@@ -1,0 +1,468 @@
+// This is the Prisma schema for the finances SaaS.
+// TimescaleDB is used for the transactions hypertable (time-series performance).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// IDENTITY (Better Auth managed + app profile)
+// ─────────────────────────────────────────────
+
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime
+  updatedAt     DateTime
+
+  // Better Auth relations
+  sessions   Session[]
+  accounts   Account[]
+
+  // App relations
+  profile         UserProfile?
+  ownedGroups     Group[]           @relation("GroupOwner")
+  groupMemberships GroupMember[]
+  financialAccounts FinancialAccount[]
+  customCategories  Category[]
+  transactions    Transaction[]
+  budgets         Budget[]
+  goals           Goal[]
+  recurringBills  RecurringBill[]
+  ofConsents      OpenFinanceConsent[]
+  botConversations BotConversation[]
+  notifications   Notification[]
+  aiInsights      AiInsight[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@map("accounts")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verifications")
+}
+
+model UserProfile {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  cpf             String?   // encrypted at application level
+  phoneE164       String?   // e.g. +5511999999999
+  telegramChatId  BigInt?   @unique
+  whatsappPhone   String?   @unique
+
+  defaultCurrency String    @default("BRL")
+  timezone        String    @default("America/Sao_Paulo")
+  aiInsightsEnabled Boolean @default(true)
+  onboardingCompletedAt DateTime?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("user_profiles")
+}
+
+// ─────────────────────────────────────────────
+// GROUPS (family / shared finance)
+// ─────────────────────────────────────────────
+
+model Group {
+  id         String   @id @default(cuid())
+  name       String
+  ownerId    String
+  owner      User     @relation("GroupOwner", fields: [ownerId], references: [id])
+  inviteCode String   @unique @default(cuid())
+  createdAt  DateTime @default(now())
+
+  members         GroupMember[]
+  financialAccounts FinancialAccount[]
+  transactions    Transaction[]
+  budgets         Budget[]
+  goals           Goal[]
+
+  @@map("groups")
+}
+
+model GroupMember {
+  groupId  String
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     String   @default("member") // owner | admin | member | viewer
+  joinedAt DateTime @default(now())
+
+  @@id([groupId, userId])
+  @@map("group_members")
+}
+
+// ─────────────────────────────────────────────
+// CORE FINANCE
+// ─────────────────────────────────────────────
+
+model FinancialAccount {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  groupId     String?
+  group       Group?   @relation(fields: [groupId], references: [id])
+
+  // account details
+  type        String   // checking | savings | credit_card | investment | wallet
+  name        String
+  institution String?  // Nubank, Itaú, etc.
+  currency    String   @default("BRL")
+  color       String?
+  icon        String?
+  isArchived  Boolean  @default(false)
+
+  // Open Finance Brasil link
+  openFinanceAccountId String?
+
+  // Pluggy fallback link
+  pluggyItemId String?
+
+  lastSyncedAt DateTime?
+  createdAt    DateTime  @default(now())
+
+  transactions      Transaction[]
+  recurringBills    RecurringBill[]
+  goals             Goal[]
+  openFinanceAccounts OpenFinanceAccount[]
+
+  @@map("financial_accounts")
+}
+
+model Category {
+  id       String  @id @default(cuid())
+  userId   String? // null = system category
+  user     User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId String?
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+
+  name     String
+  icon     String?
+  color    String?
+  type     String  // income | expense | transfer
+  isSystem Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  transactions   Transaction[]
+  budgets        Budget[]
+  recurringBills RecurringBill[]
+
+  @@map("categories")
+}
+
+// Note: After migration, run:
+// SELECT create_hypertable('transactions', 'date', if_not_exists => TRUE);
+model Transaction {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId   String
+  account     FinancialAccount @relation(fields: [accountId], references: [id])
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+  groupId     String?
+  group       Group?   @relation(fields: [groupId], references: [id])
+
+  type        String   // income | expense | transfer
+  amount      Decimal  @db.Decimal(15, 2)
+  currency    String   @default("BRL")
+  description String
+  notes       String?
+  date        DateTime @db.Date
+
+  // Source tracking
+  source      String   @default("manual") // manual | open_finance | telegram | whatsapp | import
+  externalId  String?  // bank's transaction ID (for dedup)
+  rawDescription String? // original bank description before AI categorization
+
+  // AI enrichment
+  aiCategoryConfidence Decimal? @db.Decimal(4, 3)
+  aiMerchantName       String?
+  aiTags               String[] // ['supermercado', 'alimentação']
+
+  // Transfer link
+  transferPairId String?
+
+  // Recurrence
+  recurringBillId String?
+  recurringBill   RecurringBill? @relation(fields: [recurringBillId], references: [id])
+
+  isIgnored   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  botMessages BotMessage[]
+
+  @@unique([externalId, accountId])
+  @@index([userId, date])
+  @@index([accountId, date])
+  @@map("transactions")
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  groupId    String?
+  group      Group?   @relation(fields: [groupId], references: [id])
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  name           String
+  amount         Decimal @db.Decimal(15, 2)
+  period         String  @default("monthly") // weekly | monthly | yearly
+  startDate      DateTime @db.Date
+  endDate        DateTime? @db.Date
+  alertThreshold Decimal @default(0.80) @db.Decimal(4, 3)
+
+  createdAt DateTime @default(now())
+
+  @@map("budgets")
+}
+
+model RecurringBill {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+  accountId  String?
+  account    FinancialAccount? @relation(fields: [accountId], references: [id])
+
+  name            String
+  expectedAmount  Decimal?  @db.Decimal(15, 2)
+  amountVariance  Decimal?  @db.Decimal(15, 2)
+  frequency       String    // monthly | weekly | annual | custom
+  dayOfMonth      Int?
+  nextDueDate     DateTime? @db.Date
+  lastPaidDate    DateTime? @db.Date
+  merchantPattern String?   // regex / string to detect in transaction descriptions
+  isActive        Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+
+  transactions Transaction[]
+
+  @@map("recurring_bills")
+}
+
+model Goal {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  groupId    String?
+  group      Group?   @relation(fields: [groupId], references: [id])
+  linkedAccountId String?
+  linkedAccount   FinancialAccount? @relation(fields: [linkedAccountId], references: [id])
+
+  name          String
+  description   String?
+  targetAmount  Decimal @db.Decimal(15, 2)
+  currentAmount Decimal @default(0) @db.Decimal(15, 2)
+  targetDate    DateTime? @db.Date
+  icon          String?
+  color         String?
+  isCompleted   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@map("goals")
+}
+
+// ─────────────────────────────────────────────
+// OPEN FINANCE BRASIL
+// ─────────────────────────────────────────────
+
+model OpenFinanceConsent {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bankIspb  String // e.g. '60701190' for Itaú
+  bankName  String
+
+  consentId   String @unique // urn:amazingbank:... format
+  status      String // AWAITING_AUTHORISATION | AUTHORISED | REJECTED | REVOKED
+  permissions String[]
+
+  // Encrypted OAuth tokens (application-level encryption)
+  accessTokenEnc  String?
+  refreshTokenEnc String?
+  tokenExpiresAt  DateTime?
+
+  lastSyncAt DateTime?
+  syncError  String?
+  syncCursor String?
+
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  ofAccounts OpenFinanceAccount[]
+
+  @@map("open_finance_consents")
+}
+
+model OpenFinanceAccount {
+  id        String @id @default(cuid())
+  consentId String
+  consent   OpenFinanceConsent @relation(fields: [consentId], references: [id], onDelete: Cascade)
+  financialAccountId String?
+  financialAccount   FinancialAccount? @relation(fields: [financialAccountId], references: [id])
+
+  ofAccountId   String // bank's accountId
+  ofAccountType String // CACC | SVGS | CARD
+  brandName     String?
+  branchCode    String?
+  numberLast4   String?
+  checkDigit    String?
+
+  balance          Decimal?  @db.Decimal(15, 2)
+  balanceUpdatedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@map("open_finance_accounts")
+}
+
+// ─────────────────────────────────────────────
+// BOTS + NOTIFICATIONS
+// ─────────────────────────────────────────────
+
+model BotConversation {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  platform       String // telegram | whatsapp
+  platformChatId String
+
+  state   String @default("idle") // idle | awaiting_amount | awaiting_category | awaiting_confirmation | nl_query
+  context Json?  // pending transaction data, partial parse result
+
+  lastMessageAt DateTime @default(now())
+
+  messages BotMessage[]
+
+  @@unique([platform, platformChatId])
+  @@map("bot_conversations")
+}
+
+model BotMessage {
+  id             String @id @default(cuid())
+  conversationId String
+  conversation   BotConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  direction   String // inbound | outbound
+  messageType String // text | audio | image
+  content     String?
+  rawPayload  Json?
+
+  // AI processing
+  parsedIntent String? // record_expense | record_income | query | unknown
+  parsedData   Json?
+  aiConfidence Decimal? @db.Decimal(4, 3)
+
+  resultedInTransactionId String?
+  resultedInTransaction   Transaction? @relation(fields: [resultedInTransactionId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("bot_messages")
+}
+
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type    String // bill_reminder | budget_alert | overdraft_warning | sync_complete | new_transaction | insight_ready | goal_milestone
+  channel String // email | telegram | whatsapp | push
+  title   String
+  body    String
+  metadata Json?
+
+  status  String    @default("pending") // pending | sent | failed | read
+  sentAt  DateTime?
+  readAt  DateTime?
+  error   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, status])
+  @@map("notifications")
+}
+
+model AiInsight {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type     String // monthly_summary | spending_anomaly | recurring_detected | overdraft_risk | savings_opportunity | budget_forecast
+  title    String
+  body     String // markdown
+  data     Json?
+  severity String @default("info") // info | warning | success | critical
+
+  periodStart DateTime? @db.Date
+  periodEnd   DateTime? @db.Date
+
+  isRead      Boolean @default(false)
+  isDismissed Boolean @default(false)
+  generatedAt DateTime @default(now())
+
+  @@index([userId, isRead])
+  @@map("ai_insights")
+}

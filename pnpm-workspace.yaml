@@ -1,0 +1,12 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+onlyBuiltDependencies:
+  - sharp
+  - unrs-resolver
+  - "@prisma/client"
+  - prisma
+
+overrides:
+  ioredis: "5.4.2"

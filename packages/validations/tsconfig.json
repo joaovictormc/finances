@@ -1,0 +1,4 @@
+{
+  "extends": "@finances/config/typescript/base.json",
+  "include": ["src"]
+}
