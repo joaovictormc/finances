@@ -1,8 +1,15 @@
 import React from "react";
-import { Resend } from "resend";
+import * as Brevo from "@getbrevo/brevo";
 import { emailQueue } from "../jobs/queues";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const emailClient = new Brevo.TransactionalEmailsApi();
+emailClient.setApiKey(
+  Brevo.TransactionalEmailsApiApiKeys.apiKey,
+  process.env.BREVO_API_KEY ?? ""
+);
+
+const EMAIL_FROM_NAME = "Financeiro";
+const EMAIL_FROM_ADDRESS = process.env.EMAIL_FROM_ADDRESS ?? "noreply@labapp.com.br";
 
 type EmailJob = {
   to: string;
@@ -22,20 +29,20 @@ export async function sendEmail(job: EmailJob) {
 // Called by the BullMQ worker
 export async function deliverEmail(job: EmailJob) {
   const html = await renderEmailTemplate(job.template, job.data);
-  await resend.emails.send({
-    from: process.env.EMAIL_FROM ?? "Financeiro <noreply@labapp.com.br>",
-    to: job.to,
-    subject: job.subject,
-    html,
-  });
+
+  const sendSmtpEmail = new Brevo.SendSmtpEmail();
+  sendSmtpEmail.sender = { name: EMAIL_FROM_NAME, email: EMAIL_FROM_ADDRESS };
+  sendSmtpEmail.to = [{ email: job.to }];
+  sendSmtpEmail.subject = job.subject;
+  sendSmtpEmail.htmlContent = html;
+
+  await emailClient.sendTransacEmail(sendSmtpEmail);
 }
 
 async function renderEmailTemplate(
   template: string,
   data: Record<string, unknown>
 ): Promise<string> {
-  // Templates are React Email components rendered server-side
-  // Import dynamically to avoid loading all templates on startup
   const { renderAsync } = await import("@react-email/render");
   const templates: Record<string, () => Promise<{ default: unknown }>> = {
     "email-verification": () => import("../emails/email-verification"),
@@ -51,6 +58,3 @@ async function renderEmailTemplate(
   const Component = (mod as { default: React.FC<Record<string, unknown>> }).default;
   return renderAsync(Component(data) as React.ReactElement);
 }
-
-// Re-export resend client for direct use when needed
-export { resend };

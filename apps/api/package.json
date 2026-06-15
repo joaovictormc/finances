@@ -24,7 +24,7 @@
     "hono": "^4.7.4",
     "ioredis": "^5.4.2",
     "react": "^19.0.0",
-    "resend": "^4.1.2",
+    "@getbrevo/brevo": "^2.2.0",
     "zod": "^3.24.1",
     "@hono/zod-validator": "^0.4.3"
   },
