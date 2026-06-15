@@ -1,0 +1,238 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { PiggyBank, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Drawer } from "@/components/ui/drawer";
+import { ProgressBar } from "@/components/ui/progress-bar";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/components/ui/toast-provider";
+import { api } from "@/lib/api-client";
+import { formatBRL } from "@/lib/utils";
+import type { Budget, Category } from "@/lib/types";
+
+export default function BudgetsPage() {
+  const { toast } = useToast();
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editing, setEditing] = useState<Budget | null>(null);
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [b, cats] = await Promise.all([
+        api.get<Budget[]>("/api/budgets", { year, month }),
+        api.get<Category[]>("/api/categories", { type: "expense" }),
+      ]);
+      setBudgets(b);
+      setCategories(cats);
+    } catch {
+      toast({ title: "Erro ao carregar orçamentos", variant: "error" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [year, month, toast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const openNew = () => { setEditing(null); setDrawerOpen(true); };
+  const openEdit = (b: Budget) => { setEditing(b); setDrawerOpen(true); };
+  const closeDrawer = () => { setDrawerOpen(false); setEditing(null); };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Deletar este orçamento?")) return;
+    try {
+      await api.delete(`/api/budgets/${id}`);
+      toast({ title: "Orçamento removido", variant: "success" });
+      load();
+    } catch {
+      toast({ title: "Erro ao remover orçamento", variant: "error" });
+    }
+  };
+
+  return (
+    <div>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Orçamentos</h1>
+          <p className="text-muted-foreground text-sm mt-1">Controle de limites de gastos por categoria</p>
+        </div>
+        <Button onClick={openNew}>+ Novo Orçamento</Button>
+      </div>
+
+      {/* Onboarding explanation */}
+      <div className="mb-6 flex gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+        <Info size={18} className="text-primary shrink-0 mt-0.5" />
+        <div className="text-sm">
+          <p className="font-medium text-foreground">O que são orçamentos?</p>
+          <p className="text-muted-foreground mt-1">
+            Orçamentos definem um <strong>limite de gasto por categoria no mês</strong>. Por exemplo:
+            você define R$ 800 para Alimentação. O app mostra em tempo real quanto você já gastou
+            e avisa quando estiver perto do limite — para você não ter surpresas no fim do mês.
+          </p>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-16">
+          <Spinner size="lg" />
+        </div>
+      ) : budgets.length === 0 ? (
+        <div className="bg-card rounded-lg border border-border">
+          <EmptyState
+            icon={PiggyBank}
+            title="Nenhum orçamento criado"
+            description="Crie um orçamento para começar a controlar seus gastos por categoria"
+            action={{ label: "+ Novo Orçamento", onClick: openNew }}
+          />
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {budgets.map((b) => (
+            <div key={b.id} className="bg-card rounded-lg border border-border p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    {b.category?.icon && <span className="text-lg">{b.category.icon}</span>}
+                    <p className="font-semibold text-foreground">{b.name}</p>
+                  </div>
+                  {b.category && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{b.category.name}</p>
+                  )}
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => openEdit(b)}
+                    className="text-xs px-2 py-1 rounded text-muted-foreground hover:bg-accent transition-colors"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => handleDelete(b.id)}
+                    className="text-xs px-2 py-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    Remover
+                  </button>
+                </div>
+              </div>
+
+              <ProgressBar value={b.percentage} showLabel className="mb-2" />
+
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">
+                  {formatBRL(b.spentAmount)} gastos
+                </span>
+                <span className={b.isOverBudget ? "text-destructive font-medium" : "text-muted-foreground"}>
+                  limite: {formatBRL(Number(b.amount))}
+                </span>
+              </div>
+
+              {b.isOverBudget && (
+                <p className="mt-2 text-xs font-medium text-destructive">
+                  ⚠ Limite ultrapassado em {formatBRL(b.spentAmount - Number(b.amount))}
+                </p>
+              )}
+              {!b.isOverBudget && b.isNearLimit && (
+                <p className="mt-2 text-xs font-medium text-warning">
+                  ⚡ Perto do limite — {Math.round(b.percentage * 100)}% utilizado
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Drawer open={drawerOpen} onClose={closeDrawer} title={editing ? "Editar Orçamento" : "Novo Orçamento"}>
+        <BudgetForm
+          budget={editing}
+          categories={categories}
+          year={year}
+          month={month}
+          onSuccess={() => { closeDrawer(); load(); }}
+        />
+      </Drawer>
+    </div>
+  );
+}
+
+function BudgetForm({
+  budget,
+  categories,
+  year,
+  month,
+  onSuccess,
+}: {
+  budget: Budget | null;
+  categories: Category[];
+  year: number;
+  month: number;
+  onSuccess: () => void;
+}) {
+  const { toast } = useToast();
+  const [name, setName] = useState(budget?.name ?? "");
+  const [amountCents, setAmountCents] = useState(Math.round(Number(budget?.amount ?? 0) * 100));
+  const [categoryId, setCategoryId] = useState(budget?.category?.id ?? "");
+  const [loading, setLoading] = useState(false);
+
+  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+
+  const flatCats = categories.flatMap((c) => [c, ...(c.children ?? [])]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || amountCents <= 0) {
+      toast({ title: "Preencha nome e valor", variant: "error" });
+      return;
+    }
+    setLoading(true);
+    try {
+      const payload = {
+        name: name.trim(),
+        amount: amountCents / 100,
+        period: "monthly",
+        startDate,
+        categoryId: categoryId || undefined,
+      };
+      if (budget) {
+        await api.patch(`/api/budgets/${budget.id}`, payload);
+        toast({ title: "Orçamento atualizado!", variant: "success" });
+      } else {
+        await api.post("/api/budgets", payload);
+        toast({ title: "Orçamento criado!", variant: "success" });
+      }
+      onSuccess();
+    } catch {
+      toast({ title: "Erro ao salvar orçamento", variant: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <Input label="Nome" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Alimentação mensal" autoFocus />
+      <CurrencyInput label="Limite mensal" value={amountCents} onChange={setAmountCents} />
+      <Select
+        label="Categoria (opcional)"
+        value={categoryId}
+        onChange={(e) => setCategoryId(e.target.value)}
+        placeholder="Todas as categorias"
+        options={flatCats.map((c) => ({ value: c.id, label: `${c.icon ?? ""} ${c.name}`.trim() }))}
+      />
+      <Button type="submit" loading={loading} className="w-full">
+        {budget ? "Salvar alterações" : "Criar orçamento"}
+      </Button>
+    </form>
+  );
+}
+

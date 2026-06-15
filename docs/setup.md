@@ -24,19 +24,33 @@ pnpm install
 
 O PostgreSQL já está rodando no ZimaOS. A `DATABASE_URL` já aponta para `100.104.200.37:5432`.
 
+### Opção A — Script SQL direto (recomendado para primeiro setup)
+
+Os scripts ficam em `packages/db/sql/`. Executar na ordem:
+
 ```bash
-# Gerar cliente Prisma
+# 1. Schema completo (todas as tabelas, índices e foreign keys + hypertable TimescaleDB)
+psql -h 100.104.200.37 -U postgres -d finances -f packages/db/sql/001_schema.sql
+
+# 2. Seed de categorias BR (idempotente, pode rodar mais de uma vez)
+psql -h 100.104.200.37 -U postgres -d finances -f packages/db/sql/002_seed_categories.sql
+```
+
+> **TimescaleDB**: o `001_schema.sql` já inclui `SELECT create_hypertable(...)` no final.
+> Se TimescaleDB não estiver instalado, remova esse bloco — a tabela `transactions`
+> funciona normalmente como PostgreSQL puro.
+
+### Opção B — Via Prisma (workflow de desenvolvimento)
+
+```bash
+# Gerar cliente Prisma (obrigatório antes de rodar a API)
 pnpm db:generate
 
-# Rodar migrations
+# Criar e aplicar migration (precisa de conexão com o banco)
 pnpm db:migrate
 
-# Seed de categorias BR
+# Seed de categorias via TypeScript
 pnpm db:seed
-
-# Criar hypertable TimescaleDB (rodar uma vez após primeiro migrate)
-# Conectar ao psql e executar:
-# SELECT create_hypertable('transactions', 'date', if_not_exists => TRUE);
 ```
 
 ## 3. Redis no ZimaOS

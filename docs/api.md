@@ -17,7 +17,7 @@ Gerenciado pelo Better Auth. Principais endpoints:
 ## Health
 
 ```
-GET /health
+GET /health"
 → { status: "ok", timestamp: "..." }
 ```
 
@@ -124,6 +124,46 @@ POST /api/budgets {
 
 PATCH  /api/budgets/:id
 DELETE /api/budgets/:id
+```
+
+## Metas
+
+```
+GET /api/goals
+→ Goal[]
+
+POST /api/goals {
+  name: string,
+  description?: string,
+  targetAmount: number,
+  currentAmount?: number,
+  targetDate?: string,    // YYYY-MM-DD
+  icon?: string,
+  color?: string          // #rrggbb
+}
+
+PATCH  /api/goals/:id
+DELETE /api/goals/:id
+```
+
+## Contas Recorrentes (Bills)
+
+```
+GET /api/bills
+→ RecurringBill[] com category incluída
+
+POST /api/bills {
+  name: string,
+  expectedAmount?: number,
+  frequency: "monthly" | "weekly" | "annual" | "custom",
+  dayOfMonth?: number,
+  nextDueDate?: string,   // YYYY-MM-DD
+  categoryId?: string,
+  accountId?: string
+}
+
+PATCH  /api/bills/:id   (inclui isActive: boolean)
+DELETE /api/bills/:id
 ```
 
 ## Bots

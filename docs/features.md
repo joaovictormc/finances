@@ -18,7 +18,7 @@ Legenda: ✅ Feito | 🔄 Em progresso | 📋 Planejado
 | React Email templates | ✅ | Verificação, boas-vindas, alerta orçamento, boleto |
 | GitHub Actions CI | ✅ | typecheck, lint, build |
 
-## Fase 1 — MVP Finanças Manual 🔄
+## Fase 1 — MVP Finanças Manual ✅
 
 | Funcionalidade | Status | Detalhes |
 |---|---|---|
@@ -27,12 +27,22 @@ Legenda: ✅ Feito | 🔄 Em progresso | 📋 Planejado
 | API: CRUD orçamentos | ✅ | Com cálculo de % gasto e alertas |
 | API: CRUD categorias | ✅ | Hierárquico, sistema + usuário |
 | API: CRUD contas financeiras | ✅ | Checking, savings, credit_card, wallet |
-| Web: Overview dashboard | 🔄 | KPIs prontos, charts pendentes |
-| Web: Lista de transações | 🔄 | Skeleton pronto, integração API pendente |
-| Web: Form criar/editar transação | 📋 | Modal + validação |
-| Web: Filtros de transações | 📋 | Busca, tipo, data, categoria |
-| Web: Página de orçamentos | 📋 | Progress bars + form |
-| Web: Gráficos (Recharts) | 📋 | PieChart categorias, BarChart mensal |
+| API: CRUD metas financeiras | ✅ | `GET/POST/PATCH/DELETE /api/goals` |
+| API: CRUD contas recorrentes | ✅ | `GET/POST/PATCH/DELETE /api/bills` |
+| Web: Identidade visual indigo | ✅ | Paleta OKLCH diferenciada, dark mode preto puro |
+| Web: Toggle tema claro/escuro | ✅ | localStorage + inline script (sem FOUC) |
+| Web: Overview com charts | ✅ | KPIs + PieChart categorias + BarChart 6 meses |
+| Web: Navegação de mês no overview | ✅ | search params `?year=&month=` |
+| Web: CRUD transações completo | ✅ | Drawer lateral + máscara BR + tabela+cards |
+| Web: Filtros de transações | ✅ | Busca debounce, tipo, date range |
+| Web: Página de orçamentos | ✅ | Explicação onboarding + progress bars |
+| Web: Página de contas bancárias | ✅ | Cards por tipo + drawer criação |
+| Web: Página de metas | ✅ | Progress bars + dias restantes |
+| Web: Página de contas a pagar | ✅ | Badges urgência vencimento |
+| Web: Página de configurações | ✅ | Toggle tema + perfil + notificações |
+| Web: Sidebar com active state | ✅ | Destaca página atual |
+| Web: Navegação mobile | ✅ | Header hamburger + drawer slide-out |
+| Web: Biblioteca de componentes | ✅ | Button, Input, Select, CurrencyInput, Drawer, Toast, Badge, etc |
 | Web: Autenticação (login/registro) | 🔄 | Login page pronto, registro pendente |
 | Mobile: Telas básicas | 📋 | Overview, transações, perfil |
 | Email: Boas-vindas + verificação | ✅ | Templates prontos, disparo via Brevo |

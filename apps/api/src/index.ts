@@ -7,6 +7,8 @@ import transactionsRoute from "./routes/transactions";
 import financialAccountsRoute from "./routes/financial-accounts";
 import categoriesRoute from "./routes/categories";
 import budgetsRoute from "./routes/budgets";
+import goalsRoute from "./routes/goals";
+import billsRoute from "./routes/bills";
 
 // Start BullMQ workers
 import "./jobs/workers/bot-messages.worker";
@@ -42,6 +44,8 @@ app.route("/api/transactions", transactionsRoute);
 app.route("/api/accounts", financialAccountsRoute);
 app.route("/api/categories", categoriesRoute);
 app.route("/api/budgets", budgetsRoute);
+app.route("/api/goals", goalsRoute);
+app.route("/api/bills", billsRoute);
 
 // ── Start server ──────────────────────────────────────────────────────────────
 const port = parseInt(process.env.PORT ?? "3001");

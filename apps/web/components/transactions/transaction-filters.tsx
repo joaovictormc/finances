@@ -1,0 +1,73 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+
+export interface TransactionFilters {
+  search: string;
+  type: string;
+  startDate: string;
+  endDate: string;
+}
+
+interface TransactionFiltersProps {
+  filters: TransactionFilters;
+  onChange: (filters: TransactionFilters) => void;
+  onNew: () => void;
+}
+
+export function TransactionFilters({ filters, onChange, onNew }: TransactionFiltersProps) {
+  const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSearch = (value: string) => {
+    if (searchRef.current) clearTimeout(searchRef.current);
+    searchRef.current = setTimeout(() => {
+      onChange({ ...filters, search: value });
+    }, 300);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (searchRef.current) clearTimeout(searchRef.current);
+    };
+  }, []);
+
+  return (
+    <div className="flex flex-wrap gap-3 items-center">
+      <input
+        type="text"
+        defaultValue={filters.search}
+        onChange={(e) => handleSearch(e.target.value)}
+        placeholder="Buscar transações..."
+        className="flex-1 min-w-[200px] rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+      />
+      <select
+        value={filters.type}
+        onChange={(e) => onChange({ ...filters, type: e.target.value })}
+        className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+      >
+        <option value="">Todos os tipos</option>
+        <option value="income">Receitas</option>
+        <option value="expense">Gastos</option>
+        <option value="transfer">Transferências</option>
+      </select>
+      <input
+        type="date"
+        value={filters.startDate}
+        onChange={(e) => onChange({ ...filters, startDate: e.target.value })}
+        className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+      />
+      <input
+        type="date"
+        value={filters.endDate}
+        onChange={(e) => onChange({ ...filters, endDate: e.target.value })}
+        className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+      />
+      <button
+        onClick={onNew}
+        className="ml-auto rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity whitespace-nowrap"
+      >
+        + Nova Transação
+      </button>
+    </div>
+  );
+}
