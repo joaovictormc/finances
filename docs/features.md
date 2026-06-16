@@ -43,9 +43,9 @@ Legenda: ✅ Feito | 🔄 Em progresso | 📋 Planejado
 | Web: Sidebar com active state | ✅ | Destaca página atual |
 | Web: Navegação mobile | ✅ | Header hamburger + drawer slide-out |
 | Web: Biblioteca de componentes | ✅ | Button, Input, Select, CurrencyInput, Drawer, Toast, Badge, etc |
-| Web: Autenticação (login/registro) | 🔄 | Login page pronto, registro pendente |
+| Web: Autenticação (login/registro) | ✅ | Login, registro e verificação de e-mail (Better Auth client) + `proxy.ts` protegendo rotas + logout |
 | Mobile: Telas básicas | 📋 | Overview, transações, perfil |
-| Email: Boas-vindas + verificação | ✅ | Templates prontos, disparo via Brevo |
+| Email: Boas-vindas + verificação | ✅ | Boas-vindas no signup (databaseHook) + verificação; entregue por email worker (BullMQ → Brevo) |
 
 ## Fase 2 — Bot + NLP
 

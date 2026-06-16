@@ -11,7 +11,7 @@ emailClient.setApiKey(
 const EMAIL_FROM_NAME = "Financeiro";
 const EMAIL_FROM_ADDRESS = process.env.EMAIL_FROM_ADDRESS ?? "noreply@labapp.com.br";
 
-type EmailJob = {
+export type EmailJob = {
   to: string;
   subject: string;
   template: string;
@@ -28,6 +28,12 @@ export async function sendEmail(job: EmailJob) {
 
 // Called by the BullMQ worker
 export async function deliverEmail(job: EmailJob) {
+  // Em dev sem Brevo configurado, não tenta enviar (evita falhas/retries no worker).
+  if (!process.env.BREVO_API_KEY) {
+    console.warn(`[email] BREVO_API_KEY ausente — envio pulado: ${job.template} -> ${job.to}`);
+    return;
+  }
+
   const html = await renderEmailTemplate(job.template, job.data);
 
   const sendSmtpEmail = new Brevo.SendSmtpEmail();

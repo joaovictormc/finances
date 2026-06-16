@@ -51,6 +51,29 @@ export const auth = betterAuth({
       }
     },
   },
+  databaseHooks: {
+    user: {
+      create: {
+        // E-mail de boas-vindas logo após o cadastro. Fire-and-forget: nunca
+        // bloqueia nem derruba o signup, mesmo com Redis/Brevo indisponíveis.
+        after: async (user) => {
+          void (async () => {
+            try {
+              const { sendEmail } = await import("./email");
+              await sendEmail({
+                to: user.email,
+                subject: "Bem-vindo ao Financeiro! 💰",
+                template: "welcome",
+                data: { name: user.name },
+              });
+            } catch (err) {
+              console.error("[auth] Falha ao enfileirar e-mail de boas-vindas:", err);
+            }
+          })();
+        },
+      },
+    },
+  },
   session: {
     cookieCache: {
       enabled: true,

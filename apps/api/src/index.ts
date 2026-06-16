@@ -14,6 +14,7 @@ import billsRoute from "./routes/bills";
 
 // Start BullMQ workers
 import "./jobs/workers/bot-messages.worker";
+import "./jobs/workers/email.worker";
 
 const app = new Hono();
 

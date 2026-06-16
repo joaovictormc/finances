@@ -29,7 +29,7 @@ export default function RegisterPage() {
 
     setLoading(true);
 
-    const { error } = await authClient.signUp.email({
+    const { data, error } = await authClient.signUp.email({
       name,
       email,
       password,
@@ -46,7 +46,14 @@ export default function RegisterPage() {
       return;
     }
 
-    router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+    // Verificação de e-mail OFF → signup já cria sessão (retorna token) → dashboard.
+    // Verificação ON → sem sessão → tela de confirmação de e-mail.
+    if (data?.token) {
+      router.push("/overview");
+    } else {
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+    }
+    router.refresh();
   }
 
   return (
