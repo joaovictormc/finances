@@ -4,7 +4,9 @@ import { redis } from "../../lib/redis";
 import { parseExpenseMessage } from "../../lib/ai/expense-parser";
 import { botMessagesQueue, voiceTranscriptionQueue } from "../../jobs/queues";
 
-const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN ?? "placeholder");
+// Usa "||" (não "??") para que TELEGRAM_BOT_TOKEN="" também caia no placeholder.
+// grammy exige token não-vazio na instanciação; só chama o Telegram de fato no webhook.
+const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN || "placeholder");
 
 // ── /start — link Telegram account to web app ────────────────────────────────
 bot.command("start", async (ctx) => {

@@ -1,3 +1,5 @@
+import "./env";
+import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
@@ -34,7 +36,7 @@ app.use(
 app.get("/health", (c) => c.json({ status: "ok", ts: new Date().toISOString() }));
 
 // ── Better Auth handler (handles /api/auth/* requests) ────────────────────────
-app.on(["GET", "POST"], "/api/auth/**", (c) => auth.handler(c.req.raw));
+app.on(["GET", "POST"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 // ── Bot webhooks ──────────────────────────────────────────────────────────────
 app.post("/api/bots/telegram", telegramWebhookHandler);
@@ -47,12 +49,9 @@ app.route("/api/budgets", budgetsRoute);
 app.route("/api/goals", goalsRoute);
 app.route("/api/bills", billsRoute);
 
-// ── Start server ──────────────────────────────────────────────────────────────
+// ── Start server (Node via @hono/node-server) ─────────────────────────────────
 const port = parseInt(process.env.PORT ?? "3001");
 
-export default {
-  port,
-  fetch: app.fetch,
-};
-
-console.log(`🚀 API running on http://localhost:${port}`);
+serve({ fetch: app.fetch, port }, (info) => {
+  console.log(`🚀 API running on http://localhost:${info.port}`);
+});

@@ -1,0 +1,100 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+export default function RegisterPage() {
+  const router = useRouter();
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    if (password.length < 8) {
+      setError("A senha deve ter pelo menos 8 caracteres.");
+      return;
+    }
+
+    setLoading(true);
+
+    const { error } = await authClient.signUp.email({
+      name,
+      email,
+      password,
+      callbackURL: `${APP_URL}/overview`,
+    });
+
+    if (error) {
+      setLoading(false);
+      setError(
+        error.code === "USER_ALREADY_EXISTS"
+          ? "Já existe uma conta com este e-mail."
+          : error.message ?? "Não foi possível criar a conta. Tente novamente."
+      );
+      return;
+    }
+
+    router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+  }
+
+  return (
+    <>
+      <h2 className="mb-6 text-lg font-semibold">Criar conta</h2>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          label="Nome"
+          type="text"
+          required
+          autoComplete="name"
+          placeholder="Seu nome"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <Input
+          label="E-mail"
+          type="email"
+          required
+          autoComplete="email"
+          placeholder="seu@email.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <Input
+          label="Senha"
+          type="password"
+          required
+          autoComplete="new-password"
+          placeholder="Mínimo 8 caracteres"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+
+        <Button type="submit" loading={loading} className="w-full">
+          Criar conta
+        </Button>
+      </form>
+
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        Já tem conta?{" "}
+        <Link href="/login" className="font-medium text-primary hover:underline">
+          Entrar
+        </Link>
+      </p>
+    </>
+  );
+}

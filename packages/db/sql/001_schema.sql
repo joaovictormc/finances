@@ -140,8 +140,10 @@ CREATE TABLE IF NOT EXISTS "categories" (
     CONSTRAINT "categories_pkey" PRIMARY KEY ("id")
 );
 
--- Nota: TimescaleDB converte esta tabela em hypertable após a criação.
---       Particionada por "date" para performance em consultas de séries temporais.
+-- Nota: PK simples em "id" (igual ao schema Prisma). Tabela PostgreSQL normal.
+--       Hypertable do TimescaleDB foi removida porque (a) exigiria "date" na PK e
+--       (b) o TimescaleDB não permite foreign keys apontando para um hypertable —
+--       e "bot_messages" referencia transactions("id"). Ver bloco no final do arquivo.
 CREATE TABLE IF NOT EXISTS "transactions" (
     "id"                    TEXT           NOT NULL,
     "userId"                TEXT           NOT NULL,
@@ -165,7 +167,7 @@ CREATE TABLE IF NOT EXISTS "transactions" (
     "isIgnored"             BOOLEAN        NOT NULL DEFAULT false,
     "createdAt"             TIMESTAMP(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt"             TIMESTAMP(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "transactions_pkey" PRIMARY KEY ("id", "date")
+    CONSTRAINT "transactions_pkey" PRIMARY KEY ("id")
 );
 
 CREATE TABLE IF NOT EXISTS "budgets" (
@@ -477,14 +479,18 @@ ALTER TABLE "ai_insights"
     FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE;
 
 -- -----------------------------------------------------------------------------
--- TIMESCALEDB — Hypertable para transactions
--- Executar APÓS as foreign keys (TimescaleDB recria a tabela internamente).
--- Remover se TimescaleDB não estiver instalado.
+-- TIMESCALEDB — Hypertable para transactions (DESABILITADO no MVP)
 -- -----------------------------------------------------------------------------
-
-SELECT create_hypertable(
-    'transactions',
-    'date',
-    chunk_time_interval => INTERVAL '1 month',
-    if_not_exists => TRUE
-);
+-- O hypertable foi removido intencionalmente por dois motivos incompatíveis com
+-- o schema atual:
+--   1. Um hypertable exige que a coluna de particionamento ("date") faça parte
+--      da PRIMARY KEY — mas a PK é apenas ("id"), igual ao schema Prisma.
+--   2. O TimescaleDB NÃO permite FOREIGN KEYS apontando para um hypertable, e a
+--      tabela "bot_messages" tem FK para transactions("id").
+--
+-- Para habilitar no futuro (otimização de performance em escala), seria preciso:
+--   - Tornar a PK composta ("id", "date");
+--   - Remover a FK "bot_messages_resultedInTransactionId_fkey" (vira referência
+--     lógica, sem constraint);
+--   - Então: SELECT create_hypertable('transactions', 'date',
+--              chunk_time_interval => INTERVAL '1 month', if_not_exists => TRUE);

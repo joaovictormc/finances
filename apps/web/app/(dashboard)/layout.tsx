@@ -3,6 +3,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NavLinks } from "@/components/ui/nav-links";
 import { MobileSidebar } from "@/components/ui/mobile-sidebar";
 import { ToastProvider } from "@/components/ui/toast-provider";
+import { UserMenu } from "@/components/ui/user-menu";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -19,14 +20,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <NavLinks />
 
-          <div className="p-4 border-t border-border">
-            <p className="text-xs text-muted-foreground">Plano Gratuito</p>
-            <Link
-              href="/upgrade"
-              className="mt-0.5 block text-xs font-medium text-primary hover:underline"
-            >
-              Upgrade para Pro →
-            </Link>
+          <div className="mt-auto border-t border-border p-4 space-y-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Plano Gratuito</p>
+              <Link
+                href="/upgrade"
+                className="mt-0.5 block text-xs font-medium text-primary hover:underline"
+              >
+                Upgrade para Pro →
+              </Link>
+            </div>
+            <UserMenu />
           </div>
         </aside>
 

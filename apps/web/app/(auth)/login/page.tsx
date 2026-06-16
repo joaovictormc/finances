@@ -1,65 +1,115 @@
-import type { Metadata } from "next";
-import Link from "next/link";
+"use client";
 
-export const metadata: Metadata = { title: "Entrar" };
+import { Suspense, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackURL = searchParams.get("next") ?? "/overview";
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const { error } = await authClient.signIn.email({ email, password });
+
+    if (error) {
+      setLoading(false);
+      if (error.code === "EMAIL_NOT_VERIFIED") {
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        return;
+      }
+      setError(
+        error.code === "INVALID_EMAIL_OR_PASSWORD"
+          ? "E-mail ou senha incorretos."
+          : error.message ?? "Não foi possível entrar. Tente novamente."
+      );
+      return;
+    }
+
+    router.push(callbackURL);
+    router.refresh();
+  }
+
+  async function handleGoogle() {
+    setError(null);
+    setGoogleLoading(true);
+    await authClient.signIn.social({ provider: "google", callbackURL });
+  }
+
+  return (
+    <>
+      <h2 className="mb-6 text-lg font-semibold">Entrar na sua conta</h2>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          label="E-mail"
+          type="email"
+          required
+          autoComplete="email"
+          placeholder="seu@email.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <Input
+          label="Senha"
+          type="password"
+          required
+          autoComplete="current-password"
+          placeholder="••••••••"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+
+        <Button type="submit" loading={loading} className="w-full">
+          Entrar
+        </Button>
+      </form>
+
+      <div className="my-5 flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs text-muted-foreground">ou</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        loading={googleLoading}
+        onClick={handleGoogle}
+        className="w-full"
+      >
+        Continuar com Google
+      </Button>
+
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        Não tem conta?{" "}
+        <Link href="/register" className="font-medium text-primary hover:underline">
+          Criar conta
+        </Link>
+      </p>
+    </>
+  );
+}
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted p-4">
-      <div className="w-full max-w-sm bg-card rounded-lg border border-border p-8 shadow-sm">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold tracking-tight">Financeiro</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Controle financeiro inteligente
-          </p>
-        </div>
-
-        <form action="/api/auth/sign-in/email" method="POST" className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-1">
-              E-mail
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="seu@email.com"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-1">
-              Senha
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="••••••••"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full rounded-md bg-primary text-primary-foreground py-2 text-sm font-medium hover:opacity-90 transition-opacity"
-          >
-            Entrar
-          </button>
-        </form>
-
-        <div className="mt-4 text-center text-sm text-muted-foreground">
-          Não tem conta?{" "}
-          <Link href="/register" className="text-foreground underline underline-offset-2">
-            Criar conta
-          </Link>
-        </div>
-      </div>
-    </div>
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
