@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Layout da Lista de Transações</title>
+<script src="/helper.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f172a; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 24px; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { color: #94a3b8; font-size: 14px; margin-bottom: 28px; }
+
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 960px; }
+
+  .option-card {
+    background: #1e293b; border: 2px solid #334155; border-radius: 12px;
+    overflow: hidden; cursor: pointer; transition: border-color 0.2s, transform 0.1s;
+  }
+  .option-card:hover { border-color: #3b82f6; transform: translateY(-2px); }
+  .option-card.selected { border-color: #3b82f6; background: #1e3a5f; }
+
+  .option-label {
+    padding: 16px 18px 12px; font-size: 15px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .badge { background: #334155; border-radius: 4px; padding: 2px 8px; font-size: 12px; color: #94a3b8; }
+  .selected .badge { background: #3b82f6; color: white; }
+  .rec-badge { font-size: 10px; background: #1d4ed8; color: #bfdbfe; border-radius: 4px; padding: 2px 7px; margin-left: auto; }
+
+  .preview-area {
+    margin: 0 16px 16px; background: #0f172a; border: 1px solid #334155;
+    border-radius: 8px; overflow: hidden;
+  }
+
+  /* ---------- OPÇÃO A: TABLE ---------- */
+  .table-header {
+    display: grid; grid-template-columns: 90px 1fr 100px 80px 60px;
+    gap: 8px; padding: 8px 14px; background: #0f172a;
+    border-bottom: 1px solid #1e293b; font-size: 9px;
+    color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
+  }
+  .table-row {
+    display: grid; grid-template-columns: 90px 1fr 100px 80px 60px;
+    gap: 8px; padding: 10px 14px; border-bottom: 1px solid #0f172a;
+    align-items: center;
+  }
+  .table-row:nth-child(even) { background: #111827; }
+  .table-row:hover { background: #1e293b; }
+  .col-date { font-size: 10px; color: #64748b; }
+  .col-desc { font-size: 11px; color: #f1f5f9; font-weight: 500; }
+  .col-sub { font-size: 9px; color: #64748b; margin-top: 2px; }
+  .cat-pill { display: inline-flex; align-items: center; gap: 3px; background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 2px 7px; font-size: 9px; color: #94a3b8; }
+  .col-acc { font-size: 9px; color: #64748b; }
+  .col-amt { font-size: 11px; font-weight: 700; text-align: right; }
+  .col-amt.exp { color: #f87171; }
+  .col-amt.inc { color: #4ade80; }
+  .col-actions { display: flex; gap: 4px; justify-content: flex-end; }
+  .act-btn { width: 20px; height: 20px; border-radius: 4px; background: #1e293b; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #64748b; }
+  .pagination { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; border-top: 1px solid #1e293b; }
+  .pag-info { font-size: 9px; color: #64748b; }
+  .pag-btn { font-size: 9px; background: #1e293b; border-radius: 4px; padding: 3px 8px; color: #94a3b8; }
+
+  /* ---------- OPÇÃO B: CARDS ---------- */
+  .cards-list { padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .txn-card {
+    background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+    padding: 10px 12px; display: flex; align-items: center; gap: 10px;
+  }
+  .txn-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .txn-icon.exp { background: #450a0a; }
+  .txn-icon.inc { background: #052e16; }
+  .txn-body { flex: 1; min-width: 0; }
+  .txn-desc { font-size: 11px; font-weight: 600; color: #f1f5f9; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .txn-meta { display: flex; gap: 6px; align-items: center; }
+  .txn-cat { font-size: 9px; color: #64748b; }
+  .txn-dot { width: 3px; height: 3px; background: #475569; border-radius: 50%; }
+  .txn-date { font-size: 9px; color: #64748b; }
+  .txn-right { text-align: right; flex-shrink: 0; }
+  .txn-amt { font-size: 13px; font-weight: 700; }
+  .txn-amt.exp { color: #f87171; }
+  .txn-amt.inc { color: #4ade80; }
+  .txn-acc { font-size: 9px; color: #475569; margin-top: 2px; }
+  .cards-pag { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border-top: 1px solid #1e293b; }
+  .pag-dots { display: flex; gap: 3px; }
+  .pag-dot { width: 6px; height: 6px; border-radius: 50%; background: #334155; }
+  .pag-dot.active { background: #3b82f6; }
+
+  .option-desc {
+    padding: 0 18px 18px; font-size: 12px; color: #94a3b8; line-height: 1.6;
+  }
+  .tag { display: inline-block; background: #334155; border-radius: 4px; padding: 1px 6px; font-size: 10px; margin-right: 3px; margin-top: 5px; color: #cbd5e1; }
+  .tag.green { background: #14532d; color: #4ade80; }
+  .tag.yellow { background: #713f12; color: #fbbf24; }
+
+  .note { background: #1e3a5f; border: 1px solid #1d4ed8; border-radius: 6px; padding: 8px 12px; font-size: 11px; color: #93c5fd; margin: 0 16px 14px; }
+
+  .selection-hint { text-align: center; color: #64748b; font-size: 12px; margin-top: 24px; }
+</style>
+</head>
+<body>
+
+<h1>Como listar as transações?</h1>
+<p class="subtitle">Layout da tela principal de transações — onde o usuário passa mais tempo</p>
+
+<div class="options-grid">
+
+  <!-- OPÇÃO A: TABLE (desktop) -->
+  <div class="option-card" data-choice="table" onclick="toggleSelect(this)">
+    <div class="option-label">
+      <span class="badge">A</span>
+      Tabela (desktop) + Cards (mobile)
+      <span class="rec-badge">★ Recomendado</span>
+    </div>
+
+    <div class="preview-area">
+      <div class="table-header">
+        <span>Data</span><span>Descrição</span><span>Categoria</span><span>Conta</span><span style="text-align:right">Valor</span>
+      </div>
+      <div class="table-row">
+        <div class="col-date">14 jun 2025</div>
+        <div><div class="col-desc">Supermercado Extra</div></div>
+        <div><span class="cat-pill">🛒 Alimentação</span></div>
+        <div class="col-acc">Nubank</div>
+        <div class="col-amt exp">-R$ 312,40</div>
+      </div>
+      <div class="table-row">
+        <div class="col-date">13 jun 2025</div>
+        <div><div class="col-desc">Salário CLT</div></div>
+        <div><span class="cat-pill">💼 Salário</span></div>
+        <div class="col-acc">Bradesco</div>
+        <div class="col-amt inc">+R$ 5.200,00</div>
+      </div>
+      <div class="table-row">
+        <div class="col-date">12 jun 2025</div>
+        <div><div class="col-desc">Netflix</div></div>
+        <div><span class="cat-pill">🎬 Lazer</span></div>
+        <div class="col-acc">Itaú</div>
+        <div class="col-amt exp">-R$ 55,90</div>
+      </div>
+      <div class="table-row">
+        <div class="col-date">11 jun 2025</div>
+        <div><div class="col-desc">Conta de Luz</div></div>
+        <div><span class="cat-pill">🏠 Moradia</span></div>
+        <div class="col-acc">Nubank</div>
+        <div class="col-amt exp">-R$ 187,60</div>
+      </div>
+      <div class="table-row">
+        <div class="col-date">10 jun 2025</div>
+        <div><div class="col-desc">Uber</div></div>
+        <div><span class="cat-pill">🚗 Transporte</span></div>
+        <div class="col-acc">Nubank</div>
+        <div class="col-amt exp">-R$ 23,50</div>
+      </div>
+      <div class="pagination">
+        <span class="pag-info">Mostrando 1–20 de 87 transações</span>
+        <div style="display:flex;gap:4px;">
+          <span class="pag-btn">← Anterior</span>
+          <span class="pag-btn">Próxima →</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="option-desc">
+      Tabela densa no desktop: 5+ colunas, scan rápido por data/valor. No mobile vira cards automaticamente via CSS (<code>@media</code>). Padrão de apps de gestão financeira profissional (Conta Azul, Omie).
+      <br>
+      <span class="tag green">Máximo de informação visível</span>
+      <span class="tag green">Scan rápido por linha</span>
+      <span class="tag">Responsivo: cards no mobile</span>
+    </div>
+  </div>
+
+  <!-- OPÇÃO B: CARDS -->
+  <div class="option-card" data-choice="cards" onclick="toggleSelect(this)">
+    <div class="option-label">
+      <span class="badge">B</span>
+      Somente Cards
+    </div>
+
+    <div class="preview-area">
+      <div class="cards-list">
+        <div class="txn-card">
+          <div class="txn-icon exp">🛒</div>
+          <div class="txn-body">
+            <div class="txn-desc">Supermercado Extra</div>
+            <div class="txn-meta">
+              <span class="txn-cat">Alimentação</span>
+              <span class="txn-dot"></span>
+              <span class="txn-date">14 jun</span>
+              <span class="txn-dot"></span>
+              <span class="txn-date">Nubank</span>
+            </div>
+          </div>
+          <div class="txn-right">
+            <div class="txn-amt exp">-R$ 312,40</div>
+          </div>
+        </div>
+        <div class="txn-card">
+          <div class="txn-icon inc">💼</div>
+          <div class="txn-body">
+            <div class="txn-desc">Salário CLT</div>
+            <div class="txn-meta">
+              <span class="txn-cat">Renda</span>
+              <span class="txn-dot"></span>
+              <span class="txn-date">13 jun</span>
+              <span class="txn-dot"></span>
+              <span class="txn-date">Bradesco</span>
+            </div>
+          </div>
+          <div class="txn-right">
+            <div class="txn-amt inc">+R$ 5.200,00</div>
+          </div>
+        </div>
+        <div class="txn-card">
+          <div class="txn-icon exp">🎬</div>
+          <div class="txn-body">
+            <div class="txn-desc">Netflix</div>
+            <div class="txn-meta">
+              <span class="txn-cat">Lazer</span>
+              <span class="txn-dot"></span>
+              <span class="txn-date">12 jun</span>
+            </div>
+          </div>
+          <div class="txn-right">
+            <div class="txn-amt exp">-R$ 55,90</div>
+          </div>
+        </div>
+        <div class="txn-card">
+          <div class="txn-icon exp">🏠</div>
+          <div class="txn-body">
+            <div class="txn-desc">Conta de Luz</div>
+            <div class="txn-meta">
+              <span class="txn-cat">Moradia</span>
+              <span class="txn-dot"></span>
+              <span class="txn-date">11 jun</span>
+            </div>
+          </div>
+          <div class="txn-right">
+            <div class="txn-amt exp">-R$ 187,60</div>
+          </div>
+        </div>
+      </div>
+      <div class="cards-pag">
+        <span class="pag-btn">← Anterior</span>
+        <div class="pag-dots">
+          <div class="pag-dot active"></div>
+          <div class="pag-dot"></div>
+          <div class="pag-dot"></div>
+        </div>
+        <span class="pag-btn">Próxima →</span>
+      </div>
+    </div>
+
+    <div class="option-desc">
+      Um card por transação. Visual mais limpo e "mobile-first". Mesmo layout no desktop e mobile. Padrão de apps de consumo (Nubank, Mobills).
+      <br>
+      <span class="tag green">Visual moderno</span>
+      <span class="tag green">Mesmo layout em todo dispositivo</span>
+      <span class="tag yellow">Menos denso — vê menos itens por tela</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="note" style="max-width:960px;margin-top:16px;">
+  💡 <strong>Nota:</strong> Em ambas as opções, a paginação funciona via estado React (não URL). Os filtros (busca, tipo, data) ficam no topo e disparam novo fetch ao API.
+</div>
+
+<p class="selection-hint">Clique para selecionar → responda no terminal</p>
+
+</body>
+</html>

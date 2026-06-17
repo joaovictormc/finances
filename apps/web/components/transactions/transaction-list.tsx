@@ -2,6 +2,7 @@
 
 import { Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { CategoryIcon } from "@/components/ui/category-icon";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatBRL, formatShortDate } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
@@ -46,7 +47,7 @@ export function TransactionList({ transactions, isLoading, onEdit, onDelete }: T
 
   if (!isLoading && transactions.length === 0) {
     return (
-      <div className="bg-card rounded-lg border border-border">
+      <div className="bg-card rounded-2xl border border-border/60 shadow-sm">
         <EmptyState
           icon={ArrowLeftRight}
           title="Nenhuma transação encontrada"
@@ -59,7 +60,7 @@ export function TransactionList({ transactions, isLoading, onEdit, onDelete }: T
   return (
     <>
       {/* Desktop table */}
-      <div className="hidden md:block bg-card rounded-lg border border-border overflow-hidden">
+      <div className="hidden md:block bg-card rounded-2xl border border-border/60 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">
@@ -84,8 +85,8 @@ export function TransactionList({ transactions, isLoading, onEdit, onDelete }: T
                     </td>
                     <td className="px-4 py-3">
                       {t.category ? (
-                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                          {t.category.icon && <span>{t.category.icon}</span>}
+                        <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                          <CategoryIcon icon={t.category.icon} iconUrl={t.category.iconUrl} color={t.category.color} size="sm" />
                           {t.category.name}
                         </span>
                       ) : (
@@ -130,18 +131,19 @@ export function TransactionList({ transactions, isLoading, onEdit, onDelete }: T
       </div>
 
       {/* Mobile cards */}
-      <div className="md:hidden bg-card rounded-lg border border-border overflow-hidden">
+      <div className="md:hidden bg-card rounded-2xl border border-border/60 shadow-sm overflow-hidden">
         {isLoading
           ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
           : transactions.map((t) => (
               <div key={t.id} className="flex items-center gap-3 px-4 py-3 border-b border-border last:border-0">
-                <div
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0 ${
-                    t.type === "income" ? "bg-success/15" : t.type === "expense" ? "bg-destructive/15" : "bg-primary/15"
-                  }`}
-                >
-                  {t.category?.icon ?? (t.type === "income" ? "💚" : t.type === "expense" ? "💸" : "↔️")}
-                </div>
+                <CategoryIcon
+                  icon={t.category?.icon ?? (t.type === "income" ? "💚" : t.type === "expense" ? "💸" : "↔️")}
+                  iconUrl={t.category?.iconUrl}
+                  color={
+                    t.category?.color ??
+                    (t.type === "income" ? "#22c55e" : t.type === "expense" ? "#ef4444" : "#6366f1")
+                  }
+                />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{t.description}</p>
                   <p className="text-xs text-muted-foreground">

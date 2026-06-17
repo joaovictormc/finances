@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Drawer } from "@/components/ui/drawer";
 import { ProgressBar } from "@/components/ui/progress-bar";
+import { CategoryIcon } from "@/components/ui/category-icon";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
-import { formatBRL } from "@/lib/utils";
+import { cn, formatBRL } from "@/lib/utils";
 import type { Budget, Category } from "@/lib/types";
 
 export default function BudgetsPage() {
@@ -22,6 +23,7 @@ export default function BudgetsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Budget | null>(null);
+  const [formKey, setFormKey] = useState(0);
 
   const now = new Date();
   const year = now.getFullYear();
@@ -45,8 +47,8 @@ export default function BudgetsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const openNew = () => { setEditing(null); setDrawerOpen(true); };
-  const openEdit = (b: Budget) => { setEditing(b); setDrawerOpen(true); };
+  const openNew = () => { setEditing(null); setFormKey((k) => k + 1); setDrawerOpen(true); };
+  const openEdit = (b: Budget) => { setEditing(b); setFormKey((k) => k + 1); setDrawerOpen(true); };
   const closeDrawer = () => { setDrawerOpen(false); setEditing(null); };
 
   const handleDelete = async (id: string) => {
@@ -88,7 +90,7 @@ export default function BudgetsPage() {
           <Spinner size="lg" />
         </div>
       ) : budgets.length === 0 ? (
-        <div className="bg-card rounded-lg border border-border">
+        <div className="bg-card rounded-2xl border border-border/60 shadow-sm">
           <EmptyState
             icon={PiggyBank}
             title="Nenhum orçamento criado"
@@ -98,62 +100,84 @@ export default function BudgetsPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {budgets.map((b) => (
-            <div key={b.id} className="bg-card rounded-lg border border-border p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    {b.category?.icon && <span className="text-lg">{b.category.icon}</span>}
-                    <p className="font-semibold text-foreground">{b.name}</p>
+          {(() => {
+            const featuredId = budgets
+              .filter((b) => b.isOverBudget || b.isNearLimit)
+              .slice()
+              .sort((a, b) => b.percentage - a.percentage)[0]?.id;
+
+            return budgets.map((b) => {
+              const featured = b.id === featuredId;
+              const fillColor = featured ? (b.isOverBudget ? "var(--color-destructive)" : "var(--color-warning)") : undefined;
+
+              return (
+                <div
+                  key={b.id}
+                  className={cn(
+                    "rounded-2xl shadow-sm p-5 transition-shadow hover:shadow-md",
+                    featured ? "text-white" : "bg-card border border-border/60"
+                  )}
+                  style={featured ? { backgroundColor: fillColor } : undefined}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      {b.category && (
+                        <CategoryIcon icon={b.category.icon} color={featured ? "#fff" : b.category.color} size="sm" />
+                      )}
+                      <div>
+                        <p className={cn("font-semibold", featured ? "text-white" : "text-foreground")}>{b.name}</p>
+                        {b.category && (
+                          <p className={cn("text-xs mt-0.5", featured ? "text-white/75" : "text-muted-foreground")}>{b.category.name}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => openEdit(b)}
+                        className={cn("text-xs px-2 py-1 rounded transition-colors", featured ? "text-white/80 hover:bg-white/15" : "text-muted-foreground hover:bg-accent")}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(b.id)}
+                        className={cn("text-xs px-2 py-1 rounded transition-colors", featured ? "text-white/80 hover:bg-white/15" : "text-muted-foreground hover:text-destructive hover:bg-destructive/10")}
+                      >
+                        Remover
+                      </button>
+                    </div>
                   </div>
-                  {b.category && (
-                    <p className="text-xs text-muted-foreground mt-0.5">{b.category.name}</p>
+
+                  <ProgressBar value={b.percentage} showLabel className="mb-2" color={featured ? "#fff" : b.category?.color} trackClassName={featured ? "bg-white/20" : undefined} />
+
+                  <div className="flex justify-between text-sm">
+                    <span className={featured ? "text-white/85" : "text-muted-foreground"}>
+                      {formatBRL(b.spentAmount)} gastos
+                    </span>
+                    <span className={cn(featured ? "text-white/85" : b.isOverBudget ? "text-destructive font-medium" : "text-muted-foreground")}>
+                      limite: {formatBRL(Number(b.amount))}
+                    </span>
+                  </div>
+
+                  {b.isOverBudget && (
+                    <p className={cn("mt-2 text-xs font-medium", featured ? "text-white" : "text-destructive")}>
+                      ⚠ Limite ultrapassado em {formatBRL(b.spentAmount - Number(b.amount))}
+                    </p>
+                  )}
+                  {!b.isOverBudget && b.isNearLimit && (
+                    <p className={cn("mt-2 text-xs font-medium", featured ? "text-white" : "text-warning")}>
+                      ⚡ Perto do limite — {Math.round(b.percentage * 100)}% utilizado
+                    </p>
                   )}
                 </div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => openEdit(b)}
-                    className="text-xs px-2 py-1 rounded text-muted-foreground hover:bg-accent transition-colors"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleDelete(b.id)}
-                    className="text-xs px-2 py-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                  >
-                    Remover
-                  </button>
-                </div>
-              </div>
-
-              <ProgressBar value={b.percentage} showLabel className="mb-2" />
-
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
-                  {formatBRL(b.spentAmount)} gastos
-                </span>
-                <span className={b.isOverBudget ? "text-destructive font-medium" : "text-muted-foreground"}>
-                  limite: {formatBRL(Number(b.amount))}
-                </span>
-              </div>
-
-              {b.isOverBudget && (
-                <p className="mt-2 text-xs font-medium text-destructive">
-                  ⚠ Limite ultrapassado em {formatBRL(b.spentAmount - Number(b.amount))}
-                </p>
-              )}
-              {!b.isOverBudget && b.isNearLimit && (
-                <p className="mt-2 text-xs font-medium text-warning">
-                  ⚡ Perto do limite — {Math.round(b.percentage * 100)}% utilizado
-                </p>
-              )}
-            </div>
-          ))}
+              );
+            });
+          })()}
         </div>
       )}
 
       <Drawer open={drawerOpen} onClose={closeDrawer} title={editing ? "Editar Orçamento" : "Novo Orçamento"}>
         <BudgetForm
+          key={formKey}
           budget={editing}
           categories={categories}
           year={year}

@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Padrão de Formulário</title>
+<script src="/helper.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f172a; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 24px; }
+
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { color: #94a3b8; font-size: 14px; margin-bottom: 28px; }
+
+  .options-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px; }
+
+  .option-card {
+    background: #1e293b;
+    border: 2px solid #334155;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.1s;
+  }
+  .option-card:hover { border-color: #3b82f6; transform: translateY(-2px); }
+  .option-card.selected { border-color: #3b82f6; background: #1e3a5f; }
+
+  .option-label {
+    padding: 14px 16px 10px;
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .badge {
+    background: #334155;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 500;
+  }
+  .selected .badge { background: #3b82f6; color: white; }
+
+  /* MOCKUP AREA */
+  .mockup-area {
+    margin: 0 12px 12px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #334155;
+    background: #0f172a;
+  }
+
+  /* Shared app chrome */
+  .app-shell {
+    display: flex;
+    height: 320px;
+    position: relative;
+  }
+  .sidebar {
+    width: 48px;
+    background: #1e293b;
+    border-right: 1px solid #334155;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .sidebar-dot {
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    background: #334155;
+  }
+  .sidebar-dot.active { background: #3b82f6; }
+  .main-area {
+    flex: 1;
+    background: #0f172a;
+    padding: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+  .page-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin-bottom: 10px;
+    letter-spacing: 0.3px;
+  }
+  .list-row {
+    background: #1e293b;
+    border-radius: 5px;
+    padding: 7px 10px;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .list-row .desc { font-size: 9px; color: #cbd5e1; }
+  .list-row .amt { font-size: 9px; font-weight: 600; }
+  .list-row .amt.exp { color: #f87171; }
+  .list-row .amt.inc { color: #4ade80; }
+  .cat-pill {
+    font-size: 7px;
+    background: #334155;
+    border-radius: 10px;
+    padding: 2px 6px;
+    color: #94a3b8;
+  }
+
+  /* ---- OPÇÃO A: MODAL CENTRADO ---- */
+  .backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  .modal-box {
+    background: #1e293b;
+    border: 1px solid #475569;
+    border-radius: 10px;
+    padding: 16px;
+    width: 200px;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+  }
+  .modal-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin-bottom: 12px;
+  }
+  .field-group { margin-bottom: 8px; }
+  .field-label { font-size: 7px; color: #94a3b8; margin-bottom: 3px; }
+  .field-input {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    height: 18px;
+    width: 100%;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .btn-cancel {
+    flex: 1;
+    height: 20px;
+    background: #334155;
+    border-radius: 4px;
+    font-size: 7px;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .btn-save {
+    flex: 1;
+    height: 20px;
+    background: #3b82f6;
+    border-radius: 4px;
+    font-size: 7px;
+    color: white;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ---- OPÇÃO B: DRAWER LATERAL ---- */
+  .drawer {
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 190px;
+    background: #1e293b;
+    border-left: 1px solid #475569;
+    padding: 14px;
+    z-index: 10;
+    box-shadow: -8px 0 24px rgba(0,0,0,0.4);
+  }
+  .drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .drawer-title { font-size: 11px; font-weight: 700; color: #f1f5f9; }
+  .close-btn { font-size: 10px; color: #64748b; }
+  .drawer-field { margin-bottom: 9px; }
+  .type-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+  .tab {
+    flex: 1;
+    height: 18px;
+    border-radius: 4px;
+    font-size: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+  }
+  .tab.active { background: #ef4444; color: white; }
+  .tab.inactive { background: #334155; color: #94a3b8; }
+  .drawer-save {
+    margin-top: 10px;
+    height: 22px;
+    background: #3b82f6;
+    border-radius: 5px;
+    font-size: 8px;
+    font-weight: 700;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+
+  /* Descrição */
+  .option-desc {
+    padding: 0 16px 14px;
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.5;
+  }
+  .tag {
+    display: inline-block;
+    background: #334155;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 10px;
+    margin-right: 3px;
+    margin-top: 4px;
+    color: #cbd5e1;
+  }
+  .tag.green { background: #14532d; color: #4ade80; }
+  .tag.yellow { background: #713f12; color: #fbbf24; }
+
+  .rec-badge {
+    font-size: 10px;
+    background: #1d4ed8;
+    color: #bfdbfe;
+    border-radius: 4px;
+    padding: 2px 7px;
+    margin-left: auto;
+  }
+
+  .selection-hint {
+    text-align: center;
+    color: #64748b;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Como exibir formulários no app?</h1>
+<p class="subtitle">Escolha o padrão para criar e editar transações, orçamentos e categorias</p>
+
+<div class="options-grid">
+
+  <!-- OPÇÃO A: MODAL CENTRADO -->
+  <div class="option-card" data-choice="centered" onclick="toggleSelect(this)">
+    <div class="option-label">
+      <span class="badge">A</span>
+      Modal Centrado
+    </div>
+
+    <div class="mockup-area">
+      <div class="app-shell">
+        <!-- Sidebar -->
+        <div class="sidebar">
+          <div class="sidebar-dot active"></div>
+          <div class="sidebar-dot"></div>
+          <div class="sidebar-dot"></div>
+          <div class="sidebar-dot"></div>
+        </div>
+        <!-- Lista atrás -->
+        <div class="main-area">
+          <div class="page-title">Transações</div>
+          <div class="list-row">
+            <div><div class="desc">Supermercado Extra</div><div class="cat-pill">Alimentação</div></div>
+            <div class="amt exp">-R$ 312,40</div>
+          </div>
+          <div class="list-row">
+            <div><div class="desc">Salário CLT</div><div class="cat-pill">Renda</div></div>
+            <div class="amt inc">+R$ 5.200</div>
+          </div>
+          <div class="list-row">
+            <div><div class="desc">Conta de Luz</div><div class="cat-pill">Moradia</div></div>
+            <div class="amt exp">-R$ 187,60</div>
+          </div>
+
+          <!-- Backdrop + Modal -->
+          <div class="backdrop">
+            <div class="modal-box">
+              <div class="modal-title">Nova Transação</div>
+              <div class="field-group">
+                <div class="field-label">VALOR (R$)</div>
+                <div class="field-input"></div>
+              </div>
+              <div class="field-group">
+                <div class="field-label">DESCRIÇÃO</div>
+                <div class="field-input"></div>
+              </div>
+              <div class="field-group">
+                <div class="field-label">CATEGORIA</div>
+                <div class="field-input"></div>
+              </div>
+              <div class="field-group">
+                <div class="field-label">CONTA</div>
+                <div class="field-input"></div>
+              </div>
+              <div class="modal-actions">
+                <div class="btn-cancel">Cancelar</div>
+                <div class="btn-save">Salvar</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="option-desc">
+      Overlay escurece a tela. Dialog aparece no centro. Fecha ao clicar fora ou pressionar Escape.
+      <br>
+      <span class="tag green">Simples de implementar</span>
+      <span class="tag">Padrão universal</span>
+    </div>
+  </div>
+
+  <!-- OPÇÃO B: DRAWER LATERAL -->
+  <div class="option-card" data-choice="drawer" onclick="toggleSelect(this)">
+    <div class="option-label">
+      <span class="badge">B</span>
+      Drawer Lateral
+      <span class="rec-badge">★ Recomendado</span>
+    </div>
+
+    <div class="mockup-area">
+      <div class="app-shell">
+        <!-- Sidebar -->
+        <div class="sidebar">
+          <div class="sidebar-dot active"></div>
+          <div class="sidebar-dot"></div>
+          <div class="sidebar-dot"></div>
+          <div class="sidebar-dot"></div>
+        </div>
+        <!-- Lista visível atrás (escurecida) -->
+        <div class="main-area" style="opacity:0.4;">
+          <div class="page-title">Transações</div>
+          <div class="list-row">
+            <div><div class="desc">Supermercado Extra</div></div>
+            <div class="amt exp">-R$ 312,40</div>
+          </div>
+          <div class="list-row">
+            <div><div class="desc">Salário CLT</div></div>
+            <div class="amt inc">+R$ 5.200</div>
+          </div>
+          <div class="list-row">
+            <div><div class="desc">Conta de Luz</div></div>
+            <div class="amt exp">-R$ 187,60</div>
+          </div>
+        </div>
+        <!-- Drawer -->
+        <div class="drawer">
+          <div class="drawer-header">
+            <div class="drawer-title">Nova Transação</div>
+            <div class="close-btn">✕</div>
+          </div>
+          <div class="type-tabs">
+            <div class="tab active">Gasto</div>
+            <div class="tab inactive">Receita</div>
+            <div class="tab inactive">Transfer.</div>
+          </div>
+          <div class="drawer-field">
+            <div class="field-label">VALOR (R$)</div>
+            <div class="field-input" style="height:22px;background:#0f172a;border:1px solid #475569;border-radius:4px;"></div>
+          </div>
+          <div class="drawer-field">
+            <div class="field-label">DESCRIÇÃO</div>
+            <div class="field-input" style="height:22px;background:#0f172a;border:1px solid #334155;border-radius:4px;"></div>
+          </div>
+          <div class="drawer-field">
+            <div class="field-label">CATEGORIA</div>
+            <div class="field-input" style="height:22px;background:#0f172a;border:1px solid #334155;border-radius:4px;"></div>
+          </div>
+          <div class="drawer-field">
+            <div class="field-label">CONTA</div>
+            <div class="field-input" style="height:22px;background:#0f172a;border:1px solid #334155;border-radius:4px;"></div>
+          </div>
+          <div class="drawer-field">
+            <div class="field-label">DATA</div>
+            <div class="field-input" style="height:22px;background:#0f172a;border:1px solid #334155;border-radius:4px;"></div>
+          </div>
+          <div class="drawer-save">Salvar Transação</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="option-desc">
+      Painel desliza pela direita. Todos os campos visíveis sem scroll. A lista fica visível atrás.
+      <br>
+      <span class="tag green">Mais campos visíveis</span>
+      <span class="tag green">Ótimo no mobile</span>
+      <span class="tag yellow">Requer animação CSS</span>
+    </div>
+  </div>
+
+  <!-- OPÇÃO C: PÁGINA PRÓPRIA -->
+  <div class="option-card" data-choice="page" onclick="toggleSelect(this)">
+    <div class="option-label">
+      <span class="badge">C</span>
+      Página Própria
+    </div>
+
+    <div class="mockup-area">
+      <div class="app-shell">
+        <!-- Sidebar -->
+        <div class="sidebar">
+          <div class="sidebar-dot active"></div>
+          <div class="sidebar-dot"></div>
+          <div class="sidebar-dot"></div>
+          <div class="sidebar-dot"></div>
+        </div>
+        <!-- Página de form -->
+        <div class="main-area">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <div style="font-size:10px;color:#64748b;">← Transações</div>
+            <div class="page-title" style="margin:0;">Nova Transação</div>
+          </div>
+          <div class="type-tabs">
+            <div class="tab active" style="height:22px;">Gasto</div>
+            <div class="tab inactive" style="height:22px;">Receita</div>
+            <div class="tab inactive" style="height:22px;">Transferência</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+            <div class="field-group">
+              <div class="field-label">VALOR (R$)</div>
+              <div class="field-input" style="height:22px;background:#1e293b;border:1px solid #475569;border-radius:4px;"></div>
+            </div>
+            <div class="field-group">
+              <div class="field-label">DATA</div>
+              <div class="field-input" style="height:22px;background:#1e293b;border:1px solid #334155;border-radius:4px;"></div>
+            </div>
+          </div>
+          <div class="field-group" style="margin-top:8px;">
+            <div class="field-label">DESCRIÇÃO</div>
+            <div class="field-input" style="height:22px;background:#1e293b;border:1px solid #334155;border-radius:4px;width:100%;"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+            <div class="field-group">
+              <div class="field-label">CATEGORIA</div>
+              <div class="field-input" style="height:22px;background:#1e293b;border:1px solid #334155;border-radius:4px;"></div>
+            </div>
+            <div class="field-group">
+              <div class="field-label">CONTA</div>
+              <div class="field-input" style="height:22px;background:#1e293b;border:1px solid #334155;border-radius:4px;"></div>
+            </div>
+          </div>
+          <div style="margin-top:14px;">
+            <div class="btn-save" style="height:24px;font-size:9px;border-radius:5px;width:100%;">Salvar Transação</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="option-desc">
+      Navega para uma página dedicada (<code>/transacoes/nova</code>). Mais espaço, sem sobreposições. Padrão mobile-first.
+      <br>
+      <span class="tag green">Máximo espaço</span>
+      <span class="tag">URL compartilhável</span>
+      <span class="tag yellow">Perde contexto da lista</span>
+    </div>
+  </div>
+
+</div>
+
+<p class="selection-hint">Clique em uma opção para selecionar → responda no terminal</p>
+
+</body>
+</html>

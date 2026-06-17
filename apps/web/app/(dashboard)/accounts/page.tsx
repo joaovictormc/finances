@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { Drawer } from "@/components/ui/drawer";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
+import { CategoryIcon } from "@/components/ui/category-icon";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
 import type { FinancialAccount } from "@/lib/types";
@@ -34,6 +35,7 @@ export default function AccountsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialAccount | null>(null);
+  const [formKey, setFormKey] = useState(0);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -49,8 +51,8 @@ export default function AccountsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const openNew = () => { setEditing(null); setDrawerOpen(true); };
-  const openEdit = (a: FinancialAccount) => { setEditing(a); setDrawerOpen(true); };
+  const openNew = () => { setEditing(null); setFormKey((k) => k + 1); setDrawerOpen(true); };
+  const openEdit = (a: FinancialAccount) => { setEditing(a); setFormKey((k) => k + 1); setDrawerOpen(true); };
   const closeDrawer = () => { setDrawerOpen(false); setEditing(null); };
 
   const handleDelete = async (id: string) => {
@@ -79,7 +81,7 @@ export default function AccountsPage() {
           <Spinner size="lg" />
         </div>
       ) : accounts.length === 0 ? (
-        <div className="bg-card rounded-lg border border-border">
+        <div className="bg-card rounded-2xl border border-border/60 shadow-sm">
           <EmptyState
             icon={CreditCard}
             title="Nenhuma conta cadastrada"
@@ -90,15 +92,10 @@ export default function AccountsPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {accounts.map((a) => (
-            <div key={a.id} className="bg-card rounded-lg border border-border p-5">
+            <div key={a.id} className="bg-card rounded-2xl border border-border/60 shadow-sm p-5 transition-shadow hover:shadow-md">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center text-xl"
-                    style={{ backgroundColor: a.color ? `${a.color}22` : undefined }}
-                  >
-                    {accountTypeIcons[a.type] ?? "🏦"}
-                  </div>
+                  <CategoryIcon icon={accountTypeIcons[a.type] ?? "🏦"} color={a.color} />
                   <div>
                     <p className="font-semibold text-foreground">{a.name}</p>
                     <p className="text-xs text-muted-foreground">
@@ -129,6 +126,7 @@ export default function AccountsPage() {
 
       <Drawer open={drawerOpen} onClose={closeDrawer} title={editing ? "Editar Conta" : "Nova Conta"}>
         <AccountForm
+          key={formKey}
           account={editing}
           onSuccess={() => { closeDrawer(); load(); }}
         />

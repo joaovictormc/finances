@@ -25,8 +25,8 @@ export const CreateTransactionSchema = z.object({
 export const UpdateTransactionSchema = CreateTransactionSchema.partial();
 
 export const TransactionFiltersSchema = z.object({
-  page: z.number().int().min(1).default(1),
-  limit: z.number().int().min(1).max(100).default(20),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
   startDate: z.string().date().optional(),
   endDate: z.string().date().optional(),
   type: TransactionTypeSchema.optional(),
@@ -34,7 +34,7 @@ export const TransactionFiltersSchema = z.object({
   accountId: z.string().optional(),
   search: z.string().optional(),
   source: z.string().optional(),
-  isIgnored: z.boolean().optional(),
+  isIgnored: z.coerce.boolean().optional(),
 });
 
 export type CreateTransaction = z.infer<typeof CreateTransactionSchema>;

@@ -51,7 +51,7 @@ Legenda: ✅ Feito | 🔄 Em progresso | 📋 Planejado
 
 | Funcionalidade | Status | Detalhes |
 |---|---|---|
-| Telegram: Fluxo de vinculação | 📋 | Web gera código → /start valida |
+| Telegram: Fluxo de vinculação | ✅ | `/start` gera código (Redis, 10min) → web resgata em `POST /api/bots/telegram/link`; página `/bot` funcional (status, vincular, desvincular) |
 | Telegram: Registro por texto | ✅ | Claude Haiku + confirmação via inline keyboard |
 | Telegram: Registro por voz | 📋 | Whisper API → Claude |
 | Telegram: /resumo mensal | ✅ | Consulta DB e responde em PT-BR |

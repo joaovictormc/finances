@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Input de Valor</title>
+<script src="/helper.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f172a; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 24px; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { color: #94a3b8; font-size: 14px; margin-bottom: 28px; }
+
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 860px; }
+
+  .option-card {
+    background: #1e293b;
+    border: 2px solid #334155;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.1s;
+  }
+  .option-card:hover { border-color: #3b82f6; transform: translateY(-2px); }
+  .option-card.selected { border-color: #3b82f6; background: #1e3a5f; }
+
+  .option-label {
+    padding: 16px 18px 12px;
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .badge { background: #334155; border-radius: 4px; padding: 2px 8px; font-size: 12px; color: #94a3b8; font-weight: 500; }
+  .selected .badge { background: #3b82f6; color: white; }
+  .rec-badge { font-size: 10px; background: #1d4ed8; color: #bfdbfe; border-radius: 4px; padding: 2px 7px; margin-left: auto; }
+
+  /* Drawer simulado */
+  .drawer-preview {
+    margin: 0 16px 16px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .drawer-title { font-size: 12px; font-weight: 700; color: #f1f5f9; margin-bottom: 16px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+
+  .field { margin-bottom: 14px; }
+  .field-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; font-weight: 600; }
+
+  /* OPÇÃO A — type=number */
+  .input-number {
+    width: 100%;
+    background: #1e293b;
+    border: 1.5px solid #475569;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #f1f5f9;
+    font-family: monospace;
+  }
+  .input-number-hint { font-size: 9px; color: #64748b; margin-top: 4px; }
+
+  /* OPÇÃO B — type=text com máscara */
+  .input-mask-wrap {
+    position: relative;
+  }
+  .input-prefix {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    font-weight: 700;
+    color: #64748b;
+  }
+  .input-mask {
+    width: 100%;
+    background: #1e293b;
+    border: 1.5px solid #475569;
+    border-radius: 6px;
+    padding: 10px 12px 10px 36px;
+    font-size: 22px;
+    font-weight: 700;
+    color: #f1f5f9;
+    font-family: monospace;
+  }
+  .input-mask-hint { font-size: 9px; color: #64748b; margin-top: 4px; }
+
+  /* Simulação de estados */
+  .states { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .state-chip {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 8px 12px;
+    text-align: center;
+    min-width: 90px;
+  }
+  .state-label { font-size: 8px; color: #64748b; margin-bottom: 4px; }
+  .state-value { font-size: 13px; font-weight: 700; color: #f1f5f9; font-family: monospace; }
+  .state-value.typed { color: #94a3b8; }
+  .state-value.green { color: #4ade80; }
+
+  .option-desc {
+    padding: 0 18px 18px;
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.6;
+  }
+  .tag { display: inline-block; background: #334155; border-radius: 4px; padding: 1px 6px; font-size: 10px; margin-right: 3px; margin-top: 5px; color: #cbd5e1; }
+  .tag.green { background: #14532d; color: #4ade80; }
+  .tag.red { background: #7f1d1d; color: #fca5a5; }
+
+  .selection-hint { text-align: center; color: #64748b; font-size: 12px; margin-top: 24px; }
+
+  /* Simulação do teclado numérico no mobile */
+  .kbd-sim {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+    margin-top: 10px;
+  }
+  .kbd-key {
+    background: #334155;
+    border-radius: 4px;
+    padding: 5px;
+    text-align: center;
+    font-size: 11px;
+    color: #cbd5e1;
+  }
+</style>
+</head>
+<body>
+
+<h1>Como digitar valores em BRL?</h1>
+<p class="subtitle">O campo de valor é usado em toda transação — precisa ser rápido e intuitivo para o usuário brasileiro</p>
+
+<div class="options-grid">
+
+  <!-- OPÇÃO A: type=number -->
+  <div class="option-card" data-choice="number" onclick="toggleSelect(this)">
+    <div class="option-label">
+      <span class="badge">A</span>
+      type="number" nativo
+    </div>
+
+    <div class="drawer-preview">
+      <div class="drawer-title">Nova Transação — Campo de Valor</div>
+
+      <div class="field">
+        <div class="field-label">Valor (R$)</div>
+        <input class="input-number" type="number" placeholder="0.00" step="0.01" readonly value="312.40">
+        <div class="input-number-hint">O browser controla a formatação conforme o locale do sistema</div>
+      </div>
+
+      <div class="states">
+        <div class="state-chip">
+          <div class="state-label">Usuário digita</div>
+          <div class="state-value typed">312.40</div>
+        </div>
+        <div class="state-chip">
+          <div class="state-label">Tela exibe</div>
+          <div class="state-value">312,40</div>
+        </div>
+        <div class="state-chip">
+          <div class="state-label">JS recebe</div>
+          <div class="state-value green">312.40</div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div class="field-label" style="margin-bottom:6px;">Teclado no mobile (iOS/Android)</div>
+        <div class="kbd-sim">
+          <div class="kbd-key">1</div><div class="kbd-key">2</div><div class="kbd-key">3</div>
+          <div class="kbd-key">4</div><div class="kbd-key">5</div><div class="kbd-key">6</div>
+          <div class="kbd-key">7</div><div class="kbd-key">8</div><div class="kbd-key">9</div>
+          <div class="kbd-key" style="color:#ef4444">✕</div><div class="kbd-key">0</div><div class="kbd-key">,</div>
+        </div>
+        <div class="input-number-hint" style="margin-top:6px;">⚠ Abre teclado numérico — mas alguns browsers iOS exibem ponto ao invés de vírgula</div>
+      </div>
+    </div>
+
+    <div class="option-desc">
+      Input nativo do browser. Simples de implementar. <strong>Problema:</strong> comportamento varia por browser/OS — no Chrome/Windows pode mostrar ponto, no iOS pode travar com vírgula. Precisaria de workaround para garantir padrão BR.
+      <br>
+      <span class="tag green">Simples de implementar</span>
+      <span class="tag green">Validação nativa</span>
+      <span class="tag red">Inconsistente entre browsers</span>
+      <span class="tag red">iOS pode dar problema</span>
+    </div>
+  </div>
+
+  <!-- OPÇÃO B: type=text com máscara -->
+  <div class="option-card" data-choice="mask" onclick="toggleSelect(this)">
+    <div class="option-label">
+      <span class="badge">B</span>
+      type="text" + máscara BR
+      <span class="rec-badge">★ Recomendado</span>
+    </div>
+
+    <div class="drawer-preview">
+      <div class="drawer-title">Nova Transação — Campo de Valor</div>
+
+      <div class="field">
+        <div class="field-label">Valor</div>
+        <div class="input-mask-wrap">
+          <span class="input-prefix">R$</span>
+          <input class="input-mask" type="text" inputmode="numeric" readonly value="1.234,56">
+        </div>
+        <div class="input-mask-hint">inputmode="numeric" força teclado numérico no mobile mantendo type=text</div>
+      </div>
+
+      <div class="states">
+        <div class="state-chip">
+          <div class="state-label">Usuário digita</div>
+          <div class="state-value typed">123456</div>
+        </div>
+        <div class="state-chip">
+          <div class="state-label">Tela exibe</div>
+          <div class="state-value">1.234,56</div>
+        </div>
+        <div class="state-chip">
+          <div class="state-label">JS envia</div>
+          <div class="state-value green">1234.56</div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div class="field-label" style="margin-bottom:6px;">Lógica da máscara (20 linhas de código)</div>
+        <div style="background:#0f172a;border-radius:6px;padding:10px;font-family:monospace;font-size:9px;color:#94a3b8;line-height:1.6;">
+          <span style="color:#64748b">// Ao digitar: formata centavos da direita</span><br>
+          "1"     → <span style="color:#4ade80">"0,01"</span><br>
+          "12"    → <span style="color:#4ade80">"0,12"</span><br>
+          "123"   → <span style="color:#4ade80">"1,23"</span><br>
+          "1234"  → <span style="color:#4ade80">"12,34"</span><br>
+          "12345" → <span style="color:#4ade80">"123,45"</span><br>
+          "123456"→ <span style="color:#4ade80">"1.234,56"</span><br>
+          <span style="color:#64748b">// Submit: replace(",","").replace(".","") → /100</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="option-desc">
+      Máscara formatada em tempo real estilo "caixa registradora": sempre começa pelos centavos e vai preenchendo para a esquerda. Comportamento idêntico ao Nubank, PicPay, iFood. Totalmente consistente em qualquer browser ou dispositivo.
+      <br>
+      <span class="tag green">100% consistente BR</span>
+      <span class="tag green">Experiência Nubank/PicPay</span>
+      <span class="tag green">Teclado numérico no mobile</span>
+      <span class="tag" style="background:#1e3a5f;color:#93c5fd;">~20 linhas de código extra</span>
+    </div>
+  </div>
+
+</div>
+
+<p class="selection-hint">Clique para selecionar → responda no terminal</p>
+
+</body>
+</html>

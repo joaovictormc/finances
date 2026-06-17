@@ -7,7 +7,7 @@ export type Transaction = {
   notes: string | null;
   isIgnored: boolean;
   source: string;
-  category: { id: string; name: string; icon: string | null; color: string | null } | null;
+  category: { id: string; name: string; icon: string | null; iconUrl?: string | null; color: string | null } | null;
   account: { id: string; name: string; institution: string | null; color: string | null };
   createdAt: string;
 };
@@ -21,6 +21,7 @@ export type Category = {
   id: string;
   name: string;
   icon: string | null;
+  iconUrl?: string | null;
   color: string | null;
   type: string;
   children: Category[];
@@ -40,7 +41,7 @@ export type Budget = {
   amount: string;
   period: string;
   alertThreshold: string;
-  category: { id: string; name: string; icon: string | null } | null;
+  category: { id: string; name: string; icon: string | null; color: string | null } | null;
   spentAmount: number;
   percentage: number;
   isOverBudget: boolean;
@@ -55,6 +56,7 @@ export type Goal = {
   currentAmount: string;
   targetDate: string | null;
   icon: string | null;
+  iconUrl?: string | null;
   color: string | null;
   isCompleted: boolean;
   createdAt: string;
@@ -69,6 +71,6 @@ export type RecurringBill = {
   nextDueDate: string | null;
   lastPaidDate: string | null;
   isActive: boolean;
-  category: { id: string; name: string; icon: string | null } | null;
+  category: { id: string; name: string; icon: string | null; iconUrl?: string | null } | null;
   createdAt: string;
 };

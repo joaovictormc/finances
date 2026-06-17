@@ -28,6 +28,7 @@ export default function TransactionsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
   const [meta, setMeta] = useState({ page: 1, total: 0, totalPages: 1 });
+  const [formKey, setFormKey] = useState(0);
 
   const loadTransactions = useCallback(async (f: Filters, page = 1) => {
     setIsLoading(true);
@@ -64,8 +65,8 @@ export default function TransactionsPage() {
     loadTransactions(filters);
   }, [filters]);
 
-  const openNew = () => { setEditing(null); setDrawerOpen(true); };
-  const openEdit = (t: Transaction) => { setEditing(t); setDrawerOpen(true); };
+  const openNew = () => { setEditing(null); setFormKey((k) => k + 1); setDrawerOpen(true); };
+  const openEdit = (t: Transaction) => { setEditing(t); setFormKey((k) => k + 1); setDrawerOpen(true); };
   const closeDrawer = () => { setDrawerOpen(false); setEditing(null); };
 
   const handleDelete = async (id: string) => {
@@ -93,7 +94,7 @@ export default function TransactionsPage() {
         </p>
       </div>
 
-      <div className="bg-card rounded-lg border border-border p-4 mb-4">
+      <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-4 mb-4">
         <TransactionFilters filters={filters} onChange={setFilters} onNew={openNew} />
       </div>
 
@@ -134,6 +135,7 @@ export default function TransactionsPage() {
         title={editing ? "Editar Transação" : "Nova Transação"}
       >
         <TransactionForm
+          key={formKey}
           transaction={editing}
           categories={categories}
           accounts={accounts}

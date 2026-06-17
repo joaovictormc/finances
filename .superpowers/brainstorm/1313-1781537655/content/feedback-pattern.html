@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feedback ao Usuário</title>
+<script src="/helper.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f172a; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 24px; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { color: #94a3b8; font-size: 14px; margin-bottom: 28px; }
+
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 960px; }
+
+  .option-card {
+    background: #1e293b; border: 2px solid #334155; border-radius: 12px;
+    overflow: hidden; cursor: pointer; transition: border-color 0.2s, transform 0.1s;
+  }
+  .option-card:hover { border-color: #3b82f6; transform: translateY(-2px); }
+  .option-card.selected { border-color: #3b82f6; background: #1e3a5f; }
+
+  .option-label {
+    padding: 16px 18px 12px; font-size: 15px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .badge { background: #334155; border-radius: 4px; padding: 2px 8px; font-size: 12px; color: #94a3b8; }
+  .selected .badge { background: #3b82f6; color: white; }
+  .rec-badge { font-size: 10px; background: #1d4ed8; color: #bfdbfe; border-radius: 4px; padding: 2px 7px; margin-left: auto; }
+
+  .preview-area {
+    margin: 0 16px 16px; background: #0f172a; border: 1px solid #334155;
+    border-radius: 8px; overflow: hidden; position: relative; min-height: 280px;
+  }
+
+  /* App chrome compartilhada */
+  .app-top { padding: 10px 14px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
+  .app-top-title { font-size: 11px; font-weight: 700; color: #f1f5f9; }
+  .btn-new { font-size: 9px; background: #3b82f6; color: white; border-radius: 5px; padding: 4px 9px; font-weight: 600; }
+
+  .table-header {
+    display: grid; grid-template-columns: 80px 1fr 90px 70px;
+    padding: 7px 14px; border-bottom: 1px solid #1e293b;
+    font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .table-row {
+    display: grid; grid-template-columns: 80px 1fr 90px 70px;
+    padding: 9px 14px; border-bottom: 1px solid #111827; align-items: center;
+  }
+  .col-date { font-size: 10px; color: #64748b; }
+  .col-desc { font-size: 11px; color: #f1f5f9; font-weight: 500; }
+  .col-cat { font-size: 9px; color: #64748b; }
+  .col-amt { font-size: 11px; font-weight: 700; text-align: right; }
+  .col-amt.exp { color: #f87171; }
+  .col-amt.inc { color: #4ade80; }
+
+  /* ---- OPÇÃO A: TOAST ---- */
+  .toast {
+    position: absolute; bottom: 16px; right: 16px;
+    background: #1e293b; border: 1px solid #334155;
+    border-radius: 8px; padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    min-width: 200px; z-index: 20;
+  }
+  .toast-icon { font-size: 16px; }
+  .toast-text { flex: 1; }
+  .toast-title { font-size: 11px; font-weight: 600; color: #f1f5f9; }
+  .toast-sub { font-size: 9px; color: #64748b; margin-top: 2px; }
+  .toast-close { font-size: 10px; color: #475569; cursor: pointer; }
+  .toast-bar {
+    position: absolute; bottom: 0; left: 0;
+    height: 3px; background: #22c55e; border-radius: 0 0 8px 8px;
+    width: 40%; /* simula progresso de auto-dismiss */
+  }
+  .toast.success { border-color: #166534; }
+  .toast.error { border-color: #7f1d1d; }
+
+  /* Nova linha destacada na tabela */
+  .table-row.new-row {
+    background: #052e16;
+    border-left: 3px solid #22c55e;
+    animation: none;
+  }
+  .new-badge { font-size: 8px; background: #14532d; color: #4ade80; border-radius: 3px; padding: 1px 5px; margin-left: 5px; }
+
+  /* ---- OPÇÃO B: INLINE ---- */
+  .inline-banner {
+    margin: 10px 14px; padding: 10px 14px;
+    background: #052e16; border: 1px solid #166534;
+    border-radius: 8px; display: flex; align-items: center; gap: 10px;
+  }
+  .inline-icon { font-size: 16px; }
+  .inline-text { flex: 1; }
+  .inline-title { font-size: 11px; font-weight: 600; color: #4ade80; }
+  .inline-sub { font-size: 9px; color: #86efac; margin-top: 2px; }
+  .inline-dismiss { font-size: 9px; color: #166534; text-decoration: underline; cursor: pointer; }
+
+  .inline-banner.error {
+    background: #450a0a; border-color: #7f1d1d;
+  }
+  .inline-banner.error .inline-title { color: #fca5a5; }
+  .inline-banner.error .inline-sub { color: #fca5a5; opacity: 0.7; }
+
+  .option-desc {
+    padding: 0 18px 18px; font-size: 12px; color: #94a3b8; line-height: 1.6;
+  }
+  .tag { display: inline-block; background: #334155; border-radius: 4px; padding: 1px 6px; font-size: 10px; margin-right: 3px; margin-top: 5px; color: #cbd5e1; }
+  .tag.green { background: #14532d; color: #4ade80; }
+  .tag.yellow { background: #713f12; color: #fbbf24; }
+
+  .scenarios { margin: 10px 16px 0; display: flex; gap: 6px; flex-wrap: wrap; }
+  .scenario-chip { background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 5px 10px; font-size: 10px; color: #94a3b8; }
+  .scenario-chip span { font-size: 11px; }
+
+  .selection-hint { text-align: center; color: #64748b; font-size: 12px; margin-top: 24px; }
+</style>
+</head>
+<body>
+
+<h1>Feedback após salvar / deletar</h1>
+<p class="subtitle">O que o usuário vê depois que cria, edita ou deleta uma transação?</p>
+
+<div class="options-grid">
+
+  <!-- OPÇÃO A: TOAST -->
+  <div class="option-card" data-choice="toast" onclick="toggleSelect(this)">
+    <div class="option-label">
+      <span class="badge">A</span>
+      Toast (notificação flutuante)
+      <span class="rec-badge">★ Recomendado</span>
+    </div>
+
+    <div class="preview-area">
+      <div class="app-top">
+        <span class="app-top-title">Transações — Junho 2025</span>
+        <span class="btn-new">+ Nova</span>
+      </div>
+      <div class="table-header">
+        <span>Data</span><span>Descrição</span><span>Categoria</span><span style="text-align:right">Valor</span>
+      </div>
+      <!-- Nova transação destacada no topo -->
+      <div class="table-row new-row">
+        <div class="col-date">14 jun</div>
+        <div class="col-desc">Supermercado <span class="new-badge">novo</span></div>
+        <div class="col-cat">🛒 Alimentação</div>
+        <div class="col-amt exp">-R$ 312,40</div>
+      </div>
+      <div class="table-row">
+        <div class="col-date">13 jun</div>
+        <div class="col-desc">Salário CLT</div>
+        <div class="col-cat">💼 Salário</div>
+        <div class="col-amt inc">+R$ 5.200,00</div>
+      </div>
+      <div class="table-row">
+        <div class="col-date">12 jun</div>
+        <div class="col-desc">Netflix</div>
+        <div class="col-cat">🎬 Lazer</div>
+        <div class="col-amt exp">-R$ 55,90</div>
+      </div>
+
+      <!-- Toast de sucesso -->
+      <div class="toast success">
+        <div class="toast-icon">✅</div>
+        <div class="toast-text">
+          <div class="toast-title">Transação criada!</div>
+          <div class="toast-sub">Supermercado · R$ 312,40</div>
+        </div>
+        <div class="toast-close">✕</div>
+        <div class="toast-bar"></div>
+      </div>
+    </div>
+
+    <div class="scenarios">
+      <div class="scenario-chip"><span>✅</span> Criou</div>
+      <div class="scenario-chip"><span>✏️</span> Editou</div>
+      <div class="scenario-chip"><span>🗑️</span> Deletou</div>
+      <div class="scenario-chip"><span>❌</span> Erro de rede</div>
+    </div>
+
+    <div class="option-desc" style="margin-top:10px;">
+      Notificação flutuante no canto inferior direito. Desaparece automaticamente em 4s. Não bloqueia a tela — o usuário pode continuar usando o app. Padrão do GitHub, Linear, Vercel.
+      <br>
+      <span class="tag green">Não interrompe o fluxo</span>
+      <span class="tag green">Funciona para todos os cenários</span>
+      <span class="tag green">Cobre erros de rede também</span>
+    </div>
+  </div>
+
+  <!-- OPÇÃO B: INLINE BANNER -->
+  <div class="option-card" data-choice="inline" onclick="toggleSelect(this)">
+    <div class="option-label">
+      <span class="badge">B</span>
+      Banner inline (dentro da página)
+    </div>
+
+    <div class="preview-area">
+      <div class="app-top">
+        <span class="app-top-title">Transações — Junho 2025</span>
+        <span class="btn-new">+ Nova</span>
+      </div>
+
+      <!-- Banner de sucesso inline -->
+      <div class="inline-banner">
+        <div class="inline-icon">✅</div>
+        <div class="inline-text">
+          <div class="inline-title">Transação criada com sucesso!</div>
+          <div class="inline-sub">Supermercado · R$ 312,40 · 14 jun 2025</div>
+        </div>
+        <div class="inline-dismiss">Fechar</div>
+      </div>
+
+      <div class="table-header">
+        <span>Data</span><span>Descrição</span><span>Categoria</span><span style="text-align:right">Valor</span>
+      </div>
+      <div class="table-row">
+        <div class="col-date">14 jun</div>
+        <div class="col-desc">Supermercado</div>
+        <div class="col-cat">🛒 Alimentação</div>
+        <div class="col-amt exp">-R$ 312,40</div>
+      </div>
+      <div class="table-row">
+        <div class="col-date">13 jun</div>
+        <div class="col-desc">Salário CLT</div>
+        <div class="col-cat">💼 Salário</div>
+        <div class="col-amt inc">+R$ 5.200,00</div>
+      </div>
+
+      <!-- Banner de erro inline -->
+      <div class="inline-banner error" style="margin-top:6px;">
+        <div class="inline-icon">❌</div>
+        <div class="inline-text">
+          <div class="inline-title">Erro ao salvar transação</div>
+          <div class="inline-sub">Verifique sua conexão e tente novamente</div>
+        </div>
+        <div class="inline-dismiss" style="color:#7f1d1d;">Fechar</div>
+      </div>
+    </div>
+
+    <div class="option-desc" style="margin-top:10px;">
+      Banner aparece no topo da lista, empurrando o conteúdo para baixo. Permanece até o usuário fechar. Mais visível — útil quando o usuário precisa confirmar que a ação ocorreu.
+      <br>
+      <span class="tag green">Muito visível</span>
+      <span class="tag yellow">Empurra o conteúdo</span>
+      <span class="tag yellow">Ocupa espaço permanentemente</span>
+    </div>
+  </div>
+
+</div>
+
+<p class="selection-hint">Clique para selecionar → responda no terminal</p>
+
+</body>
+</html>

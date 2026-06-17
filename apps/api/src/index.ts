@@ -5,6 +5,7 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { auth } from "./lib/auth";
 import { telegramWebhookHandler } from "./routes/bots/telegram";
+import telegramLinkRoute from "./routes/bots/telegram-link";
 import transactionsRoute from "./routes/transactions";
 import financialAccountsRoute from "./routes/financial-accounts";
 import categoriesRoute from "./routes/categories";
@@ -41,6 +42,9 @@ app.on(["GET", "POST"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 // ── Bot webhooks ──────────────────────────────────────────────────────────────
 app.post("/api/bots/telegram", telegramWebhookHandler);
+
+// ── Telegram account linking (web → bot) ──────────────────────────────────────
+app.route("/api/bots/telegram", telegramLinkRoute);
 
 // ── API routes ────────────────────────────────────────────────────────────────
 app.route("/api/transactions", transactionsRoute);

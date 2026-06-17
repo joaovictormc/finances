@@ -18,10 +18,10 @@ interface TransactionFormProps {
   onSuccess: () => void;
 }
 
-const tabs: { value: TransactionType; label: string }[] = [
-  { value: "expense", label: "Gasto" },
-  { value: "income", label: "Receita" },
-  { value: "transfer", label: "Transferência" },
+const tabs: { value: TransactionType; label: string; activeClass: string }[] = [
+  { value: "expense", label: "Gasto", activeClass: "bg-destructive text-white" },
+  { value: "income", label: "Receita", activeClass: "bg-success text-white" },
+  { value: "transfer", label: "Transferência", activeClass: "bg-primary text-primary-foreground" },
 ];
 
 function flattenCategories(cats: Category[], type: string): Category[] {
@@ -97,16 +97,16 @@ export function TransactionForm({ transaction, categories, accounts, onSuccess }
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Type tabs */}
-      <div className="flex rounded-md border border-border overflow-hidden">
+      <div className="flex gap-1.5 rounded-lg bg-muted p-1">
         {tabs.map((tab) => (
           <button
             key={tab.value}
             type="button"
             onClick={() => setType(tab.value)}
-            className={`flex-1 py-2 text-sm font-medium transition-colors ${
+            className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${
               type === tab.value
-                ? "bg-primary text-primary-foreground"
-                : "bg-card text-muted-foreground hover:bg-accent"
+                ? tab.activeClass
+                : "text-muted-foreground hover:bg-accent"
             }`}
           >
             {tab.label}

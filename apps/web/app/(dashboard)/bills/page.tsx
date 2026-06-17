@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
-import { formatBRL, formatDate } from "@/lib/utils";
+import { cn, formatBRL, formatDate } from "@/lib/utils";
 import type { RecurringBill } from "@/lib/types";
 
 const frequencyLabels: Record<string, string> = {
@@ -28,6 +28,7 @@ export default function BillsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<RecurringBill | null>(null);
+  const [formKey, setFormKey] = useState(0);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -43,8 +44,8 @@ export default function BillsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const openNew = () => { setEditing(null); setDrawerOpen(true); };
-  const openEdit = (b: RecurringBill) => { setEditing(b); setDrawerOpen(true); };
+  const openNew = () => { setEditing(null); setFormKey((k) => k + 1); setDrawerOpen(true); };
+  const openEdit = (b: RecurringBill) => { setEditing(b); setFormKey((k) => k + 1); setDrawerOpen(true); };
   const closeDrawer = () => { setDrawerOpen(false); setEditing(null); };
 
   const handleDelete = async (id: string) => {
@@ -82,7 +83,7 @@ export default function BillsPage() {
           <Spinner size="lg" />
         </div>
       ) : bills.length === 0 ? (
-        <div className="bg-card rounded-lg border border-border">
+        <div className="bg-card rounded-2xl border border-border/60 shadow-sm">
           <EmptyState
             icon={FileText}
             title="Nenhuma conta recorrente"
@@ -91,46 +92,65 @@ export default function BillsPage() {
           />
         </div>
       ) : (
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
-          {bills.map((b, i) => (
-            <div key={b.id} className={`flex items-center gap-4 px-5 py-4 ${i < bills.length - 1 ? "border-b border-border" : ""}`}>
-              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-lg shrink-0">
-                {b.category?.icon ?? "📄"}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-medium text-foreground">{b.name}</p>
-                  {getDueBadge(b)}
-                  {!b.isActive && <Badge variant="default">Inativa</Badge>}
-                </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {frequencyLabels[b.frequency] ?? b.frequency}
-                  {b.dayOfMonth && ` · Todo dia ${b.dayOfMonth}`}
-                  {b.nextDueDate && ` · Próximo: ${formatDate(b.nextDueDate)}`}
-                </p>
-              </div>
-              <div className="text-right shrink-0">
-                {b.expectedAmount ? (
-                  <p className="font-semibold text-foreground">{formatBRL(Number(b.expectedAmount))}</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Valor variável</p>
-                )}
-                <div className="flex gap-1 justify-end mt-1">
-                  <button onClick={() => openEdit(b)} className="text-xs px-2 py-1 rounded text-muted-foreground hover:bg-accent transition-colors">
-                    Editar
-                  </button>
-                  <button onClick={() => handleDelete(b.id)} className="text-xs px-2 py-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
-                    Remover
-                  </button>
-                </div>
-              </div>
+        (() => {
+          const featuredId = bills
+            .filter((b) => b.isActive && b.nextDueDate)
+            .slice()
+            .sort((a, b) => new Date(a.nextDueDate!).getTime() - new Date(b.nextDueDate!).getTime())[0]?.id;
+
+          return (
+            <div className="bg-card rounded-2xl border border-border/60 shadow-sm overflow-hidden">
+              {bills.map((b, i) => {
+                const featured = b.id === featuredId;
+                return (
+                  <div
+                    key={b.id}
+                    className={cn(
+                      "flex items-center gap-4 px-5 py-4",
+                      featured ? "bg-primary text-primary-foreground" : i < bills.length - 1 ? "border-b border-border/60" : ""
+                    )}
+                  >
+                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 bg-white shadow-sm")}>
+                      {b.category?.icon ?? "📄"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className={cn("font-medium", featured ? "text-primary-foreground" : "text-foreground")}>{b.name}</p>
+                        {!featured && getDueBadge(b)}
+                        {!b.isActive && <Badge variant="default">Inativa</Badge>}
+                      </div>
+                      <p className={cn("text-xs mt-0.5", featured ? "text-primary-foreground/75" : "text-muted-foreground")}>
+                        {frequencyLabels[b.frequency] ?? b.frequency}
+                        {b.dayOfMonth && ` · Todo dia ${b.dayOfMonth}`}
+                        {b.nextDueDate && ` · Próximo: ${formatDate(b.nextDueDate)}`}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {b.expectedAmount ? (
+                        <p className={cn("font-semibold", featured ? "text-primary-foreground" : "text-foreground")}>{formatBRL(Number(b.expectedAmount))}</p>
+                      ) : (
+                        <p className={cn("text-sm", featured ? "text-primary-foreground/75" : "text-muted-foreground")}>Valor variável</p>
+                      )}
+                      <div className="flex gap-1 justify-end mt-1">
+                        <button onClick={() => openEdit(b)} className={cn("text-xs px-2 py-1 rounded transition-colors", featured ? "text-primary-foreground/80 hover:bg-white/15" : "text-muted-foreground hover:bg-accent")}>
+                          Editar
+                        </button>
+                        <button onClick={() => handleDelete(b.id)} className={cn("text-xs px-2 py-1 rounded transition-colors", featured ? "text-primary-foreground/80 hover:bg-white/15" : "text-muted-foreground hover:text-destructive hover:bg-destructive/10")}>
+                          Remover
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          ))}
-        </div>
+          );
+        })()
       )}
 
       <Drawer open={drawerOpen} onClose={closeDrawer} title={editing ? "Editar Conta" : "Nova Conta Recorrente"}>
         <BillForm
+          key={formKey}
           bill={editing}
           onSuccess={() => { closeDrawer(); load(); }}
         />

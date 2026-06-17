@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { formatBRL } from "@/lib/utils";
-import { api } from "@/lib/api-client";
+import { serverApiGet } from "@/lib/api-server";
 import { MonthNav } from "@/components/overview/month-nav";
 import { SpendingPieChart } from "@/components/overview/spending-pie-chart";
 import { MonthlyBarChart } from "@/components/overview/monthly-bar-chart";
+import { HeroBalanceCard } from "@/components/overview/hero-balance-card";
+import { GoalsPreview } from "@/components/overview/goals-preview";
+import { RecentTransactions } from "@/components/overview/recent-transactions";
+import { UpcomingBills } from "@/components/overview/upcoming-bills";
+import type { Goal, RecurringBill, PaginatedResponse, Transaction } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Visão Geral" };
 
@@ -21,9 +27,34 @@ type MonthlyReport = {
 
 async function fetchReport(year: number, month: number): Promise<MonthlyReport | null> {
   try {
-    return await api.get<MonthlyReport>("/api/transactions/reports/monthly", { year, month });
+    return await serverApiGet<MonthlyReport>("/api/transactions/reports/monthly", { year, month });
   } catch {
     return null;
+  }
+}
+
+async function fetchGoals(): Promise<Goal[]> {
+  try {
+    return await serverApiGet<Goal[]>("/api/goals");
+  } catch {
+    return [];
+  }
+}
+
+async function fetchBills(): Promise<RecurringBill[]> {
+  try {
+    return await serverApiGet<RecurringBill[]>("/api/bills");
+  } catch {
+    return [];
+  }
+}
+
+async function fetchRecentTransactions(): Promise<Transaction[]> {
+  try {
+    const res = await serverApiGet<PaginatedResponse<Transaction>>("/api/transactions", { page: 1, limit: 6 });
+    return res.data;
+  } catch {
+    return [];
   }
 }
 
@@ -43,8 +74,11 @@ export default async function OverviewPage({
     return { year: d.getFullYear(), month: d.getMonth() + 1 };
   });
 
-  const [currentReport, ...historyReports] = await Promise.all([
+  const [currentReport, goals, bills, recentTransactions, ...historyReports] = await Promise.all([
     fetchReport(year, month),
+    fetchGoals(),
+    fetchBills(),
+    fetchRecentTransactions(),
     ...sixMonths.slice(0, 5).map((m) => fetchReport(m.year, m.month)),
   ]);
 
@@ -84,70 +118,51 @@ export default async function OverviewPage({
         <MonthNav year={year} month={month} />
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <KpiCard
-          title="Receitas"
-          value={currentReport?.income ?? 0}
-          valueClass="text-success"
-          prefix="+"
-        />
-        <KpiCard
-          title="Gastos"
-          value={currentReport?.expense ?? 0}
-          valueClass="text-destructive"
-          prefix="-"
-        />
-        <KpiCard
-          title="Saldo"
-          value={balance}
-          valueClass={balance >= 0 ? "text-success" : "text-destructive"}
-          prefix={balance >= 0 ? "+" : ""}
-        />
+      {/* Hero balance + goals */}
+      <div className="mb-6 grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div className="lg:col-span-2">
+          <HeroBalanceCard
+            balance={balance}
+            income={currentReport?.income ?? 0}
+            expense={currentReport?.expense ?? 0}
+          />
+        </div>
+        <div className="lg:col-span-3">
+          <GoalsPreview goals={goals} />
+        </div>
       </div>
 
       {!currentReport ? (
-        <div className="bg-card rounded-lg border border-border p-10 text-center text-muted-foreground">
+        <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-10 text-center text-muted-foreground mb-6">
           <p className="text-2xl mb-2">📊</p>
           <p className="font-medium">Sem dados para este mês</p>
           <p className="text-sm mt-1">Adicione transações para ver o resumo aqui</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
           {/* Pie chart */}
-          <div className="bg-card rounded-lg border border-border p-6">
+          <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
             <h2 className="font-semibold mb-4 text-foreground">Gastos por Categoria</h2>
             <SpendingPieChart data={pieData} totalExpense={currentReport.expense} />
           </div>
 
           {/* Bar chart */}
-          <div className="bg-card rounded-lg border border-border p-6">
+          <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
             <h2 className="font-semibold mb-4 text-foreground">Receitas vs Gastos — 6 meses</h2>
             <MonthlyBarChart data={barData} />
           </div>
         </div>
       )}
-    </div>
-  );
-}
 
-function KpiCard({
-  title,
-  value,
-  valueClass,
-  prefix = "",
-}: {
-  title: string;
-  value: number;
-  valueClass: string;
-  prefix?: string;
-}) {
-  return (
-    <div className="bg-card rounded-lg border border-border p-5">
-      <p className="text-sm text-muted-foreground mb-1">{title}</p>
-      <p className={`text-2xl font-bold tabular-nums ${valueClass}`}>
-        {prefix}{formatBRL(value)}
-      </p>
+      {/* Recent transactions + upcoming bills */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div className="lg:col-span-3">
+          <RecentTransactions transactions={recentTransactions} />
+        </div>
+        <div className="lg:col-span-2">
+          <UpcomingBills bills={bills} />
+        </div>
+      </div>
     </div>
   );
 }

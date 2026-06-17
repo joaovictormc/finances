@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { TelegramLink } from "@/components/bot/telegram-link";
 
 export const metadata: Metadata = { title: "Integração Bot" };
 
@@ -14,9 +15,9 @@ export default function BotPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Telegram */}
-        <div className="bg-card rounded-lg border border-border p-6">
+        <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white font-bold shadow-sm">
               ✈️
             </div>
             <div>
@@ -39,13 +40,13 @@ export default function BotPage() {
             </p>
           </div>
 
-          <TelegramLinkSection />
+          <TelegramLink />
         </div>
 
         {/* WhatsApp */}
-        <div className="bg-card rounded-lg border border-border p-6 opacity-70">
+        <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-6 opacity-70">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 rounded-xl bg-green-500 flex items-center justify-center text-white font-bold shadow-sm">
               💬
             </div>
             <div>
@@ -67,28 +68,6 @@ export default function BotPage() {
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function TelegramLinkSection() {
-  return (
-    <div className="space-y-3">
-      <div className="flex gap-2">
-        <input
-          type="text"
-          placeholder="Cole o código do Telegram aqui"
-          className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-        <button className="rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:opacity-90">
-          Vincular
-        </button>
-      </div>
-      <p className="text-xs text-muted-foreground">
-        1. Abra o Telegram e busque nosso bot<br />
-        2. Envie /start<br />
-        3. Cole o código de 6 dígitos acima
-      </p>
     </div>
   );
 }

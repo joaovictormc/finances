@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Drawer } from "@/components/ui/drawer";
 import { ProgressBar } from "@/components/ui/progress-bar";
+import { CategoryIcon } from "@/components/ui/category-icon";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
-import { formatBRL, formatDate } from "@/lib/utils";
+import { cn, formatBRL, formatDate } from "@/lib/utils";
 import type { Goal } from "@/lib/types";
 
 export default function GoalsPage() {
@@ -20,6 +21,7 @@ export default function GoalsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Goal | null>(null);
+  const [formKey, setFormKey] = useState(0);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -35,8 +37,8 @@ export default function GoalsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const openNew = () => { setEditing(null); setDrawerOpen(true); };
-  const openEdit = (g: Goal) => { setEditing(g); setDrawerOpen(true); };
+  const openNew = () => { setEditing(null); setFormKey((k) => k + 1); setDrawerOpen(true); };
+  const openEdit = (g: Goal) => { setEditing(g); setFormKey((k) => k + 1); setDrawerOpen(true); };
   const closeDrawer = () => { setDrawerOpen(false); setEditing(null); };
 
   const handleDelete = async (id: string) => {
@@ -65,7 +67,7 @@ export default function GoalsPage() {
           <Spinner size="lg" />
         </div>
       ) : goals.length === 0 ? (
-        <div className="bg-card rounded-lg border border-border">
+        <div className="bg-card rounded-2xl border border-border/60 shadow-sm">
           <EmptyState
             icon={Target}
             title="Nenhuma meta criada"
@@ -75,68 +77,94 @@ export default function GoalsPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {goals.map((g) => {
-            const pct = Number(g.targetAmount) > 0
-              ? Number(g.currentAmount) / Number(g.targetAmount)
-              : 0;
-            const daysLeft = g.targetDate
-              ? Math.ceil((new Date(g.targetDate).getTime() - Date.now()) / 86400000)
-              : null;
+          {(() => {
+            const featuredId = goals
+              .filter((g) => !g.isCompleted)
+              .slice()
+              .sort((a, b) => {
+                const da = a.targetDate ? new Date(a.targetDate).getTime() : Infinity;
+                const db = b.targetDate ? new Date(b.targetDate).getTime() : Infinity;
+                return da - db;
+              })[0]?.id;
 
-            return (
-              <div key={g.id} className="bg-card rounded-lg border border-border p-5">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    {g.icon && <span className="text-2xl">{g.icon}</span>}
-                    <div>
-                      <p className="font-semibold text-foreground">{g.name}</p>
-                      {g.description && (
-                        <p className="text-xs text-muted-foreground">{g.description}</p>
-                      )}
+            return goals.map((g) => {
+              const pct = Number(g.targetAmount) > 0
+                ? Number(g.currentAmount) / Number(g.targetAmount)
+                : 0;
+              const daysLeft = g.targetDate
+                ? Math.ceil((new Date(g.targetDate).getTime() - Date.now()) / 86400000)
+                : null;
+              const featured = g.id === featuredId;
+              const fillColor = featured ? g.color || "var(--color-primary)" : undefined;
+
+              return (
+                <div
+                  key={g.id}
+                  className={cn(
+                    "rounded-2xl shadow-sm p-5 transition-shadow hover:shadow-md",
+                    featured ? "text-white" : "bg-card border border-border/60"
+                  )}
+                  style={featured ? { backgroundColor: fillColor } : undefined}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <CategoryIcon icon={g.icon} iconUrl={g.iconUrl} color={featured ? "#fff" : g.color} />
+                      <div>
+                        <p className={cn("font-semibold", featured ? "text-white" : "text-foreground")}>{g.name}</p>
+                        {g.description && (
+                          <p className={cn("text-xs", featured ? "text-white/75" : "text-muted-foreground")}>{g.description}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={() => openEdit(g)} className={cn("text-xs px-2 py-1 rounded transition-colors", featured ? "text-white/80 hover:bg-white/15" : "text-muted-foreground hover:bg-accent")}>
+                        Editar
+                      </button>
+                      <button onClick={() => handleDelete(g.id)} className={cn("text-xs px-2 py-1 rounded transition-colors", featured ? "text-white/80 hover:bg-white/15" : "text-muted-foreground hover:text-destructive hover:bg-destructive/10")}>
+                        Remover
+                      </button>
                     </div>
                   </div>
-                  <div className="flex gap-1">
-                    <button onClick={() => openEdit(g)} className="text-xs px-2 py-1 rounded text-muted-foreground hover:bg-accent transition-colors">
-                      Editar
-                    </button>
-                    <button onClick={() => handleDelete(g.id)} className="text-xs px-2 py-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
-                      Remover
-                    </button>
+
+                  <ProgressBar value={pct} showLabel className="mb-3" color={featured ? "#fff" : g.color} trackClassName={featured ? "bg-white/20" : undefined} />
+
+                  <div className="flex justify-between text-sm">
+                    <span className={featured ? "text-white/85" : "text-muted-foreground"}>
+                      {formatBRL(Number(g.currentAmount))} poupados
+                    </span>
+                    <span className={featured ? "text-white/85" : "text-muted-foreground"}>
+                      meta: {formatBRL(Number(g.targetAmount))}
+                    </span>
                   </div>
+
+                  {daysLeft !== null && (
+                    <p className={cn(
+                      "mt-2 text-xs",
+                      featured
+                        ? "text-white/85"
+                        : daysLeft < 0 ? "text-destructive" : daysLeft < 30 ? "text-warning" : "text-muted-foreground"
+                    )}>
+                      {daysLeft < 0
+                        ? `⚠ Prazo encerrado há ${Math.abs(daysLeft)} dias`
+                        : daysLeft === 0
+                          ? "🎯 Prazo é hoje!"
+                          : `📅 ${daysLeft} dias restantes — ${formatDate(g.targetDate!)}`}
+                    </p>
+                  )}
+
+                  {g.isCompleted && (
+                    <p className="mt-2 text-xs font-medium text-success">✅ Meta concluída!</p>
+                  )}
                 </div>
-
-                <ProgressBar value={pct} showLabel className="mb-3" />
-
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    {formatBRL(Number(g.currentAmount))} poupados
-                  </span>
-                  <span className="text-muted-foreground">
-                    meta: {formatBRL(Number(g.targetAmount))}
-                  </span>
-                </div>
-
-                {daysLeft !== null && (
-                  <p className={`mt-2 text-xs ${daysLeft < 0 ? "text-destructive" : daysLeft < 30 ? "text-warning" : "text-muted-foreground"}`}>
-                    {daysLeft < 0
-                      ? `⚠ Prazo encerrado há ${Math.abs(daysLeft)} dias`
-                      : daysLeft === 0
-                        ? "🎯 Prazo é hoje!"
-                        : `📅 ${daysLeft} dias restantes — ${formatDate(g.targetDate!)}`}
-                  </p>
-                )}
-
-                {g.isCompleted && (
-                  <p className="mt-2 text-xs font-medium text-success">✅ Meta concluída!</p>
-                )}
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
       )}
 
       <Drawer open={drawerOpen} onClose={closeDrawer} title={editing ? "Editar Meta" : "Nova Meta"}>
         <GoalForm
+          key={formKey}
           goal={editing}
           onSuccess={() => { closeDrawer(); load(); }}
         />

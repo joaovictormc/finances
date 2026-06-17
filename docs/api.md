@@ -169,8 +169,18 @@ DELETE /api/bills/:id
 ## Bots
 
 ```
-POST /api/bots/telegram   Webhook do Telegram (grammy)
+POST   /api/bots/telegram          Webhook do Telegram (grammy)
+
+# Vinculação de conta (requer sessão autenticada)
+GET    /api/bots/telegram/status   → { linked: boolean, telegramChatId: string | null }
+POST   /api/bots/telegram/link     body { code } → resgata o código gerado pelo /start
+                                     no bot (Redis) e grava telegramChatId no perfil.
+                                     400 código inválido/expirado · 409 já vinculado a outra conta
+DELETE /api/bots/telegram/link     → desvincula o Telegram da conta
 ```
+
+Fluxo: usuário envia `/start` ao bot → bot gera código de 6 dígitos (Redis, TTL 10min) →
+usuário cola o código na página `/bot` do app → `POST /link` valida e vincula.
 
 ## Tipos principais
 
