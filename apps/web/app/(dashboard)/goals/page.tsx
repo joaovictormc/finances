@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Drawer } from "@/components/ui/drawer";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -217,7 +218,7 @@ function GoalForm({ goal, onSuccess }: { goal: Goal | null; onSuccess: () => voi
       <Input label="Descrição (opcional)" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Detalhes sobre a meta..." />
       <CurrencyInput label="Valor alvo" value={targetCents} onChange={setTargetCents} />
       <CurrencyInput label="Valor atual poupado" value={currentCents} onChange={setCurrentCents} />
-      <Input label="Prazo (opcional)" type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
+      <DateInput label="Prazo (opcional)" value={targetDate} onChange={setTargetDate} />
       <Button type="submit" loading={loading} className="w-full">
         {goal ? "Salvar alterações" : "Criar meta"}
       </Button>

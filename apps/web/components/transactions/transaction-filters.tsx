@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { DateInput } from "@/components/ui/date-input";
 
 export interface TransactionFilters {
   search: string;
@@ -50,17 +51,17 @@ export function TransactionFilters({ filters, onChange, onNew }: TransactionFilt
         <option value="expense">Gastos</option>
         <option value="transfer">Transferências</option>
       </select>
-      <input
-        type="date"
+      <DateInput
         value={filters.startDate}
-        onChange={(e) => onChange({ ...filters, startDate: e.target.value })}
-        className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+        onChange={(isoValue) => onChange({ ...filters, startDate: isoValue })}
+        placeholder="Data inicial"
+        className="w-36"
       />
-      <input
-        type="date"
+      <DateInput
         value={filters.endDate}
-        onChange={(e) => onChange({ ...filters, endDate: e.target.value })}
-        className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+        onChange={(isoValue) => onChange({ ...filters, endDate: isoValue })}
+        placeholder="Data final"
+        className="w-36"
       />
       <button
         onClick={onNew}

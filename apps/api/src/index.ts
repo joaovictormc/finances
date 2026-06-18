@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { auth } from "./lib/auth";
+import { bootstrapAdmin } from "./lib/bootstrap-admin";
 import { telegramWebhookHandler } from "./routes/bots/telegram";
 import telegramLinkRoute from "./routes/bots/telegram-link";
 import transactionsRoute from "./routes/transactions";
@@ -59,4 +60,5 @@ const port = parseInt(process.env.PORT ?? "3001");
 
 serve({ fetch: app.fetch, port }, (info) => {
   console.log(`🚀 API running on http://localhost:${info.port}`);
+  void bootstrapAdmin(info.port);
 });

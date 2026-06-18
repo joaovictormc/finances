@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CurrencyInput, parseBRL } from "@/components/ui/currency-input";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-client";
@@ -150,11 +151,10 @@ export function TransactionForm({ transaction, categories, accounts, onSuccess }
         }))}
       />
 
-      <Input
+      <DateInput
         label="Data"
-        type="date"
         value={date}
-        onChange={(e) => setDate(e.target.value)}
+        onChange={setDate}
         error={errors.date}
       />
 

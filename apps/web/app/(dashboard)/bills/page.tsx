@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Select } from "@/components/ui/select";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Drawer } from "@/components/ui/drawer";
@@ -216,7 +217,7 @@ function BillForm({ bill, onSuccess }: { bill: RecurringBill | null; onSuccess: 
           placeholder="Ex: 10"
         />
       )}
-      <Input label="Próximo vencimento (opcional)" type="date" value={nextDueDate} onChange={(e) => setNextDueDate(e.target.value)} />
+      <DateInput label="Próximo vencimento (opcional)" value={nextDueDate} onChange={setNextDueDate} />
       <Button type="submit" loading={loading} className="w-full">
         {bill ? "Salvar alterações" : "Criar conta recorrente"}
       </Button>

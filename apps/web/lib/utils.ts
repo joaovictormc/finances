@@ -13,14 +13,15 @@ export function formatBRL(value: number | string): string {
 }
 
 export function formatDate(date: Date | string): string {
-  return new Date(date).toLocaleDateString("pt-BR");
+  const d = new Date(date);
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const year = d.getUTCFullYear();
+  return `${day}/${month}/${year}`;
 }
 
 export function formatShortDate(date: Date | string): string {
-  return new Date(date).toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "short",
-  });
+  return formatDate(date);
 }
 
 export function getMonthName(date: Date = new Date()): string {
