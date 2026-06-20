@@ -14,12 +14,13 @@ import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
 import { cn, formatBRL } from "@/lib/utils";
-import type { Budget, Category } from "@/lib/types";
+import type { Budget, Category, Group } from "@/lib/types";
 
 export default function BudgetsPage() {
   const { toast } = useToast();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Budget | null>(null);
@@ -32,12 +33,14 @@ export default function BudgetsPage() {
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [b, cats] = await Promise.all([
+      const [b, cats, grps] = await Promise.all([
         api.get<Budget[]>("/api/budgets", { year, month }),
         api.get<Category[]>("/api/categories", { type: "expense" }),
+        api.get<Group[]>("/api/groups"),
       ]);
       setBudgets(b);
       setCategories(cats);
+      setGroups(grps);
     } catch {
       toast({ title: "Erro ao carregar orçamentos", variant: "error" });
     } finally {
@@ -180,6 +183,7 @@ export default function BudgetsPage() {
           key={formKey}
           budget={editing}
           categories={categories}
+          groups={groups}
           year={year}
           month={month}
           onSuccess={() => { closeDrawer(); load(); }}
@@ -192,12 +196,14 @@ export default function BudgetsPage() {
 function BudgetForm({
   budget,
   categories,
+  groups,
   year,
   month,
   onSuccess,
 }: {
   budget: Budget | null;
   categories: Category[];
+  groups: Group[];
   year: number;
   month: number;
   onSuccess: () => void;
@@ -206,6 +212,7 @@ function BudgetForm({
   const [name, setName] = useState(budget?.name ?? "");
   const [amountCents, setAmountCents] = useState(Math.round(Number(budget?.amount ?? 0) * 100));
   const [categoryId, setCategoryId] = useState(budget?.category?.id ?? "");
+  const [groupId, setGroupId] = useState(budget?.groupId ?? "");
   const [loading, setLoading] = useState(false);
 
   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
@@ -226,6 +233,7 @@ function BudgetForm({
         period: "monthly",
         startDate,
         categoryId: categoryId || undefined,
+        groupId: groupId || undefined,
       };
       if (budget) {
         await api.patch(`/api/budgets/${budget.id}`, payload);
@@ -252,6 +260,12 @@ function BudgetForm({
         onChange={(e) => setCategoryId(e.target.value)}
         placeholder="Todas as categorias"
         options={flatCats.map((c) => ({ value: c.id, label: `${c.icon ?? ""} ${c.name}`.trim() }))}
+      />
+      <Select
+        label="Compartilhar com"
+        value={groupId}
+        onChange={(e) => setGroupId(e.target.value)}
+        options={[{ value: "", label: "Pessoal" }, ...groups.map((g) => ({ value: g.id, label: g.name }))]}
       />
       <Button type="submit" loading={loading} className="w-full">
         {budget ? "Salvar alterações" : "Criar orçamento"}

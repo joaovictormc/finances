@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   Menu, X,
   LayoutDashboard, ArrowLeftRight, PiggyBank,
-  Target, FileText, CreditCard, Settings, Bot,
+  Target, FileText, CreditCard, Settings, Bot, Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
@@ -18,6 +18,7 @@ const navItems = [
   { href: "/goals", label: "Metas", icon: Target },
   { href: "/bills", label: "Contas a Pagar", icon: FileText },
   { href: "/accounts", label: "Contas Bancárias", icon: CreditCard },
+  { href: "/groups", label: "Família", icon: Users },
   { href: "/bot", label: "Integração Bot", icon: Bot },
   { href: "/settings", label: "Configurações", icon: Settings },
 ];

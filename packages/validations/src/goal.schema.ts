@@ -9,6 +9,7 @@ export const CreateGoalSchema = z.object({
   icon: z.string().optional(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   linkedAccountId: z.string().optional(),
+  groupId: z.string().optional(),
 });
 
 export const UpdateGoalSchema = CreateGoalSchema.partial();

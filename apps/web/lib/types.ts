@@ -9,6 +9,8 @@ export type Transaction = {
   source: string;
   category: { id: string; name: string; icon: string | null; iconUrl?: string | null; color: string | null } | null;
   account: { id: string; name: string; institution: string | null; color: string | null };
+  groupId?: string | null;
+  group?: { id: string; name: string } | null;
   createdAt: string;
 };
 
@@ -33,6 +35,7 @@ export type FinancialAccount = {
   name: string;
   institution: string | null;
   color: string | null;
+  groupId?: string | null;
 };
 
 export type Budget = {
@@ -46,6 +49,7 @@ export type Budget = {
   percentage: number;
   isOverBudget: boolean;
   isNearLimit: boolean;
+  groupId?: string | null;
 };
 
 export type Goal = {
@@ -59,6 +63,7 @@ export type Goal = {
   iconUrl?: string | null;
   color: string | null;
   isCompleted: boolean;
+  groupId?: string | null;
   createdAt: string;
 };
 
@@ -71,6 +76,30 @@ export type AiInsight = {
   isRead: boolean;
   isDismissed: boolean;
   generatedAt: string;
+};
+
+export type GroupRole = "owner" | "admin" | "member" | "viewer";
+
+export type Group = {
+  id: string;
+  name: string;
+  ownerId: string;
+  inviteCode: string;
+  role: GroupRole;
+  memberCount: number;
+  createdAt: string;
+};
+
+export type GroupMember = {
+  userId: string;
+  name: string;
+  email: string;
+  role: GroupRole;
+  joinedAt: string;
+};
+
+export type GroupDetail = Group & {
+  members: GroupMember[];
 };
 
 export type RecurringBill = {

@@ -15,6 +15,7 @@ export const CreateFinancialAccountSchema = z.object({
   currency: z.string().default("BRL"),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   icon: z.string().optional(),
+  groupId: z.string().optional(),
 });
 
 export const UpdateFinancialAccountSchema =

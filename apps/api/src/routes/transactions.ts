@@ -7,6 +7,7 @@ import {
   TransactionFiltersSchema,
 } from "@finances/validations";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
+import { getUserGroupIds, hasGroupRole } from "../lib/groups";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -15,47 +16,42 @@ app.use("*", requireAuth);
 // List transactions with filters and pagination
 app.get("/", zValidator("query", TransactionFiltersSchema), async (c) => {
   const userId = c.get("userId");
-  const { page, limit, startDate, endDate, type, categoryId, accountId, search, isIgnored } =
+  const groupIds = await getUserGroupIds(userId);
+  const { page, limit, startDate, endDate, type, categoryId, accountId, search, isIgnored, groupId } =
     c.req.valid("query");
 
   const skip = (page - 1) * limit;
 
+  const ownershipFilter = { OR: [{ userId, groupId: null }, { groupId: { in: groupIds } }] };
+  const scopeFilter =
+    groupId === "personal" ? { groupId: null, userId } : groupId ? { groupId } : {};
+
+  const where = {
+    AND: [ownershipFilter, scopeFilter],
+    ...(startDate && { date: { gte: new Date(startDate) } }),
+    ...(endDate && { date: { lte: new Date(endDate) } }),
+    ...(type && { type }),
+    ...(categoryId && { categoryId }),
+    ...(accountId && { accountId }),
+    ...(search && {
+      description: { contains: search, mode: "insensitive" as const },
+    }),
+    ...(isIgnored !== undefined && { isIgnored }),
+  };
+
   const [transactions, total] = await Promise.all([
     db.transaction.findMany({
-      where: {
-        userId,
-        ...(startDate && { date: { gte: new Date(startDate) } }),
-        ...(endDate && { date: { lte: new Date(endDate) } }),
-        ...(type && { type }),
-        ...(categoryId && { categoryId }),
-        ...(accountId && { accountId }),
-        ...(search && {
-          description: { contains: search, mode: "insensitive" as const },
-        }),
-        ...(isIgnored !== undefined && { isIgnored }),
-      },
+      where,
       include: {
         category: { select: { id: true, name: true, icon: true, color: true } },
         account: { select: { id: true, name: true, institution: true, color: true } },
+        group: { select: { id: true, name: true } },
       },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       skip,
       take: limit,
     }),
-    db.transaction.count({
-      where: {
-        userId,
-        ...(startDate && { date: { gte: new Date(startDate) } }),
-        ...(endDate && { date: { lte: new Date(endDate) } }),
-        ...(type && { type }),
-        ...(categoryId && { categoryId }),
-        ...(accountId && { accountId }),
-        ...(search && {
-          description: { contains: search, mode: "insensitive" as const },
-        }),
-        ...(isIgnored !== undefined && { isIgnored }),
-      },
-    }),
+    db.transaction.count({ where }),
   ]);
 
   return c.json({
@@ -67,10 +63,11 @@ app.get("/", zValidator("query", TransactionFiltersSchema), async (c) => {
 // Get single transaction
 app.get("/:id", async (c) => {
   const userId = c.get("userId");
+  const groupIds = await getUserGroupIds(userId);
   const id = c.req.param("id");
 
   const transaction = await db.transaction.findFirst({
-    where: { id, userId },
+    where: { id, OR: [{ userId, groupId: null }, { groupId: { in: groupIds } }] },
     include: {
       category: true,
       account: true,
@@ -86,9 +83,13 @@ app.post("/", zValidator("json", CreateTransactionSchema), async (c) => {
   const userId = c.get("userId");
   const data = c.req.valid("json");
 
-  // Verify account belongs to user
+  if (data.groupId && !(await hasGroupRole(userId, data.groupId, ["owner", "admin", "member"]))) {
+    return c.json({ error: "Sem permissão para lançar neste grupo" }, 403);
+  }
+
+  // Verify account belongs to the same context (pessoal do usuário ou do grupo informado)
   const account = await db.financialAccount.findFirst({
-    where: { id: data.accountId, userId },
+    where: data.groupId ? { id: data.accountId, groupId: data.groupId } : { id: data.accountId, userId },
   });
   if (!account) return c.json({ error: "Conta não encontrada" }, 404);
 
@@ -102,6 +103,7 @@ app.post("/", zValidator("json", CreateTransactionSchema), async (c) => {
     include: {
       category: { select: { id: true, name: true, icon: true, color: true } },
       account: { select: { id: true, name: true, institution: true } },
+      group: { select: { id: true, name: true } },
     },
   });
 
@@ -114,8 +116,12 @@ app.patch("/:id", zValidator("json", UpdateTransactionSchema), async (c) => {
   const id = c.req.param("id");
   const data = c.req.valid("json");
 
-  const existing = await db.transaction.findFirst({ where: { id, userId } });
+  const existing = await db.transaction.findFirst({ where: { id } });
   if (!existing) return c.json({ error: "Transação não encontrada" }, 404);
+  const canEdit =
+    existing.userId === userId ||
+    (existing.groupId && (await hasGroupRole(userId, existing.groupId, ["owner", "admin"])));
+  if (!canEdit) return c.json({ error: "Transação não encontrada" }, 404);
 
   const transaction = await db.transaction.update({
     where: { id },
@@ -127,6 +133,7 @@ app.patch("/:id", zValidator("json", UpdateTransactionSchema), async (c) => {
     include: {
       category: { select: { id: true, name: true, icon: true, color: true } },
       account: { select: { id: true, name: true, institution: true } },
+      group: { select: { id: true, name: true } },
     },
   });
 
@@ -138,8 +145,12 @@ app.delete("/:id", async (c) => {
   const userId = c.get("userId");
   const id = c.req.param("id");
 
-  const existing = await db.transaction.findFirst({ where: { id, userId } });
+  const existing = await db.transaction.findFirst({ where: { id } });
   if (!existing) return c.json({ error: "Transação não encontrada" }, 404);
+  const canDelete =
+    existing.userId === userId ||
+    (existing.groupId && (await hasGroupRole(userId, existing.groupId, ["owner", "admin"])));
+  if (!canDelete) return c.json({ error: "Transação não encontrada" }, 404);
 
   await db.transaction.delete({ where: { id } });
   return c.json({ success: true });

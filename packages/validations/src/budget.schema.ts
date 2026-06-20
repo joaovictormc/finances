@@ -10,6 +10,7 @@ export const CreateBudgetSchema = z.object({
   startDate: z.string().date("Data inválida"),
   endDate: z.string().date().optional(),
   alertThreshold: z.number().min(0).max(1).default(0.8),
+  groupId: z.string().optional(),
 });
 
 export const UpdateBudgetSchema = CreateBudgetSchema.partial();

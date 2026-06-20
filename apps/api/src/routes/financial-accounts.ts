@@ -6,6 +6,7 @@ import {
   UpdateFinancialAccountSchema,
 } from "@finances/validations";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
+import { getUserGroupIds, hasGroupRole } from "../lib/groups";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -13,9 +14,13 @@ app.use("*", requireAuth);
 
 app.get("/", async (c) => {
   const userId = c.get("userId");
+  const groupIds = await getUserGroupIds(userId);
 
   const accounts = await db.financialAccount.findMany({
-    where: { userId, isArchived: false },
+    where: {
+      isArchived: false,
+      OR: [{ userId, groupId: null }, { groupId: { in: groupIds } }],
+    },
     include: {
       _count: { select: { transactions: true } },
     },
@@ -29,6 +34,10 @@ app.post("/", zValidator("json", CreateFinancialAccountSchema), async (c) => {
   const userId = c.get("userId");
   const data = c.req.valid("json");
 
+  if (data.groupId && !(await hasGroupRole(userId, data.groupId, ["owner", "admin", "member"]))) {
+    return c.json({ error: "Sem permissão para compartilhar com este grupo" }, 403);
+  }
+
   const account = await db.financialAccount.create({
     data: { ...data, userId },
   });
@@ -41,8 +50,12 @@ app.patch("/:id", zValidator("json", UpdateFinancialAccountSchema), async (c) =>
   const id = c.req.param("id");
   const data = c.req.valid("json");
 
-  const existing = await db.financialAccount.findFirst({ where: { id, userId } });
+  const existing = await db.financialAccount.findFirst({ where: { id } });
   if (!existing) return c.json({ error: "Conta não encontrada" }, 404);
+  const canEdit =
+    existing.userId === userId ||
+    (existing.groupId && (await hasGroupRole(userId, existing.groupId, ["owner", "admin"])));
+  if (!canEdit) return c.json({ error: "Conta não encontrada" }, 404);
 
   const account = await db.financialAccount.update({
     where: { id },
@@ -56,8 +69,12 @@ app.delete("/:id", async (c) => {
   const userId = c.get("userId");
   const id = c.req.param("id");
 
-  const existing = await db.financialAccount.findFirst({ where: { id, userId } });
+  const existing = await db.financialAccount.findFirst({ where: { id } });
   if (!existing) return c.json({ error: "Conta não encontrada" }, 404);
+  const canDelete =
+    existing.userId === userId ||
+    (existing.groupId && (await hasGroupRole(userId, existing.groupId, ["owner", "admin"])));
+  if (!canDelete) return c.json({ error: "Conta não encontrada" }, 404);
 
   // Soft delete via archive
   const account = await db.financialAccount.update({

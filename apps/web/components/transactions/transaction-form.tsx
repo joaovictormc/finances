@@ -8,7 +8,7 @@ import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-client";
 import { useToast } from "@/components/ui/toast-provider";
-import type { Category, FinancialAccount, Transaction } from "@/lib/types";
+import type { Category, FinancialAccount, Group, Transaction } from "@/lib/types";
 
 type TransactionType = "expense" | "income" | "transfer";
 
@@ -16,6 +16,7 @@ interface TransactionFormProps {
   transaction?: Transaction | null;
   categories: Category[];
   accounts: FinancialAccount[];
+  groups: Group[];
   onSuccess: () => void;
 }
 
@@ -36,11 +37,12 @@ function flattenCategories(cats: Category[], type: string): Category[] {
   return result;
 }
 
-export function TransactionForm({ transaction, categories, accounts, onSuccess }: TransactionFormProps) {
+export function TransactionForm({ transaction, categories, accounts, groups, onSuccess }: TransactionFormProps) {
   const { toast } = useToast();
   const [type, setType] = useState<TransactionType>(transaction?.type ?? "expense");
   const [amountCents, setAmountCents] = useState(Math.round(Number(transaction?.amount ?? 0) * 100));
   const [description, setDescription] = useState(transaction?.description ?? "");
+  const [groupId, setGroupId] = useState(transaction?.groupId ?? "");
   const [accountId, setAccountId] = useState(transaction?.account?.id ?? "");
   const [categoryId, setCategoryId] = useState(transaction?.category?.id ?? "");
   const [date, setDate] = useState(
@@ -55,6 +57,7 @@ export function TransactionForm({ transaction, categories, accounts, onSuccess }
   }, [type]);
 
   const filteredCategories = flattenCategories(categories, type);
+  const availableAccounts = accounts.filter((a) => (groupId ? a.groupId === groupId : !a.groupId));
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -79,6 +82,7 @@ export function TransactionForm({ transaction, categories, accounts, onSuccess }
         categoryId: categoryId || undefined,
         date,
         notes: notes.trim() || undefined,
+        groupId: groupId || undefined,
       };
       if (transaction) {
         await api.patch(`/api/transactions/${transaction.id}`, payload);
@@ -132,11 +136,18 @@ export function TransactionForm({ transaction, categories, accounts, onSuccess }
       />
 
       <Select
+        label="Compartilhar com"
+        value={groupId}
+        onChange={(e) => { setGroupId(e.target.value); setAccountId(""); }}
+        options={[{ value: "", label: "Pessoal" }, ...groups.map((g) => ({ value: g.id, label: g.name }))]}
+      />
+
+      <Select
         label="Conta"
         value={accountId}
         onChange={(e) => setAccountId(e.target.value)}
         placeholder="Selecione uma conta"
-        options={accounts.map((a) => ({ value: a.id, label: a.name }))}
+        options={availableAccounts.map((a) => ({ value: a.id, label: a.name }))}
         error={errors.accountId}
       />
 

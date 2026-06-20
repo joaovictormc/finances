@@ -1,5 +1,6 @@
 import { db } from "@finances/db";
 import { sendNotification } from "../notifications";
+import { notifyGroupMembers } from "../groups";
 
 export async function checkBudgetForecasts(userId: string) {
   const today = new Date();
@@ -88,7 +89,7 @@ export async function checkBudgetForecasts(userId: string) {
     });
     createdInsights.push(insight.id);
 
-    await sendNotification(userId, {
+    const notificationInput = {
       type: "budget_alert",
       title,
       body,
@@ -100,7 +101,13 @@ export async function checkBudgetForecasts(userId: string) {
         spent: `R$ ${spentSoFar.toFixed(2).replace(".", ",")}`,
         limit: `R$ ${budgetAmount.toFixed(2).replace(".", ",")}`,
       },
-    });
+    };
+
+    if (budget.groupId) {
+      await notifyGroupMembers(budget.groupId, notificationInput);
+    } else {
+      await sendNotification(userId, notificationInput);
+    }
   }
 
   return createdInsights;

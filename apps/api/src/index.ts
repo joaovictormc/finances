@@ -16,6 +16,7 @@ import billsRoute from "./routes/bills";
 import pluggyRoute from "./routes/pluggy";
 import pluggyWebhookRoute from "./routes/webhooks/pluggy";
 import aiRoute from "./routes/ai";
+import groupsRoute from "./routes/groups";
 import { registerRepeatableJobs } from "./jobs/scheduler";
 
 // Start BullMQ workers
@@ -65,6 +66,7 @@ app.route("/api/bills", billsRoute);
 app.route("/api/pluggy", pluggyRoute);
 app.route("/api/webhooks/pluggy", pluggyWebhookRoute);
 app.route("/api/ai", aiRoute);
+app.route("/api/groups", groupsRoute);
 
 // ── Start server (Node via @hono/node-server) ─────────────────────────────────
 const port = parseInt(process.env.PORT ?? "3001");

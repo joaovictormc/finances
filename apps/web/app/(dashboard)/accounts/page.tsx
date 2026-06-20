@@ -12,7 +12,7 @@ import { CategoryIcon } from "@/components/ui/category-icon";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
 import { ConnectBankButton } from "@/components/accounts/connect-bank-button";
-import type { FinancialAccount } from "@/lib/types";
+import type { FinancialAccount, Group } from "@/lib/types";
 
 const accountTypeLabels: Record<string, string> = {
   checking: "Conta Corrente",
@@ -33,6 +33,7 @@ const accountTypeIcons: Record<string, string> = {
 export default function AccountsPage() {
   const { toast } = useToast();
   const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialAccount | null>(null);
@@ -41,8 +42,12 @@ export default function AccountsPage() {
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await api.get<FinancialAccount[]>("/api/accounts");
+      const [data, grps] = await Promise.all([
+        api.get<FinancialAccount[]>("/api/accounts"),
+        api.get<Group[]>("/api/groups"),
+      ]);
       setAccounts(data);
+      setGroups(grps);
     } catch {
       toast({ title: "Erro ao carregar contas", variant: "error" });
     } finally {
@@ -132,6 +137,7 @@ export default function AccountsPage() {
         <AccountForm
           key={formKey}
           account={editing}
+          groups={groups}
           onSuccess={() => { closeDrawer(); load(); }}
         />
       </Drawer>
@@ -141,15 +147,18 @@ export default function AccountsPage() {
 
 function AccountForm({
   account,
+  groups,
   onSuccess,
 }: {
   account: FinancialAccount | null;
+  groups: Group[];
   onSuccess: () => void;
 }) {
   const { toast } = useToast();
   const [name, setName] = useState(account?.name ?? "");
   const [type, setType] = useState(account?.type ?? "checking");
   const [institution, setInstitution] = useState(account?.institution ?? "");
+  const [groupId, setGroupId] = useState(account?.groupId ?? "");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -157,7 +166,7 @@ function AccountForm({
     if (!name.trim()) { toast({ title: "Informe o nome da conta", variant: "error" }); return; }
     setLoading(true);
     try {
-      const payload = { name: name.trim(), type, institution: institution.trim() || undefined };
+      const payload = { name: name.trim(), type, institution: institution.trim() || undefined, groupId: groupId || undefined };
       if (account) {
         await api.patch(`/api/accounts/${account.id}`, payload);
         toast({ title: "Conta atualizada!", variant: "success" });
@@ -183,6 +192,12 @@ function AccountForm({
         options={Object.entries(accountTypeLabels).map(([v, l]) => ({ value: v, label: l }))}
       />
       <Input label="Instituição (opcional)" value={institution} onChange={(e) => setInstitution(e.target.value)} placeholder="Ex: Nubank, Itaú, Bradesco" />
+      <Select
+        label="Compartilhar com"
+        value={groupId}
+        onChange={(e) => setGroupId(e.target.value)}
+        options={[{ value: "", label: "Pessoal" }, ...groups.map((g) => ({ value: g.id, label: g.name }))]}
+      />
       <Button type="submit" loading={loading} className="w-full">
         {account ? "Salvar alterações" : "Criar conta"}
       </Button>

@@ -29,3 +29,20 @@ export async function serverApiGet<T>(
 
   return res.json() as Promise<T>;
 }
+
+export async function serverApiPost<T>(path: string, body?: unknown): Promise<T> {
+  const cookieStore = await cookies();
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: { Cookie: cookieStore.toString(), "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: "Request failed" }));
+    throw new Error((error as { error: string }).error ?? "Request failed");
+  }
+
+  return res.json() as Promise<T>;
+}

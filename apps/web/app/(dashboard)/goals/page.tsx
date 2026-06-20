@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { Select } from "@/components/ui/select";
 import { Drawer } from "@/components/ui/drawer";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { CategoryIcon } from "@/components/ui/category-icon";
@@ -14,11 +15,12 @@ import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
 import { cn, formatBRL, formatDate } from "@/lib/utils";
-import type { Goal } from "@/lib/types";
+import type { Goal, Group } from "@/lib/types";
 
 export default function GoalsPage() {
   const { toast } = useToast();
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Goal | null>(null);
@@ -27,8 +29,12 @@ export default function GoalsPage() {
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await api.get<Goal[]>("/api/goals");
+      const [data, grps] = await Promise.all([
+        api.get<Goal[]>("/api/goals"),
+        api.get<Group[]>("/api/groups"),
+      ]);
       setGoals(data);
+      setGroups(grps);
     } catch {
       toast({ title: "Erro ao carregar metas", variant: "error" });
     } finally {
@@ -167,6 +173,7 @@ export default function GoalsPage() {
         <GoalForm
           key={formKey}
           goal={editing}
+          groups={groups}
           onSuccess={() => { closeDrawer(); load(); }}
         />
       </Drawer>
@@ -174,13 +181,14 @@ export default function GoalsPage() {
   );
 }
 
-function GoalForm({ goal, onSuccess }: { goal: Goal | null; onSuccess: () => void }) {
+function GoalForm({ goal, groups, onSuccess }: { goal: Goal | null; groups: Group[]; onSuccess: () => void }) {
   const { toast } = useToast();
   const [name, setName] = useState(goal?.name ?? "");
   const [description, setDescription] = useState(goal?.description ?? "");
   const [targetCents, setTargetCents] = useState(Math.round(Number(goal?.targetAmount ?? 0) * 100));
   const [currentCents, setCurrentCents] = useState(Math.round(Number(goal?.currentAmount ?? 0) * 100));
   const [targetDate, setTargetDate] = useState(goal?.targetDate?.slice(0, 10) ?? "");
+  const [groupId, setGroupId] = useState(goal?.groupId ?? "");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -196,6 +204,7 @@ function GoalForm({ goal, onSuccess }: { goal: Goal | null; onSuccess: () => voi
         targetAmount: targetCents / 100,
         currentAmount: currentCents / 100,
         targetDate: targetDate || undefined,
+        groupId: groupId || undefined,
       };
       if (goal) {
         await api.patch(`/api/goals/${goal.id}`, payload);
@@ -219,6 +228,12 @@ function GoalForm({ goal, onSuccess }: { goal: Goal | null; onSuccess: () => voi
       <CurrencyInput label="Valor alvo" value={targetCents} onChange={setTargetCents} />
       <CurrencyInput label="Valor atual poupado" value={currentCents} onChange={setCurrentCents} />
       <DateInput label="Prazo (opcional)" value={targetDate} onChange={setTargetDate} />
+      <Select
+        label="Compartilhar com"
+        value={groupId}
+        onChange={(e) => setGroupId(e.target.value)}
+        options={[{ value: "", label: "Pessoal" }, ...groups.map((g) => ({ value: g.id, label: g.name }))]}
+      />
       <Button type="submit" loading={loading} className="w-full">
         {goal ? "Salvar alterações" : "Criar meta"}
       </Button>

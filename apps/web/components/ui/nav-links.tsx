@@ -11,6 +11,7 @@ import {
   CreditCard,
   Settings,
   Bot,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ const navItems = [
   { href: "/goals", label: "Metas", icon: Target },
   { href: "/bills", label: "Contas a Pagar", icon: FileText },
   { href: "/accounts", label: "Contas Bancárias", icon: CreditCard },
+  { href: "/groups", label: "Família", icon: Users },
   { href: "/bot", label: "Integração Bot", icon: Bot },
   { href: "/settings", label: "Configurações", icon: Settings },
 ];

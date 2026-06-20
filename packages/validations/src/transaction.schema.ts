@@ -20,6 +20,7 @@ export const CreateTransactionSchema = z.object({
   transferPairId: z.string().optional(),
   recurringBillId: z.string().optional(),
   isIgnored: z.boolean().default(false),
+  groupId: z.string().optional(),
 });
 
 export const UpdateTransactionSchema = CreateTransactionSchema.partial();
@@ -35,6 +36,7 @@ export const TransactionFiltersSchema = z.object({
   search: z.string().optional(),
   source: z.string().optional(),
   isIgnored: z.coerce.boolean().optional(),
+  groupId: z.string().optional(),
 });
 
 export type CreateTransaction = z.infer<typeof CreateTransactionSchema>;

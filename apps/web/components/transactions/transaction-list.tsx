@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CategoryIcon } from "@/components/ui/category-icon";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -81,7 +81,14 @@ export function TransactionList({ transactions, isLoading, onEdit, onDelete }: T
                       {formatShortDate(t.date)}
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-medium text-foreground truncate max-w-[200px]">{t.description}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-foreground truncate max-w-[200px]">{t.description}</p>
+                        {t.group && (
+                          <Badge variant="default">
+                            <Users size={10} /> {t.group.name}
+                          </Badge>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       {t.category ? (
@@ -146,9 +153,14 @@ export function TransactionList({ transactions, isLoading, onEdit, onDelete }: T
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{t.description}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground truncate">
                     {t.category?.name ?? "Sem categoria"} · {formatShortDate(t.date)}
                   </p>
+                  {t.group && (
+                    <Badge variant="default" className="mt-1">
+                      <Users size={10} /> {t.group.name}
+                    </Badge>
+                  )}
                 </div>
                 <div className="text-right shrink-0">
                   <p

@@ -7,16 +7,17 @@ import { TransactionForm } from "@/components/transactions/transaction-form";
 import { Drawer } from "@/components/ui/drawer";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
-import type { Category, FinancialAccount, PaginatedResponse, Transaction } from "@/lib/types";
+import type { Category, FinancialAccount, Group, PaginatedResponse, Transaction } from "@/lib/types";
 
 type Filters = {
   search: string;
   type: string;
   startDate: string;
   endDate: string;
+  groupId: string;
 };
 
-const defaultFilters: Filters = { search: "", type: "", startDate: "", endDate: "" };
+const defaultFilters: Filters = { search: "", type: "", startDate: "", endDate: "", groupId: "" };
 
 export default function TransactionsPage() {
   const { toast } = useToast();
@@ -27,6 +28,7 @@ export default function TransactionsPage() {
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [meta, setMeta] = useState({ page: 1, total: 0, totalPages: 1 });
   const [formKey, setFormKey] = useState(0);
 
@@ -38,6 +40,7 @@ export default function TransactionsPage() {
         ...(f.type && { type: f.type }),
         ...(f.startDate && { startDate: f.startDate }),
         ...(f.endDate && { endDate: f.endDate }),
+        ...(f.groupId && { groupId: f.groupId }),
         page,
         limit: 20,
       });
@@ -55,9 +58,11 @@ export default function TransactionsPage() {
     Promise.all([
       api.get<Category[]>("/api/categories"),
       api.get<FinancialAccount[]>("/api/accounts"),
-    ]).then(([cats, accs]) => {
+      api.get<Group[]>("/api/groups"),
+    ]).then(([cats, accs, grps]) => {
       setCategories(cats);
       setAccounts(accs);
+      setGroups(grps);
     });
   }, []);
 
@@ -95,7 +100,7 @@ export default function TransactionsPage() {
       </div>
 
       <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-4 mb-4">
-        <TransactionFilters filters={filters} onChange={setFilters} onNew={openNew} />
+        <TransactionFilters filters={filters} groups={groups} onChange={setFilters} onNew={openNew} />
       </div>
 
       <TransactionList
@@ -139,6 +144,7 @@ export default function TransactionsPage() {
           transaction={editing}
           categories={categories}
           accounts={accounts}
+          groups={groups}
           onSuccess={handleSuccess}
         />
       </Drawer>

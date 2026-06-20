@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, CreditCard, Bot, Settings, X } from "lucide-react";
+import { FileText, CreditCard, Bot, Settings, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const moreItems = [
   { href: "/bills", label: "Contas a Pagar", icon: FileText },
   { href: "/accounts", label: "Contas Bancárias", icon: CreditCard },
+  { href: "/groups", label: "Família", icon: Users },
   { href: "/bot", label: "Integração Bot", icon: Bot },
   { href: "/settings", label: "Configurações", icon: Settings },
 ];
