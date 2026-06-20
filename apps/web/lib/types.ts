@@ -62,6 +62,17 @@ export type Goal = {
   createdAt: string;
 };
 
+export type AiInsight = {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  severity: "info" | "warning" | "success" | "critical";
+  isRead: boolean;
+  isDismissed: boolean;
+  generatedAt: string;
+};
+
 export type RecurringBill = {
   id: string;
   name: string;

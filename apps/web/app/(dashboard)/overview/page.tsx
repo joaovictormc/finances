@@ -9,6 +9,8 @@ import { HeroBalanceCard } from "@/components/overview/hero-balance-card";
 import { GoalsPreview } from "@/components/overview/goals-preview";
 import { RecentTransactions } from "@/components/overview/recent-transactions";
 import { UpcomingBills } from "@/components/overview/upcoming-bills";
+import { InsightsPanel } from "@/components/insights/insights-panel";
+import { AiQueryBox } from "@/components/insights/ai-query-box";
 import type { Goal, RecurringBill, PaginatedResponse, Transaction } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Visão Geral" };
@@ -117,6 +119,9 @@ export default async function OverviewPage({
         </div>
         <MonthNav year={year} month={month} />
       </div>
+
+      <InsightsPanel />
+      <AiQueryBox />
 
       {/* Hero balance + goals */}
       <div className="mb-6 grid grid-cols-1 lg:grid-cols-5 gap-4">

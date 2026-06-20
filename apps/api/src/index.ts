@@ -15,12 +15,16 @@ import goalsRoute from "./routes/goals";
 import billsRoute from "./routes/bills";
 import pluggyRoute from "./routes/pluggy";
 import pluggyWebhookRoute from "./routes/webhooks/pluggy";
+import aiRoute from "./routes/ai";
+import { registerRepeatableJobs } from "./jobs/scheduler";
 
 // Start BullMQ workers
 import "./jobs/workers/bot-messages.worker";
 import "./jobs/workers/email.worker";
 import "./jobs/workers/voice-transcription.worker";
 import "./jobs/workers/open-finance-sync.worker";
+import "./jobs/workers/ai-analysis.worker";
+import "./jobs/workers/bill-detector.worker";
 
 const app = new Hono();
 
@@ -60,6 +64,7 @@ app.route("/api/goals", goalsRoute);
 app.route("/api/bills", billsRoute);
 app.route("/api/pluggy", pluggyRoute);
 app.route("/api/webhooks/pluggy", pluggyWebhookRoute);
+app.route("/api/ai", aiRoute);
 
 // ── Start server (Node via @hono/node-server) ─────────────────────────────────
 const port = parseInt(process.env.PORT ?? "3001");
@@ -67,4 +72,5 @@ const port = parseInt(process.env.PORT ?? "3001");
 serve({ fetch: app.fetch, port }, (info) => {
   console.log(`🚀 API running on http://localhost:${info.port}`);
   void bootstrapAdmin(info.port);
+  void registerRepeatableJobs();
 });

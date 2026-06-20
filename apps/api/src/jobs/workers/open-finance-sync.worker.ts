@@ -2,6 +2,7 @@ import { Worker, type Job } from "bullmq";
 import { redis } from "../../lib/redis";
 import { db } from "@finances/db";
 import { fetchTransactions, type PluggyTransaction } from "../../lib/pluggy/client";
+import { billDetectorQueue } from "../queues";
 
 type SyncJob = {
   financialAccountId: string;
@@ -64,6 +65,9 @@ export const openFinanceSyncWorker = new Worker<SyncJob>(
       where: { id: financialAccountId },
       data: { lastSyncedAt: new Date() },
     });
+
+    // Detecção mais rápida após sync bancário, sem esperar o cron diário.
+    await billDetectorQueue.add("detect-recurring", { userId: account.userId });
   },
   { connection: redis, concurrency: 3 }
 );
