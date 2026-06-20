@@ -11,6 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { CategoryIcon } from "@/components/ui/category-icon";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
+import { ConnectBankButton } from "@/components/accounts/connect-bank-button";
 import type { FinancialAccount } from "@/lib/types";
 
 const accountTypeLabels: Record<string, string> = {
@@ -73,7 +74,10 @@ export default function AccountsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Contas Bancárias</h1>
           <p className="text-muted-foreground text-sm mt-1">Gerencie suas contas e cartões</p>
         </div>
-        <Button onClick={openNew}>+ Nova Conta</Button>
+        <div className="flex gap-2">
+          <ConnectBankButton onConnected={load} />
+          <Button onClick={openNew}>+ Nova Conta</Button>
+        </div>
       </div>
 
       {isLoading ? (

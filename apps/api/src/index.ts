@@ -13,11 +13,14 @@ import categoriesRoute from "./routes/categories";
 import budgetsRoute from "./routes/budgets";
 import goalsRoute from "./routes/goals";
 import billsRoute from "./routes/bills";
+import pluggyRoute from "./routes/pluggy";
+import pluggyWebhookRoute from "./routes/webhooks/pluggy";
 
 // Start BullMQ workers
 import "./jobs/workers/bot-messages.worker";
 import "./jobs/workers/email.worker";
 import "./jobs/workers/voice-transcription.worker";
+import "./jobs/workers/open-finance-sync.worker";
 
 const app = new Hono();
 
@@ -55,6 +58,8 @@ app.route("/api/categories", categoriesRoute);
 app.route("/api/budgets", budgetsRoute);
 app.route("/api/goals", goalsRoute);
 app.route("/api/bills", billsRoute);
+app.route("/api/pluggy", pluggyRoute);
+app.route("/api/webhooks/pluggy", pluggyWebhookRoute);
 
 // ── Start server (Node via @hono/node-server) ─────────────────────────────────
 const port = parseInt(process.env.PORT ?? "3001");

@@ -167,7 +167,8 @@ model FinancialAccount {
   openFinanceAccountId String?
 
   // Pluggy fallback link
-  pluggyItemId String?
+  pluggyItemId    String?
+  pluggyAccountId String? @unique
 
   lastSyncedAt DateTime?
   createdAt    DateTime  @default(now())
