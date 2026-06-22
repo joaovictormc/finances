@@ -231,7 +231,7 @@ export default function BillingPage() {
               readOnly
               value={pixCheckout.payload}
               rows={4}
-              className="w-full rounded-md border border-border bg-muted p-2 text-xs font-mono"
+              className="w-full rounded-md border border-border bg-muted p-2 text-xs font-mono text-foreground"
               onClick={(e) => e.currentTarget.select()}
             />
             <Button

@@ -10,13 +10,15 @@ import type { FinancialAccount } from "@/lib/types";
 interface ImportFormProps {
   accounts: FinancialAccount[];
   onSuccess: () => void;
+  fixedAccountId?: string;
 }
 
-export function ImportForm({ accounts, onSuccess }: ImportFormProps) {
+export function ImportForm({ accounts, onSuccess, fixedAccountId }: ImportFormProps) {
   const { toast } = useToast();
-  const [accountId, setAccountId] = useState("");
+  const [accountId, setAccountId] = useState(fixedAccountId ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const fixedAccount = fixedAccountId ? accounts.find((a) => a.id === fixedAccountId) : undefined;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,13 +65,20 @@ export function ImportForm({ accounts, onSuccess }: ImportFormProps) {
         Transações já importadas anteriormente são ignoradas automaticamente.
       </p>
 
-      <Select
-        label="Conta de destino"
-        placeholder="Selecione a conta"
-        value={accountId}
-        onChange={(e) => setAccountId(e.target.value)}
-        options={accounts.map((a) => ({ value: a.id, label: a.name }))}
-      />
+      {fixedAccount ? (
+        <p className="text-sm">
+          <span className="text-muted-foreground">Conta de destino:</span>{" "}
+          <span className="font-medium text-foreground">{fixedAccount.name}</span>
+        </p>
+      ) : (
+        <Select
+          label="Conta de destino"
+          placeholder="Selecione a conta"
+          value={accountId}
+          onChange={(e) => setAccountId(e.target.value)}
+          options={accounts.map((a) => ({ value: a.id, label: a.name }))}
+        />
+      )}
 
       <div className="flex flex-col gap-1">
         <label htmlFor="import-file" className="text-sm font-medium text-foreground">

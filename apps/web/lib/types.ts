@@ -36,6 +36,7 @@ export type FinancialAccount = {
   institution: string | null;
   color: string | null;
   groupId?: string | null;
+  lastSyncedAt?: string | null;
 };
 
 export type Budget = {

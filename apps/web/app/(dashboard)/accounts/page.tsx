@@ -12,7 +12,34 @@ import { CategoryIcon } from "@/components/ui/category-icon";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
 import { ConnectBankButton } from "@/components/accounts/connect-bank-button";
+import { ImportForm } from "@/components/transactions/import-form";
 import type { FinancialAccount, Group } from "@/lib/types";
+
+const PLUGGY_ENABLED = process.env.NEXT_PUBLIC_ENABLE_PLUGGY === "true";
+
+function formatLastSync(lastSyncedAt: string | null | undefined): {
+  label: string;
+  tone: "neutral" | "warning" | "danger";
+} {
+  if (!lastSyncedAt) return { label: "Nunca atualizado", tone: "neutral" };
+  const days = Math.floor((Date.now() - new Date(lastSyncedAt).getTime()) / (1000 * 60 * 60 * 24));
+  const label = `Atualizado há ${days} dia${days === 1 ? "" : "s"}`;
+  if (days >= 30) return { label, tone: "danger" };
+  if (days >= 15) return { label, tone: "warning" };
+  return { label, tone: "neutral" };
+}
+
+const toneStyles: Record<"neutral" | "warning" | "danger", string> = {
+  neutral: "bg-muted/50 text-muted-foreground",
+  warning: "bg-amber-500/10 text-amber-600",
+  danger: "bg-red-500/10 text-red-600",
+};
+
+const toneIcon: Record<"neutral" | "warning" | "danger", string> = {
+  neutral: "",
+  warning: "⚠ ",
+  danger: "🔴 ",
+};
 
 const accountTypeLabels: Record<string, string> = {
   checking: "Conta Corrente",
@@ -38,6 +65,7 @@ export default function AccountsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialAccount | null>(null);
   const [formKey, setFormKey] = useState(0);
+  const [importingAccount, setImportingAccount] = useState<FinancialAccount | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -80,7 +108,7 @@ export default function AccountsPage() {
           <p className="text-muted-foreground text-sm mt-1">Gerencie suas contas e cartões</p>
         </div>
         <div className="flex gap-2">
-          <ConnectBankButton onConnected={load} />
+          {PLUGGY_ENABLED && <ConnectBankButton onConnected={load} />}
           <Button onClick={openNew}>+ Nova Conta</Button>
         </div>
       </div>
@@ -100,36 +128,50 @@ export default function AccountsPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {accounts.map((a) => (
-            <div key={a.id} className="bg-card rounded-2xl border border-border/60 shadow-sm p-5 transition-shadow hover:shadow-md">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <CategoryIcon icon={accountTypeIcons[a.type] ?? "🏦"} color={a.color} />
-                  <div>
-                    <p className="font-semibold text-foreground">{a.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {accountTypeLabels[a.type] ?? a.type}
-                      {a.institution && ` · ${a.institution}`}
-                    </p>
+          {accounts.map((a) => {
+            const sync = formatLastSync(a.lastSyncedAt);
+            return (
+              <div key={a.id} className="bg-card rounded-2xl border border-border/60 shadow-sm overflow-hidden transition-shadow hover:shadow-md">
+                <div className="p-5">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <CategoryIcon icon={accountTypeIcons[a.type] ?? "🏦"} color={a.color} />
+                      <div>
+                        <p className="font-semibold text-foreground">{a.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {accountTypeLabels[a.type] ?? a.type}
+                          {a.institution && ` · ${a.institution}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => openEdit(a)}
+                        className="text-xs px-2 py-1 rounded text-muted-foreground hover:bg-accent transition-colors"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(a.id)}
+                        className="text-xs px-2 py-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      >
+                        Arquivar
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="flex gap-1">
+                <div className={`flex items-center justify-between px-5 py-2 text-xs ${toneStyles[sync.tone]}`}>
+                  <span>{toneIcon[sync.tone]}{sync.label}</span>
                   <button
-                    onClick={() => openEdit(a)}
-                    className="text-xs px-2 py-1 rounded text-muted-foreground hover:bg-accent transition-colors"
+                    onClick={() => setImportingAccount(a)}
+                    className="font-medium hover:underline"
                   >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleDelete(a.id)}
-                    className="text-xs px-2 py-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                  >
-                    Arquivar
+                    📄 Importar
                   </button>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -140,6 +182,20 @@ export default function AccountsPage() {
           groups={groups}
           onSuccess={() => { closeDrawer(); load(); }}
         />
+      </Drawer>
+
+      <Drawer
+        open={importingAccount !== null}
+        onClose={() => setImportingAccount(null)}
+        title={`Importar extrato — ${importingAccount?.name ?? ""}`}
+      >
+        {importingAccount && (
+          <ImportForm
+            accounts={accounts}
+            fixedAccountId={importingAccount.id}
+            onSuccess={() => { setImportingAccount(null); load(); }}
+          />
+        )}
       </Drawer>
     </div>
   );

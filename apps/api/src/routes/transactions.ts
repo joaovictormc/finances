@@ -266,6 +266,11 @@ app.post("/import", async (c) => {
     skipDuplicates: true,
   });
 
+  await db.financialAccount.update({
+    where: { id: account.id },
+    data: { lastSyncedAt: new Date() },
+  });
+
   return c.json({ imported: result.count, totalInFile: rows.length }, 201);
 });
 

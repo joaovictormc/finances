@@ -43,7 +43,7 @@ export function AiQueryBox() {
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="Ex: quanto gastei em alimentação esse mês?"
-          className="flex-1 h-9 rounded-md border border-border bg-transparent px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className="flex-1 h-9 rounded-md border border-border bg-transparent px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
         />
         <Button type="submit" loading={loading} disabled={!question.trim()}>
           Perguntar
