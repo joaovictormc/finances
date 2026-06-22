@@ -22,6 +22,7 @@ export async function bootstrapAdmin(port: number) {
 
     if (res.ok) {
       console.log(`[bootstrap-admin] Conta admin criada: ${email}`);
+      await ensureAdminRole(email);
       return;
     }
 
@@ -31,9 +32,16 @@ export async function bootstrapAdmin(port: number) {
     } else {
       console.warn("[bootstrap-admin] Falha ao criar conta admin:", body);
     }
+
+    await ensureAdminRole(email);
   } catch (err) {
     console.warn("[bootstrap-admin] Erro ao tentar criar conta admin:", err);
   }
+}
+
+async function ensureAdminRole(email: string) {
+  const { db } = await import("@finances/db");
+  await db.user.updateMany({ where: { email }, data: { role: "admin" } });
 }
 
 async function syncAdminPassword(email: string, password: string) {

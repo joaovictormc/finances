@@ -1,19 +1,50 @@
 "use client";
 
 import { useState } from "react";
-import { Sun, Moon } from "lucide-react";
+import Link from "next/link";
+import { Sun, Moon, ArrowRight, CreditCard, FileDown } from "lucide-react";
 import { useTheme } from "@/app/providers/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast-provider";
+import { ReferralSection } from "@/components/settings/referral-section";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+const CURRENT_YEAR = new Date().getFullYear();
+const REPORT_YEARS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
+  const [reportYear, setReportYear] = useState(String(CURRENT_YEAR));
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     toast({ title: "Perfil atualizado!", variant: "success" });
+  };
+
+  const handleDownloadReport = async () => {
+    setIsDownloading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/reports/annual?year=${reportYear}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Falha ao gerar relatório");
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `relatorio-anual-${reportYear}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: "Erro ao gerar relatório anual", variant: "error" });
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -24,6 +55,21 @@ export default function SettingsPage() {
       </div>
 
       <div className="space-y-6">
+        {/* Billing section */}
+        <Link
+          href="/settings/billing"
+          className="flex items-center gap-4 bg-card rounded-2xl border border-border/60 shadow-sm p-6 hover:border-primary/40 transition-colors"
+        >
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/15 text-primary shrink-0">
+            <CreditCard size={18} />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-base font-semibold">Planos e Assinatura</h2>
+            <p className="text-sm text-muted-foreground">Gerencie seu plano, upgrade ou cancelamento</p>
+          </div>
+          <ArrowRight size={16} className="text-muted-foreground shrink-0" />
+        </Link>
+
         {/* Profile section */}
         <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
           <h2 className="text-base font-semibold mb-4">Perfil</h2>
@@ -63,6 +109,29 @@ export default function SettingsPage() {
             </button>
           </div>
         </section>
+
+        {/* Annual report section */}
+        <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
+          <h2 className="text-base font-semibold mb-1">Relatório anual</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Baixe um PDF com o resumo mensal e as principais categorias de gasto do ano escolhido
+          </p>
+          <div className="flex items-end gap-3">
+            <Select
+              label="Ano"
+              value={reportYear}
+              onChange={(e) => setReportYear(e.target.value)}
+              options={REPORT_YEARS.map((y) => ({ value: String(y), label: String(y) }))}
+              className="w-32"
+            />
+            <Button onClick={handleDownloadReport} loading={isDownloading} size="sm">
+              <FileDown size={16} />
+              Baixar PDF
+            </Button>
+          </div>
+        </section>
+
+        <ReferralSection />
 
         {/* Notifications section */}
         <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">

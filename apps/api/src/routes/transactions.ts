@@ -8,6 +8,9 @@ import {
 } from "@finances/validations";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { getUserGroupIds, hasGroupRole } from "../lib/groups";
+import { getHistoryCutoffDate } from "../lib/plan-limits";
+import { parseCsvTransactions } from "../lib/import/csv-parser";
+import { parseOfxTransactions } from "../lib/import/ofx-parser";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -26,9 +29,16 @@ app.get("/", zValidator("query", TransactionFiltersSchema), async (c) => {
   const scopeFilter =
     groupId === "personal" ? { groupId: null, userId } : groupId ? { groupId } : {};
 
+  const historyCutoff = await getHistoryCutoffDate(userId);
+  const requestedStart = startDate ? new Date(startDate) : null;
+  const effectiveStart =
+    historyCutoff && requestedStart
+      ? new Date(Math.max(historyCutoff.getTime(), requestedStart.getTime()))
+      : historyCutoff ?? requestedStart;
+
   const where = {
     AND: [ownershipFilter, scopeFilter],
-    ...(startDate && { date: { gte: new Date(startDate) } }),
+    ...(effectiveStart && { date: { gte: effectiveStart } }),
     ...(endDate && { date: { lte: new Date(endDate) } }),
     ...(type && { type }),
     ...(categoryId && { categoryId }),
@@ -207,6 +217,56 @@ app.get("/reports/monthly", async (c) => {
       total: Number(r._sum.amount ?? 0),
     })),
   });
+});
+
+// Import de extrato bancário (CSV ou OFX) — cria transações em lote, ignorando duplicatas
+// (mesma combinação externalId+accountId já existente, via @@unique do schema).
+app.post("/import", async (c) => {
+  const userId = c.get("userId");
+  const body = await c.req.parseBody();
+  const file = body.file;
+  const accountId = body.accountId;
+
+  if (!(file instanceof File) || typeof accountId !== "string" || !accountId) {
+    return c.json({ error: "Envie um arquivo (file) e o accountId da conta" }, 400);
+  }
+
+  const groupIds = await getUserGroupIds(userId);
+  const account = await db.financialAccount.findFirst({
+    where: { id: accountId, OR: [{ userId, groupId: null }, { groupId: { in: groupIds } }] },
+  });
+  if (!account) return c.json({ error: "Conta não encontrada" }, 404);
+
+  const text = await file.text();
+  const isOfx = file.name.toLowerCase().endsWith(".ofx") || text.includes("<OFX>");
+
+  let rows;
+  try {
+    rows = isOfx ? parseOfxTransactions(text) : parseCsvTransactions(text);
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Arquivo inválido" }, 400);
+  }
+
+  if (rows.length === 0) {
+    return c.json({ error: "Nenhuma transação válida encontrada no arquivo" }, 400);
+  }
+
+  const result = await db.transaction.createMany({
+    data: rows.map((row) => ({
+      userId,
+      accountId: account.id,
+      groupId: account.groupId,
+      type: row.type,
+      amount: row.amount,
+      description: row.description,
+      date: new Date(row.date),
+      source: "import" as const,
+      externalId: row.externalId,
+    })),
+    skipDuplicates: true,
+  });
+
+  return c.json({ imported: result.count, totalInFile: rows.length }, 201);
 });
 
 export default app;

@@ -3,6 +3,7 @@ import { db } from "@finances/db";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { createConnectToken, fetchAccounts, type PluggyAccount } from "../lib/pluggy/client";
 import { openFinanceSyncQueue } from "../jobs/queues";
+import { canAddBankConnection, getEffectivePlan } from "../lib/plan-limits";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -10,6 +11,14 @@ app.use("*", requireAuth);
 
 app.post("/connect-token", async (c) => {
   const userId = c.get("userId");
+  if (!(await canAddBankConnection(userId))) {
+    const plan = await getEffectivePlan(userId);
+    const message =
+      plan.maxBankConnections === 0
+        ? "Conexão com bancos disponível nos planos Pro e Família. Faça upgrade para conectar contas."
+        : "Limite de conexões bancárias do seu plano atingido. Faça upgrade para conectar mais contas.";
+    return c.json({ error: message }, 403);
+  }
   const connectToken = await createConnectToken(userId);
   return c.json({ connectToken });
 });

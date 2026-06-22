@@ -2,6 +2,7 @@ import { db } from "@finances/db";
 import { redis } from "../redis";
 import { bot } from "../../routes/bots/telegram";
 import { parseExpenseMessage } from "../ai/expense-parser";
+import { isChannelAllowed } from "../plan-limits";
 import { InlineKeyboard } from "grammy";
 
 export async function processIncomingText(params: {
@@ -14,7 +15,17 @@ export async function processIncomingText(params: {
 }): Promise<void> {
   const { platform, platformChatId, userId, text, today, messageType = "text" } = params;
 
-  const parsed = await parseExpenseMessage(text, today);
+  if (!(await isChannelAllowed(userId, platform))) {
+    if (platform === "telegram") {
+      await bot.api.sendMessage(
+        parseInt(platformChatId),
+        "⚠️ A integração com bot está disponível nos planos Pro e Família. Faça upgrade no app para continuar usando."
+      );
+    }
+    return;
+  }
+
+  const parsed = await parseExpenseMessage(text, today, userId);
 
   let conversation = await db.botConversation.findUnique({
     where: { platform_platformChatId: { platform, platformChatId } },

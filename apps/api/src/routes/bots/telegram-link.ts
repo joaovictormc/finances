@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@finances/db";
 import { redis } from "../../lib/redis";
 import { requireAuth, type AuthVariables } from "../../middleware/auth";
+import { isChannelAllowed } from "../../lib/plan-limits";
 import { bot } from "./telegram";
 
 const app = new Hono<{ Variables: AuthVariables }>();
@@ -30,6 +31,14 @@ const LinkSchema = z.object({ code: z.string().trim().min(4).max(12) });
 
 app.post("/link", zValidator("json", LinkSchema), async (c) => {
   const userId = c.get("userId");
+
+  if (!(await isChannelAllowed(userId, "telegram"))) {
+    return c.json(
+      { error: "Integração com bot disponível nos planos Pro e Família. Faça upgrade para usar." },
+      403
+    );
+  }
+
   const { code } = c.req.valid("json");
   const key = `telegram:link:${code.toUpperCase()}`;
 

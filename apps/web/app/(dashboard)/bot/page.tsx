@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { TelegramLink } from "@/components/bot/telegram-link";
+import { BotIntegrationGate } from "@/components/bot/bot-integration-gate";
 
 export const metadata: Metadata = { title: "Integração Bot" };
 
@@ -13,61 +13,7 @@ export default function BotPage() {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Telegram */}
-        <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white font-bold shadow-sm">
-              ✈️
-            </div>
-            <div>
-              <h2 className="font-semibold">Telegram</h2>
-              <p className="text-xs text-muted-foreground">Gratuito, disponível agora</p>
-            </div>
-          </div>
-
-          <p className="text-sm text-muted-foreground mb-4">
-            Envie mensagens de texto ou áudio para o bot e ele registrará automaticamente
-            seus gastos e receitas usando IA.
-          </p>
-
-          <div className="bg-muted rounded-md p-3 mb-4">
-            <p className="text-xs font-mono">
-              Exemplos:<br />
-              "gastei 50 no mercado"<br />
-              "recebi salário de 3200"<br />
-              "uber 23 conto"
-            </p>
-          </div>
-
-          <TelegramLink />
-        </div>
-
-        {/* WhatsApp */}
-        <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-6 opacity-70">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-green-500 flex items-center justify-center text-white font-bold shadow-sm">
-              💬
-            </div>
-            <div>
-              <h2 className="font-semibold">WhatsApp</h2>
-              <p className="text-xs text-muted-foreground">Em breve (Plano Pro)</p>
-            </div>
-          </div>
-
-          <p className="text-sm text-muted-foreground mb-4">
-            Integração com WhatsApp Business API. Mesma experiência do Telegram,
-            com suporte a mensagens de voz e botões interativos.
-          </p>
-
-          <button
-            disabled
-            className="w-full rounded-md bg-muted text-muted-foreground py-2 text-sm font-medium cursor-not-allowed"
-          >
-            Disponível em breve
-          </button>
-        </div>
-      </div>
+      <BotIntegrationGate />
     </div>
   );
 }

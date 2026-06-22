@@ -17,6 +17,11 @@ import pluggyRoute from "./routes/pluggy";
 import pluggyWebhookRoute from "./routes/webhooks/pluggy";
 import aiRoute from "./routes/ai";
 import groupsRoute from "./routes/groups";
+import billingRoute from "./routes/billing";
+import mercadopagoWebhookRoute from "./routes/webhooks/mercadopago";
+import reportsRoute from "./routes/reports";
+import referralsRoute from "./routes/referrals";
+import adminRoute from "./routes/admin";
 import { registerRepeatableJobs } from "./jobs/scheduler";
 
 // Start BullMQ workers
@@ -67,6 +72,16 @@ app.route("/api/pluggy", pluggyRoute);
 app.route("/api/webhooks/pluggy", pluggyWebhookRoute);
 app.route("/api/ai", aiRoute);
 app.route("/api/groups", groupsRoute);
+app.route("/api/billing", billingRoute);
+app.route("/api/webhooks/mercadopago", mercadopagoWebhookRoute);
+app.route("/api/reports", reportsRoute);
+app.route("/api/referrals", referralsRoute);
+app.route("/api/admin", adminRoute);
+
+app.onError((err, c) => {
+  console.error("[api] erro não tratado:", err);
+  return c.json({ error: err instanceof Error ? err.message : "Erro interno" }, 500);
+});
 
 // ── Start server (Node via @hono/node-server) ─────────────────────────────────
 const port = parseInt(process.env.PORT ?? "3001");

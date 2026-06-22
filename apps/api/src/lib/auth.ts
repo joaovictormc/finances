@@ -18,6 +18,11 @@ const hasGoogleOAuth =
 export const auth = betterAuth({
   baseURL: API_URL,
   database: prismaAdapter(db, { provider: "postgresql" }),
+  user: {
+    additionalFields: {
+      role: { type: "string", defaultValue: "user", input: false },
+    },
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification,

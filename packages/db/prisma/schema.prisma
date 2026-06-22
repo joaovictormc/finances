@@ -20,6 +20,7 @@ model User {
   email         String    @unique
   emailVerified Boolean
   image         String?
+  role          String    @default("user") // user | support | admin
   createdAt     DateTime
   updatedAt     DateTime
 
@@ -41,6 +42,11 @@ model User {
   botConversations BotConversation[]
   notifications   Notification[]
   aiInsights      AiInsight[]
+  subscription    Subscription?
+  referralCode    ReferralCode?
+  referralsMade   Referral[]        @relation("Referrer")
+  referredBy      Referral?         @relation("Referred")
+  aiUsageLogs     AiUsageLog[]
 
   @@map("users")
 }
@@ -466,4 +472,111 @@ model AiInsight {
 
   @@index([userId, isRead])
   @@map("ai_insights")
+}
+
+// ─────────────────────────────────────────────
+// MONETIZAÇÃO (Mercado Pago)
+// ─────────────────────────────────────────────
+
+model Subscription {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  plan   String @default("free") // free | pro | familia
+  status String @default("active") // active | past_due | canceled
+
+  mpPreapprovalId String? @unique // id da assinatura recorrente no Mercado Pago
+
+  currentPeriodEnd DateTime?
+  canceledAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("subscriptions")
+}
+
+model PaymentEvent {
+  id         String @id @default(cuid())
+  mpEventId  String @unique // id do evento/pagamento do Mercado Pago (idempotência do webhook)
+  type       String
+  rawPayload Json
+
+  processedAt DateTime @default(now())
+
+  @@map("payment_events")
+}
+
+model ReferralCode {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code   String @unique @default(cuid())
+
+  createdAt DateTime @default(now())
+
+  @@map("referral_codes")
+}
+
+model Referral {
+  id         String @id @default(cuid())
+  referrerId String
+  referrer   User   @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredId String @unique
+  referred   User   @relation("Referred", fields: [referredId], references: [id], onDelete: Cascade)
+
+  rewardGranted Boolean @default(false)
+  createdAt     DateTime @default(now())
+
+  @@map("referrals")
+}
+
+// ─────────────────────────────────────────────
+// ADMIN / IA (configuração e observabilidade)
+// ─────────────────────────────────────────────
+
+model AiSettings {
+  id String @id @default("singleton") // linha única de configuração global
+
+  textModel  String @default("llama-3.3-70b-versatile")
+  audioModel String @default("whisper-large-v3-turbo")
+
+  expenseParsingEnabled  Boolean @default(true) // parsing de mensagens do bot (texto/voz)
+  monthlyInsightsEnabled Boolean @default(true) // geração de insight mensal
+  nlQueryEnabled         Boolean @default(true) // POST /api/ai/query
+
+  monthlyTokenLimit Int? // null = ilimitado; soma de prompt+completion tokens do mês corrente
+
+  updatedAt DateTime @updatedAt
+
+  @@map("ai_settings")
+}
+
+/** Configuração de cada método de pagamento disponível (id = "mercadopago" | "pix"). */
+model PaymentMethodConfig {
+  id      String  @id // "mercadopago" | "pix"
+  enabled Boolean @default(false)
+  config  Json    @default("{}") // campos específicos do método (chaves, tokens, etc.)
+
+  updatedAt DateTime @updatedAt
+
+  @@map("payment_method_configs")
+}
+
+model AiUsageLog {
+  id     String  @id @default(cuid())
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  feature           String // expense_parsing | monthly_insight | nl_query | voice_transcription
+  model             String
+  promptTokens      Int?
+  completionTokens  Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([feature])
+  @@map("ai_usage_logs")
 }

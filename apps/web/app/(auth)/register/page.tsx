@@ -2,15 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { api } from "@/lib/api-client";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const referralCode = searchParams.get("ref");
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -49,6 +52,9 @@ export default function RegisterPage() {
     // Verificação de e-mail OFF → signup já cria sessão (retorna token) → dashboard.
     // Verificação ON → sem sessão → tela de confirmação de e-mail.
     if (data?.token) {
+      if (referralCode) {
+        await api.post("/api/referrals/redeem", { code: referralCode }).catch(() => {});
+      }
       router.push("/overview");
     } else {
       router.push(`/verify-email?email=${encodeURIComponent(email)}`);

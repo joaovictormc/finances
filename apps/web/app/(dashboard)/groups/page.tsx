@@ -11,6 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
 import { formatDate } from "@/lib/utils";
+import { usePlanAccess } from "@/lib/use-plan-access";
 import type { Group } from "@/lib/types";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -22,6 +23,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function GroupsPage() {
   const { toast } = useToast();
+  const { canCreateGroup } = usePlanAccess();
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
@@ -52,7 +54,13 @@ export default function GroupsPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setJoinOpen(true)}>Entrar com link</Button>
-          <Button onClick={() => setCreateOpen(true)}>+ Criar grupo</Button>
+          {canCreateGroup ? (
+            <Button onClick={() => setCreateOpen(true)}>+ Criar grupo</Button>
+          ) : (
+            <Link href="/settings/billing">
+              <Button variant="outline" title="Disponível no plano Família">Criar grupo (Família)</Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -65,8 +73,16 @@ export default function GroupsPage() {
           <EmptyState
             icon={Users}
             title="Nenhum grupo ainda"
-            description="Crie um grupo para compartilhar finanças com sua família ou entre usando um link de convite"
-            action={{ label: "+ Criar grupo", onClick: () => setCreateOpen(true) }}
+            description={
+              canCreateGroup
+                ? "Crie um grupo para compartilhar finanças com sua família ou entre usando um link de convite"
+                : "Criar um grupo é exclusivo do plano Família. Você ainda pode entrar em um grupo com um link de convite."
+            }
+            action={
+              canCreateGroup
+                ? { label: "+ Criar grupo", onClick: () => setCreateOpen(true) }
+                : { label: "Ver planos", onClick: () => { window.location.href = "/settings/billing"; } }
+            }
           />
         </div>
       ) : (

@@ -1,4 +1,5 @@
-import { groq, GROQ_TEXT_MODEL } from "./groq-client";
+import { groq } from "./groq-client";
+import { getAiSettings, isWithinUsageLimit, logAiUsage } from "./ai-settings";
 import { ParsedExpenseSchema, type ParsedExpense } from "@finances/validations";
 
 const SYSTEM_PROMPT = `Você é um assistente financeiro especializado em interpretar mensagens de usuários brasileiros sobre suas finanças pessoais.
@@ -37,10 +38,16 @@ REGRAS:
 
 export async function parseExpenseMessage(
   text: string,
-  today: string = new Date().toISOString().split("T")[0] ?? ""
+  today: string = new Date().toISOString().split("T")[0] ?? "",
+  userId?: string
 ): Promise<ParsedExpense> {
+  const settings = await getAiSettings();
+  if (!settings.expenseParsingEnabled || !(await isWithinUsageLimit(settings))) {
+    return { intent: "unknown", confidence: 0, rawText: text, currency: "BRL" };
+  }
+
   const response = await groq.chat.completions.create({
-    model: GROQ_TEXT_MODEL,
+    model: settings.textModel,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: `Data de hoje: ${today}\n\nMensagem do usuário: "${text}"` },
@@ -48,6 +55,7 @@ export async function parseExpenseMessage(
     response_format: { type: "json_object" },
     temperature: 0.1,
   });
+  await logAiUsage({ userId, feature: "expense_parsing", model: settings.textModel, usage: response.usage });
 
   const raw = response.choices[0]?.message?.content;
   if (!raw) {

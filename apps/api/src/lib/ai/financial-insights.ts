@@ -1,5 +1,6 @@
 import { db } from "@finances/db";
-import { groq, GROQ_TEXT_MODEL } from "./groq-client";
+import { groq } from "./groq-client";
+import { getAiSettings, isWithinUsageLimit, logAiUsage } from "./ai-settings";
 import { sendNotification } from "../notifications";
 
 const SYSTEM_PROMPT = `Você é um consultor financeiro pessoal que escreve resumos mensais curtos e diretos em português brasileiro.
@@ -19,6 +20,9 @@ Regras:
 - Cite a categoria de maior gasto pelo nome`;
 
 export async function generateMonthlyInsight(userId: string) {
+  const settings = await getAiSettings();
+  if (!settings.monthlyInsightsEnabled || !(await isWithinUsageLimit(settings))) return null;
+
   const periodEnd = new Date();
   const periodStart = new Date(periodEnd);
   periodStart.setDate(periodStart.getDate() - 30);
@@ -69,7 +73,7 @@ export async function generateMonthlyInsight(userId: string) {
   };
 
   const response = await groq.chat.completions.create({
-    model: GROQ_TEXT_MODEL,
+    model: settings.textModel,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: `Dados dos últimos 30 dias:\n${JSON.stringify(stats)}` },
@@ -77,6 +81,7 @@ export async function generateMonthlyInsight(userId: string) {
     response_format: { type: "json_object" },
     temperature: 0.3,
   });
+  await logAiUsage({ userId, feature: "monthly_insight", model: settings.textModel, usage: response.usage });
 
   const raw = response.choices[0]?.message?.content;
   if (!raw) return null;

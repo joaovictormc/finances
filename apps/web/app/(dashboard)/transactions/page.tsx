@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { TransactionFilters } from "@/components/transactions/transaction-filters";
 import { TransactionList } from "@/components/transactions/transaction-list";
 import { TransactionForm } from "@/components/transactions/transaction-form";
+import { ImportForm } from "@/components/transactions/import-form";
 import { Drawer } from "@/components/ui/drawer";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
@@ -31,6 +32,7 @@ export default function TransactionsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [meta, setMeta] = useState({ page: 1, total: 0, totalPages: 1 });
   const [formKey, setFormKey] = useState(0);
+  const [importOpen, setImportOpen] = useState(false);
 
   const loadTransactions = useCallback(async (f: Filters, page = 1) => {
     setIsLoading(true);
@@ -89,14 +91,27 @@ export default function TransactionsPage() {
     loadTransactions(filters);
   };
 
+  const handleImportSuccess = () => {
+    setImportOpen(false);
+    loadTransactions(filters);
+  };
+
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Transações</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Histórico de todas as suas movimentações
-          {meta.total > 0 && ` · ${meta.total} transações`}
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Transações</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Histórico de todas as suas movimentações
+            {meta.total > 0 && ` · ${meta.total} transações`}
+          </p>
+        </div>
+        <button
+          onClick={() => setImportOpen(true)}
+          className="shrink-0 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors whitespace-nowrap"
+        >
+          Importar extrato
+        </button>
       </div>
 
       <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-4 mb-4">
@@ -147,6 +162,10 @@ export default function TransactionsPage() {
           groups={groups}
           onSuccess={handleSuccess}
         />
+      </Drawer>
+
+      <Drawer open={importOpen} onClose={() => setImportOpen(false)} title="Importar extrato">
+        <ImportForm accounts={accounts} onSuccess={handleImportSuccess} />
       </Drawer>
     </div>
   );

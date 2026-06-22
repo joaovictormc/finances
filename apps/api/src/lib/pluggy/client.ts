@@ -45,14 +45,15 @@ async function pluggyFetch<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export async function createConnectToken(clientUserId: string, itemId?: string): Promise<string> {
-  const { connectToken } = await pluggyFetch<{ connectToken: string }>("/connect_token", {
+  // a API da Pluggy devolve o token no campo "accessToken" (não "connectToken", apesar do nome do endpoint)
+  const { accessToken } = await pluggyFetch<{ accessToken: string }>("/connect_token", {
     method: "POST",
     body: JSON.stringify({
       itemId,
       options: { clientUserId, avoidDuplicates: true },
     }),
   });
-  return connectToken;
+  return accessToken;
 }
 
 export type PluggyAccount = {

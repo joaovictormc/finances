@@ -3,8 +3,10 @@ import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { db } from "@finances/db";
 import type Groq from "groq-sdk";
-import { groq, GROQ_TEXT_MODEL } from "../lib/ai/groq-client";
+import { groq } from "../lib/ai/groq-client";
+import { getAiSettings, isWithinUsageLimit, logAiUsage } from "../lib/ai/ai-settings";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
+import { isAiInsightsAllowed } from "../lib/plan-limits";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -242,6 +244,20 @@ const QuerySchema = z.object({ question: z.string().min(1).max(500) });
 
 app.post("/query", zValidator("json", QuerySchema), async (c) => {
   const userId = c.get("userId");
+  if (!(await isAiInsightsAllowed(userId))) {
+    return c.json(
+      { error: "Consultas com IA fazem parte dos planos Pro e Família. Faça upgrade para usar essa função." },
+      403
+    );
+  }
+  const settings = await getAiSettings();
+  if (!settings.nlQueryEnabled) {
+    return c.json({ error: "Consultas de IA temporariamente desativadas" }, 503);
+  }
+  if (!(await isWithinUsageLimit(settings))) {
+    return c.json({ error: "Limite mensal de uso de IA atingido. Tente novamente no próximo mês." }, 503);
+  }
+
   const { question } = c.req.valid("json");
 
   const messages: Groq.Chat.Completions.ChatCompletionMessageParam[] = [
@@ -251,12 +267,13 @@ app.post("/query", zValidator("json", QuerySchema), async (c) => {
 
   for (let i = 0; i < 4; i++) {
     const response = await groq.chat.completions.create({
-      model: GROQ_TEXT_MODEL,
+      model: settings.textModel,
       messages,
       tools: TOOLS,
       tool_choice: "auto",
       temperature: 0.2,
     });
+    await logAiUsage({ userId, feature: "nl_query", model: settings.textModel, usage: response.usage });
 
     const message = response.choices[0]?.message;
     if (!message) break;

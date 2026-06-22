@@ -4,6 +4,7 @@ import { db } from "@finances/db";
 import { CreateGroupSchema, UpdateGroupSchema, UpdateMemberRoleSchema } from "@finances/validations";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { getGroupRole, notifyGroupMembers } from "../lib/groups";
+import { canAddGroupMember, isFamilyModuleAllowed } from "../lib/plan-limits";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -34,6 +35,14 @@ app.get("/", async (c) => {
 
 app.post("/", zValidator("json", CreateGroupSchema), async (c) => {
   const userId = c.get("userId");
+
+  if (!(await isFamilyModuleAllowed(userId))) {
+    return c.json(
+      { error: "Criar grupos disponível apenas no plano Família. Faça upgrade para usar." },
+      403
+    );
+  }
+
   const { name } = c.req.valid("json");
 
   const group = await db.$transaction(async (tx) => {
@@ -139,6 +148,13 @@ app.post("/join/:inviteCode", async (c) => {
     where: { groupId_userId: { groupId: group.id, userId } },
   });
   if (existing) return c.json({ id: group.id, name: group.name, role: existing.role });
+
+  if (!(await canAddGroupMember(group.id))) {
+    return c.json(
+      { error: "O grupo atingiu o limite de membros do plano do dono. Peça para ele fazer upgrade." },
+      403
+    );
+  }
 
   await db.groupMember.create({ data: { groupId: group.id, userId, role: "member" } });
 

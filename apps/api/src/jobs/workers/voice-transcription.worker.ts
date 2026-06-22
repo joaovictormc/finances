@@ -36,7 +36,7 @@ export const voiceTranscriptionWorker = new Worker<VoiceJob>(
       }
       const audio = Buffer.from(await res.arrayBuffer());
 
-      const transcript = await transcribeAudio(audio, "audio.ogg");
+      const transcript = await transcribeAudio(audio, "audio.ogg", userId);
       if (!transcript) {
         await bot.api.sendMessage(
           chatId,

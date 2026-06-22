@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { PluggyConnect } from "react-pluggy-connect";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
 
 export function ConnectBankButton({ onConnected }: { onConnected: () => void }) {
   const { toast } = useToast();
-  const [connectToken, setConnectToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const startConnect = async () => {
@@ -18,41 +16,44 @@ export function ConnectBankButton({ onConnected }: { onConnected: () => void }) 
         "/api/pluggy/connect-token",
         {}
       );
-      setConnectToken(connectToken);
-    } catch {
-      toast({ title: "Erro ao iniciar conexão com o banco", variant: "error" });
+      console.log("[pluggy] connectToken obtido");
+
+      const { PluggyConnect } = await import("pluggy-connect-sdk");
+      console.log("[pluggy] módulo pluggy-connect-sdk carregado");
+
+      const pluggyConnect = new PluggyConnect({
+        connectToken,
+        includeSandbox: process.env.NODE_ENV !== "production",
+        onSuccess: async (itemData) => {
+          console.log("[pluggy] onSuccess", itemData);
+          try {
+            await api.post("/api/pluggy/items", { itemId: itemData.item.id });
+            toast({ title: "Banco conectado! Sincronizando transações…", variant: "success" });
+            onConnected();
+          } catch {
+            toast({ title: "Conta conectada, mas houve erro ao sincronizar", variant: "error" });
+          }
+        },
+        onError: (error) => {
+          console.error("[pluggy] onError", error);
+          toast({ title: "Não foi possível conectar o banco", variant: "error" });
+        },
+      });
+
+      console.log("[pluggy] instância criada, chamando init()");
+      await pluggyConnect.init();
+      console.log("[pluggy] init() concluído com sucesso — widget deve estar visível");
+    } catch (err) {
+      console.error("[pluggy] falha ao iniciar widget:", err);
+      toast({ title: (err as Error).message || "Erro ao iniciar conexão com o banco", variant: "error" });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <>
-      <Button variant="outline" onClick={startConnect} loading={loading}>
-        🏦 Conectar Banco
-      </Button>
-
-      {connectToken && (
-        <PluggyConnect
-          connectToken={connectToken}
-          includeSandbox={process.env.NODE_ENV !== "production"}
-          onSuccess={async (itemData) => {
-            setConnectToken(null);
-            try {
-              await api.post("/api/pluggy/items", { itemId: itemData.item.id });
-              toast({ title: "Banco conectado! Sincronizando transações…", variant: "success" });
-              onConnected();
-            } catch {
-              toast({ title: "Conta conectada, mas houve erro ao sincronizar", variant: "error" });
-            }
-          }}
-          onError={() => {
-            setConnectToken(null);
-            toast({ title: "Não foi possível conectar o banco", variant: "error" });
-          }}
-          onClose={() => setConnectToken(null)}
-        />
-      )}
-    </>
+    <Button variant="outline" onClick={startConnect} loading={loading}>
+      🏦 Conectar Banco
+    </Button>
   );
 }

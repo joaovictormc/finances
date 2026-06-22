@@ -12,32 +12,69 @@ import {
   Settings,
   Bot,
   Users,
+  ShieldCheck,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSession } from "@/lib/auth-client";
+import { usePlanAccess } from "@/lib/use-plan-access";
+import { useToast } from "@/components/ui/toast-provider";
 
-const navItems = [
+const baseNavItems = [
   { href: "/overview", label: "Visão Geral", icon: LayoutDashboard },
   { href: "/transactions", label: "Transações", icon: ArrowLeftRight },
   { href: "/budgets", label: "Orçamentos", icon: PiggyBank },
   { href: "/goals", label: "Metas", icon: Target },
   { href: "/bills", label: "Contas a Pagar", icon: FileText },
   { href: "/accounts", label: "Contas Bancárias", icon: CreditCard },
-  { href: "/groups", label: "Família", icon: Users },
-  { href: "/bot", label: "Integração Bot", icon: Bot },
-  { href: "/settings", label: "Configurações", icon: Settings },
 ];
+
+const groupsItem = { href: "/groups", label: "Família", icon: Users };
+const botItem = { href: "/bot", label: "Integração Bot", icon: Bot };
+const settingsItem = { href: "/settings", label: "Configurações", icon: Settings };
+
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  locked: boolean;
+  lockedMessage: string;
+};
 
 export function NavLinks() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const { toast } = useToast();
+  const { hasIntegrations, hasGroupAccess } = usePlanAccess();
+  const isAdmin = (session?.user as { role?: string } | undefined)?.role === "admin";
+
+  const items: NavItem[] = [
+    ...baseNavItems.map((item) => ({ ...item, locked: false, lockedMessage: "" })),
+    {
+      ...groupsItem,
+      locked: !hasGroupAccess,
+      lockedMessage: "Família é exclusivo do plano Família. Faça upgrade para criar ou entrar em um grupo.",
+    },
+    {
+      ...botItem,
+      locked: !hasIntegrations,
+      lockedMessage: "Integração com bot disponível nos planos Pro e Família. Faça upgrade para usar.",
+    },
+    { ...settingsItem, locked: false, lockedMessage: "" },
+    ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: ShieldCheck, locked: false, lockedMessage: "" }] : []),
+  ];
 
   return (
     <nav className="flex-1 space-y-1 p-3">
-      {navItems.map((item) => {
+      {items.map((item) => {
         const active = pathname.startsWith(item.href);
         return (
           <Link
             key={item.href}
             href={item.href}
+            onClick={() => {
+              if (item.locked) toast({ title: item.lockedMessage, variant: "warning" });
+            }}
             className={cn(
               "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
               active
@@ -46,7 +83,8 @@ export function NavLinks() {
             )}
           >
             <item.icon size={16} />
-            <span>{item.label}</span>
+            <span className="flex-1">{item.label}</span>
+            {item.locked && <Lock size={12} className="shrink-0 opacity-60" />}
           </Link>
         );
       })}
