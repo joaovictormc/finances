@@ -66,12 +66,13 @@ export default function AccountsPage() {
   const [editing, setEditing] = useState<FinancialAccount | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [importingAccount, setImportingAccount] = useState<FinancialAccount | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
       const [data, grps] = await Promise.all([
-        api.get<FinancialAccount[]>("/api/accounts"),
+        api.get<FinancialAccount[]>("/api/accounts", { archived: showArchived }),
         api.get<Group[]>("/api/groups"),
       ]);
       setAccounts(data);
@@ -81,7 +82,7 @@ export default function AccountsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, showArchived]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -100,6 +101,22 @@ export default function AccountsPage() {
     }
   };
 
+  const handlePermanentDelete = async (a: FinancialAccount) => {
+    const txCount = a._count?.transactions ?? 0;
+    const message =
+      txCount > 0
+        ? `Excluir definitivamente "${a.name}"? Isso vai apagar a conta e ${txCount} transação${txCount === 1 ? "" : "ões"} vinculada${txCount === 1 ? "" : "s"}. Essa ação não pode ser desfeita.`
+        : `Excluir definitivamente "${a.name}"? Essa ação não pode ser desfeita.`;
+    if (!window.confirm(message)) return;
+    try {
+      await api.delete(`/api/accounts/${a.id}/permanent`);
+      toast({ title: "Conta excluída definitivamente", variant: "success" });
+      load();
+    } catch {
+      toast({ title: "Erro ao excluir conta", variant: "error" });
+    }
+  };
+
   return (
     <div>
       <div className="mb-6 flex items-start justify-between">
@@ -113,6 +130,25 @@ export default function AccountsPage() {
         </div>
       </div>
 
+      <div className="mb-4 flex gap-1 rounded-lg bg-muted p-1 w-fit">
+        <button
+          onClick={() => setShowArchived(false)}
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            !showArchived ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Ativas
+        </button>
+        <button
+          onClick={() => setShowArchived(true)}
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            showArchived ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Arquivadas
+        </button>
+      </div>
+
       {isLoading ? (
         <div className="flex justify-center py-16">
           <Spinner size="lg" />
@@ -121,9 +157,13 @@ export default function AccountsPage() {
         <div className="bg-card rounded-2xl border border-border/60 shadow-sm">
           <EmptyState
             icon={CreditCard}
-            title="Nenhuma conta cadastrada"
-            description="Adicione suas contas bancárias, cartões e carteiras digitais"
-            action={{ label: "+ Nova Conta", onClick: openNew }}
+            title={showArchived ? "Nenhuma conta arquivada" : "Nenhuma conta cadastrada"}
+            description={
+              showArchived
+                ? "Contas arquivadas aparecem aqui para exclusão definitiva"
+                : "Adicione suas contas bancárias, cartões e carteiras digitais"
+            }
+            action={showArchived ? undefined : { label: "+ Nova Conta", onClick: openNew }}
           />
         </div>
       ) : (
@@ -145,30 +185,43 @@ export default function AccountsPage() {
                       </div>
                     </div>
                     <div className="flex gap-1">
-                      <button
-                        onClick={() => openEdit(a)}
-                        className="text-xs px-2 py-1 rounded text-muted-foreground hover:bg-accent transition-colors"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => handleDelete(a.id)}
-                        className="text-xs px-2 py-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                      >
-                        Arquivar
-                      </button>
+                      {showArchived ? (
+                        <button
+                          onClick={() => handlePermanentDelete(a)}
+                          className="text-xs px-2 py-1 rounded text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          Excluir definitivamente
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => openEdit(a)}
+                            className="text-xs px-2 py-1 rounded text-muted-foreground hover:bg-accent transition-colors"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleDelete(a.id)}
+                            className="text-xs px-2 py-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          >
+                            Arquivar
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
-                <div className={`flex items-center justify-between px-5 py-2 text-xs ${toneStyles[sync.tone]}`}>
-                  <span>{toneIcon[sync.tone]}{sync.label}</span>
-                  <button
-                    onClick={() => setImportingAccount(a)}
-                    className="font-medium hover:underline"
-                  >
-                    📄 Importar
-                  </button>
-                </div>
+                {!showArchived && (
+                  <div className={`flex items-center justify-between px-5 py-2 text-xs ${toneStyles[sync.tone]}`}>
+                    <span>{toneIcon[sync.tone]}{sync.label}</span>
+                    <button
+                      onClick={() => setImportingAccount(a)}
+                      className="font-medium hover:underline"
+                    >
+                      📄 Importar
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -215,6 +268,7 @@ function AccountForm({
   const [type, setType] = useState(account?.type ?? "checking");
   const [institution, setInstitution] = useState(account?.institution ?? "");
   const [groupId, setGroupId] = useState(account?.groupId ?? "");
+  const [hasCreditCard, setHasCreditCard] = useState(account?.hasCreditCard ?? false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -222,7 +276,7 @@ function AccountForm({
     if (!name.trim()) { toast({ title: "Informe o nome da conta", variant: "error" }); return; }
     setLoading(true);
     try {
-      const payload = { name: name.trim(), type, institution: institution.trim() || undefined, groupId: groupId || undefined };
+      const payload = { name: name.trim(), type, institution: institution.trim() || undefined, groupId: groupId || undefined, hasCreditCard };
       if (account) {
         await api.patch(`/api/accounts/${account.id}`, payload);
         toast({ title: "Conta atualizada!", variant: "success" });
@@ -254,6 +308,27 @@ function AccountForm({
         onChange={(e) => setGroupId(e.target.value)}
         options={[{ value: "", label: "Pessoal" }, ...groups.map((g) => ({ value: g.id, label: g.name }))]}
       />
+      <div className="flex items-start gap-4 py-2">
+        <div className="flex-1">
+          <p className="text-sm font-medium text-foreground">Tem cartão de crédito vinculado</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Permite importar a fatura do cartão separada do extrato, na mesma conta.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setHasCreditCard((v) => !v)}
+          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+            hasCreditCard ? "bg-primary" : "bg-muted"
+          }`}
+        >
+          <span
+            className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+              hasCreditCard ? "translate-x-6" : "translate-x-1"
+            }`}
+          />
+        </button>
+      </div>
       <Button type="submit" loading={loading} className="w-full">
         {account ? "Salvar alterações" : "Criar conta"}
       </Button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { DateInput } from "@/components/ui/date-input";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import type { Group } from "@/lib/types";
 
 export interface TransactionFilters {
@@ -54,17 +54,10 @@ export function TransactionFilters({ filters, groups, onChange, onNew }: Transac
         <option value="expense">Gastos</option>
         <option value="transfer">Transferências</option>
       </select>
-      <DateInput
-        value={filters.startDate}
-        onChange={(isoValue) => onChange({ ...filters, startDate: isoValue })}
-        placeholder="Data inicial"
-        className="w-36"
-      />
-      <DateInput
-        value={filters.endDate}
-        onChange={(isoValue) => onChange({ ...filters, endDate: isoValue })}
-        placeholder="Data final"
-        className="w-36"
+      <DateRangePicker
+        startDate={filters.startDate}
+        endDate={filters.endDate}
+        onChange={(r) => onChange({ ...filters, ...r })}
       />
       <select
         value={filters.groupId}

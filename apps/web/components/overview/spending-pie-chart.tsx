@@ -66,6 +66,8 @@ export function SpendingPieChart({ data, totalExpense }: SpendingPieChartProps) 
                 fontSize: "12px",
                 color: "var(--color-foreground)",
               }}
+              itemStyle={{ color: "var(--color-foreground)" }}
+              labelStyle={{ color: "var(--color-foreground)" }}
             />
           </PieChart>
         </ResponsiveContainer>

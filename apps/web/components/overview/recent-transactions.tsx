@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CategoryIcon } from "@/components/ui/category-icon";
+import { Badge } from "@/components/ui/badge";
 import { formatBRL, formatShortDate } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
 
@@ -26,7 +27,10 @@ export function RecentTransactions({ transactions }: { transactions: Transaction
                 size="sm"
               />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{t.description}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-foreground truncate">{t.description}</p>
+                  {t.paymentMethod === "credit" && <Badge variant="default">💳 Crédito</Badge>}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {t.category?.name ?? "Sem categoria"} · {formatShortDate(t.date)}
                 </p>

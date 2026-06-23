@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
+import { Logo } from "./logo";
 
 const navItems = [
   { href: "/overview", label: "Visão Geral", icon: LayoutDashboard },
@@ -39,9 +40,11 @@ export function MobileSidebar() {
         >
           <Menu size={20} />
         </button>
-        <span className="text-sm font-semibold text-primary">
-          {currentPage?.label ?? "Financeiro"}
-        </span>
+        {currentPage ? (
+          <span className="text-sm font-semibold text-primary">{currentPage.label}</span>
+        ) : (
+          <Logo size={20} className="text-sm" />
+        )}
         <ThemeToggle />
       </header>
 
@@ -62,7 +65,7 @@ export function MobileSidebar() {
         )}
       >
         <div className="flex h-14 items-center justify-between px-4 border-b border-border">
-          <span className="text-base font-bold text-primary">Financeiro</span>
+          <Logo size={24} className="text-base" />
           <button
             onClick={() => setOpen(false)}
             className="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:bg-accent transition-colors"

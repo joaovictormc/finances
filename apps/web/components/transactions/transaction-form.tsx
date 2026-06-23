@@ -40,6 +40,7 @@ function flattenCategories(cats: Category[], type: string): Category[] {
 export function TransactionForm({ transaction, categories, accounts, groups, onSuccess }: TransactionFormProps) {
   const { toast } = useToast();
   const [type, setType] = useState<TransactionType>(transaction?.type ?? "expense");
+  const [paymentMethod, setPaymentMethod] = useState<"debit" | "credit">(transaction?.paymentMethod ?? "debit");
   const [amountCents, setAmountCents] = useState(Math.round(Number(transaction?.amount ?? 0) * 100));
   const [description, setDescription] = useState(transaction?.description ?? "");
   const [groupId, setGroupId] = useState(transaction?.groupId ?? "");
@@ -58,6 +59,7 @@ export function TransactionForm({ transaction, categories, accounts, groups, onS
 
   const filteredCategories = flattenCategories(categories, type);
   const availableAccounts = accounts.filter((a) => (groupId ? a.groupId === groupId : !a.groupId));
+  const selectedAccount = accounts.find((a) => a.id === accountId);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -76,6 +78,7 @@ export function TransactionForm({ transaction, categories, accounts, groups, onS
     try {
       const payload = {
         type,
+        paymentMethod: selectedAccount?.hasCreditCard ? paymentMethod : "debit",
         amount: amountCents / 100,
         description: description.trim(),
         accountId,
@@ -150,6 +153,18 @@ export function TransactionForm({ transaction, categories, accounts, groups, onS
         options={availableAccounts.map((a) => ({ value: a.id, label: a.name }))}
         error={errors.accountId}
       />
+
+      {selectedAccount?.hasCreditCard && (
+        <Select
+          label="Forma de pagamento"
+          value={paymentMethod}
+          onChange={(e) => setPaymentMethod(e.target.value as "debit" | "credit")}
+          options={[
+            { value: "debit", label: "Débito" },
+            { value: "credit", label: "Crédito" },
+          ]}
+        />
+      )}
 
       <Select
         label="Categoria"

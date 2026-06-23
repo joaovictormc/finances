@@ -5,6 +5,7 @@ import { MobileSidebar } from "@/components/ui/mobile-sidebar";
 import { MobileBottomNav } from "@/components/ui/mobile-bottom-nav";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { UserMenu } from "@/components/ui/user-menu";
+import { Logo } from "@/components/ui/logo";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -15,15 +16,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Sidebar */}
         <aside className="hidden lg:flex w-60 flex-col border-r border-border/60 bg-card">
           <div className="flex h-14 items-center justify-between px-4 border-b border-border/60">
-            <span className="flex items-center gap-2 text-base font-bold text-foreground tracking-tight">
-              <span
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-sm text-white shrink-0"
-                style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-highlight))" }}
-              >
-                ◆
-              </span>
-              Financeiro
-            </span>
+            <Logo size={24} className="text-base" />
             <ThemeToggle />
           </div>
 

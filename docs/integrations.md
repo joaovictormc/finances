@@ -14,21 +14,22 @@
 - `/ajuda` — lista de exemplos de uso
 - `/resumo` — resumo financeiro do mês corrente
 
-**Registro de gastos via NLP:**
+**Registro de gastos via NLP (texto e voz):**
 ```
 Usuário: "gastei 50 reais no mercado hoje"
 Bot: "💸 Gasto detectado:
       💵 Valor: R$ 50,00
       📁 Categoria: Supermercado
-      📅 Data: 14/06/2025
+      📅 Data: 14/06/2026
       [✅ Confirmar] [✏️ Editar] [❌ Cancelar]"
 ```
 
 **Pipeline NLP:**
-1. Webhook recebe mensagem → enfileira em `bot-messages` (BullMQ)
-2. Worker chama `parseExpenseMessage()` → Claude Haiku (`claude-haiku-4-5-20251001`)
-3. Se confiança ≥ 0.7: cria transação pendente em Redis (TTL 5min) + envia confirmação
-4. Usuário confirma → worker cria `Transaction` no banco
+1. Webhook recebe mensagem (texto ou áudio) → enfileira em `bot-messages` (BullMQ)
+2. Se for áudio: `voice-transcription` worker transcreve via Groq Whisper antes de seguir o mesmo pipeline
+3. Worker chama `parseExpenseMessage()` → Groq (`llama-3.3-70b-versatile`, tool calling)
+4. Se confiança ≥ 0.7: cria transação pendente em Redis (TTL 5min) + envia confirmação
+5. Usuário confirma → worker cria `Transaction` no banco
 
 **Rate limits:** 30 msg/seg global, 1 msg/seg por chat.
 
@@ -36,7 +37,7 @@ Bot: "💸 Gasto detectado:
 
 ## WhatsApp Business API (Meta)
 
-**Status:** Planejado — Fase 2
+**Status:** Planejado — nunca iniciado
 
 - Free tier: 1.000 conversas/mês (janela de 24h por conversa)
 - Aprovação: ~2 semanas (Business Verification com CNPJ)
@@ -48,7 +49,7 @@ Bot: "💸 Gasto detectado:
 
 ## Open Finance Brasil
 
-**Status:** Planejado — Fase 3 (paralelo ao Pluggy)
+**Status:** Planejado — schema pronto, sem integração real
 
 - **Custo:** Gratuito (Resolução Conjunta Bacen nº 1/2020)
 - **Cobertura:** Itaú, Bradesco, Nubank, Santander, BB, Caixa, Inter, C6, XP e todos +5M clientes
@@ -57,37 +58,52 @@ Bot: "💸 Gasto detectado:
 - **Tokens:** access_token expira em 15min; refresh_token até 1 ano
 - **mTLS:** certificado cliente exigido (obtido no RAIDIAM)
 
-Schema já preparado: `OpenFinanceConsent`, `OpenFinanceAccount`.
+Schema já preparado: `OpenFinanceConsent`, `OpenFinanceAccount`. Quando aprovado, a ideia é preferir Open Finance Brasil sobre Pluggy para o mesmo banco (custo zero).
 
 ---
 
-## Pluggy (Agregador Bancário para MVP)
+## Pluggy (Agregador Bancário)
 
-**Status:** Planejado — Fase 3
+**Status:** Implementado — `apps/api/src/lib/pluggy/client.ts`, `apps/api/src/routes/pluggy.ts` — **atrás de feature flag por custo mensal**
 
-- **Custo:** Gratuito até 100 conexões/mês (MVP sem aprovação regulatória)
-- **Vantagem:** Sem necessidade de registro no RAIDIAM para começar
+- `NEXT_PUBLIC_ENABLE_PLUGGY` (env do `apps/web`, default ausente/`false`): controla só a exibição do botão "Conectar Banco" na tela de Contas (`apps/web/components/accounts/connect-bank-button.tsx`). O código de integração (rotas, client, worker de sync) continua intacto e funcional — só fica invisível na UI até o custo deixar de ser um problema.
 - Env vars: `PLUGGY_CLIENT_ID`, `PLUGGY_CLIENT_SECRET`
-- Endpoint: Pluggy Connect widget embedded na web
-- Migração: quando OFB aprovado, preferir OFB sobre Pluggy para o mesmo banco
+- Fluxo: `POST /api/pluggy/connect-token` → widget `pluggy-connect-sdk` no navegador → `onSuccess` chama `POST /api/pluggy/items` → cria/atualiza `FinancialAccount` por conta detectada → enfileira `open-finance-sync` (BullMQ)
+- Webhook (`POST /api/webhooks/pluggy`): a Pluggy não assina o payload (sem HMAC); o handler valida o IP de origem e nunca confia no corpo — busca os dados reais de volta na API autenticada da Pluggy
+- **Atenção a um bug já corrigido:** a API da Pluggy devolve o connect token no campo `accessToken` da resposta de `/connect_token`, não em `connectToken` (apesar do nome do endpoint) — ver `apps/api/src/lib/pluggy/client.ts`
 
 ---
 
-## Claude API (Anthropic)
+## Groq (NLP / IA)
 
-**Status:** Implementado
+**Status:** Implementado — `apps/api/src/lib/ai/groq-client.ts`
 
-**Modelos usados:**
-- `claude-haiku-4-5-20251001` — parsing de gastos em PT-BR (rápido, barato, real-time)
-- `claude-sonnet-4-6` — insights mensais, NL queries (mais inteligente, usado em batch)
+**Modelos usados (configuráveis em runtime via `AiSettings`, editável em `/admin/ai`):**
+- `llama-3.3-70b-versatile` (default `textModel`) — parsing de gastos em PT-BR, insights mensais, detecção de recorrências, forecast de orçamento, NL queries
+- `whisper-large-v3-turbo` (default `audioModel`) — transcrição de áudio do bot
 
-**Arquivo:** `apps/api/src/lib/ai/expense-parser.ts`
+**4 pontos de chamada:**
+1. `lib/ai/expense-parser.ts` — parsing de mensagens (bot)
+2. `lib/ai/financial-insights.ts` — insight mensal (worker `ai-analysis`)
+3. `routes/ai.ts` (`POST /api/ai/query`) — NL query com tool calling
+4. `lib/ai/voice-transcriber.ts` — transcrição de voz (worker `voice-transcription`)
 
-**Técnica:** `tool_use` com JSON schema estruturado para saída determinística.
+Cada chamada passa por `getAiSettings()` (kill-switch + modelo) e grava uso em `AiUsageLog` via `logAiUsage()`. `monthlyTokenLimit` (opcional) corta o uso quando excedido (`isWithinUsageLimit()`).
 
-**Prompt:** Sistema em PT-BR com contexto financeiro brasileiro, gírias, datas relativas ("ontem", "semana passada"), moeda BRL.
+**Técnica:** `tool_use`/function calling com JSON schema estruturado para saída determinística. Prompt em PT-BR com contexto financeiro brasileiro, gírias, datas relativas ("ontem", "semana passada"), moeda BRL. Threshold de confiança: 0.7.
 
-**Threshold de confiança:** 0.7 — abaixo disso, bot pede esclarecimento.
+---
+
+## Mercado Pago + Pix (Assinaturas)
+
+**Status:** Implementado — `apps/api/src/lib/mercadopago.ts`, `apps/api/src/lib/pix.ts`
+
+- **Assinaturas recorrentes:** `createSubscriptionCheckout()` cria um *preapproval* no Mercado Pago; o usuário paga pelo checkout hospedado; webhook (`POST /api/webhooks/mercadopago`) confirma e ativa o plano via `Subscription`.
+- **Pix direto:** alternativa sem gateway — `buildPixPayload()` gera um BR Code (EMV QR Code) estático a partir da chave Pix cadastrada pelo admin; o pagamento é confirmado **manualmente** pelo admin em `/admin/checkouts` (`POST /api/admin/payment-events/:id/confirm-pix`), sem callback automático.
+- **Configuração:** ambos os métodos (chaves, tokens, segredos) são guardados em `PaymentMethodConfig` (banco), editáveis em `/admin/payment-methods` — não mais só via `.env`. As variáveis `MERCADOPAGO_*` no `.env` funcionam como fallback.
+- **Webhook idempotente:** todo evento recebido é gravado em `PaymentEvent` (`mpEventId` único) antes de processar, evitando duplicação.
+- **Cancelamento:** `cancelSubscriptionAtMercadoPago()` é pulado quando `mpPreapprovalId` começa com `pix:` (assinatura paga via Pix não existe no Mercado Pago).
+- Env vars: `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_PUBLIC_KEY`, `MERCADOPAGO_WEBHOOK_SECRET`
 
 ---
 

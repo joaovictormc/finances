@@ -226,6 +226,7 @@ app.post("/import", async (c) => {
   const body = await c.req.parseBody();
   const file = body.file;
   const accountId = body.accountId;
+  const paymentMethod = body.paymentMethod === "credit" ? "credit" : "debit";
 
   if (!(file instanceof File) || typeof accountId !== "string" || !accountId) {
     return c.json({ error: "Envie um arquivo (file) e o accountId da conta" }, 400);
@@ -257,6 +258,7 @@ app.post("/import", async (c) => {
       accountId: account.id,
       groupId: account.groupId,
       type: row.type,
+      paymentMethod,
       amount: row.amount,
       description: row.description,
       date: new Date(row.date),

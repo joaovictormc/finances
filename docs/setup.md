@@ -7,7 +7,7 @@
 - Docker Desktop (para Mailpit local)
 - Tailscale conectado (para acessar PostgreSQL e Redis no ZimaOS)
 - Conta no [Brevo](https://app.brevo.com/) para emails
-- Conta na [Anthropic](https://console.anthropic.com/) para NLP
+- Conta na [Groq](https://console.groq.com/keys) para NLP/IA (free tier)
 - Bot no Telegram criado via @BotFather
 
 ## 1. Clonar e instalar
@@ -24,24 +24,6 @@ pnpm install
 
 O PostgreSQL já está rodando no ZimaOS. A `DATABASE_URL` já aponta para `100.104.200.37:5432`.
 
-### Opção A — Script SQL direto (recomendado para primeiro setup)
-
-Os scripts ficam em `packages/db/sql/`. Executar na ordem:
-
-```bash
-# 1. Schema completo (todas as tabelas, índices e foreign keys + hypertable TimescaleDB)
-psql -h 100.104.200.37 -U postgres -d finances -f packages/db/sql/001_schema.sql
-
-# 2. Seed de categorias BR (idempotente, pode rodar mais de uma vez)
-psql -h 100.104.200.37 -U postgres -d finances -f packages/db/sql/002_seed_categories.sql
-```
-
-> **TimescaleDB**: o `001_schema.sql` já inclui `SELECT create_hypertable(...)` no final.
-> Se TimescaleDB não estiver instalado, remova esse bloco — a tabela `transactions`
-> funciona normalmente como PostgreSQL puro.
-
-### Opção B — Via Prisma (workflow de desenvolvimento)
-
 ```bash
 # Gerar cliente Prisma (obrigatório antes de rodar a API)
 pnpm db:generate
@@ -49,9 +31,13 @@ pnpm db:generate
 # Criar e aplicar migration (precisa de conexão com o banco)
 pnpm db:migrate
 
-# Seed de categorias via TypeScript
+# Seed de categorias BR
 pnpm db:seed
 ```
+
+> **Atenção:** por rodar contra um banco compartilhado, mudanças de schema feitas durante o desenvolvimento deste projeto costumam ser aplicadas via script `.ts` temporário com `db.$executeRawUnsafe("ALTER TABLE ...")` em vez de `prisma migrate dev` — ver `docs/database.md`.
+
+> **TimescaleDB**: depois da migration inicial, rodar no psql: `SELECT create_hypertable('transactions', 'date', if_not_exists => TRUE);`. Se TimescaleDB não estiver instalado, a tabela `transactions` funciona normalmente como PostgreSQL puro.
 
 ## 3. Redis no ZimaOS
 
@@ -92,22 +78,24 @@ docker compose up -d mailpit
 # Acesse http://localhost:8025 para ver emails enviados
 ```
 
-Para usar Mailpit no dev, mude temporariamente `BREVO_API_KEY=""` e use SMTP via `smtp://localhost:1025` (requer configurar `email.ts` para SMTP local em dev).
-
 ## 5. Rodar todos os apps
 
 ```bash
 pnpm dev
 # Web:    http://localhost:3000
 # API:    http://localhost:3001
-# Mobile: Expo Dev Server (QR code no terminal)
+# Mobile: Expo Dev Server (QR code no terminal) — só scaffold, sem telas reais
 ```
 
-## 6. Expo Go (Mobile)
+No Windows, se precisar reiniciar só a API (ex: depois de um `prisma generate`), rode `pnpm --filter @finances/api dev` separadamente — o processo `tsx watch` mantém o Prisma Client em uso e pode bloquear a regeneração do client até ser encerrado.
 
-1. Instale o **Expo Go** no celular (versão SDK 54)
-2. Com o dev server rodando (`pnpm --filter @finances/mobile dev`)
-3. Escaneie o QR code com o Expo Go
+## 6. Conta admin em dev
+
+Defina `ADMIN_BOOTSTRAP="true"`, `ADMIN_EMAIL` e `ADMIN_PASSWORD` no `.env` — ao subir a API, ela cria (ou garante `role: "admin"` em) essa conta automaticamente. Deixe `ADMIN_BOOTSTRAP="false"` em produção.
+
+## 7. Pluggy em dev (opcional, tem custo)
+
+A integração com a Pluggy está implementada mas escondida por trás de `NEXT_PUBLIC_ENABLE_PLUGGY` (no `apps/web/.env.local`) por causa do custo mensal. Para testar localmente, defina `NEXT_PUBLIC_ENABLE_PLUGGY="true"` e preencha `PLUGGY_CLIENT_ID`/`PLUGGY_CLIENT_SECRET`.
 
 ## Variáveis de Ambiente
 
@@ -116,10 +104,15 @@ pnpm dev
 | `DATABASE_URL` | Sim | ZimaOS — já configurado |
 | `REDIS_URL` | Sim | ZimaOS — após instalar Redis |
 | `BETTER_AUTH_SECRET` | Sim | Gerar: `openssl rand -base64 32` |
+| `BETTER_AUTH_URL` | Sim | `http://localhost:3001` em dev |
+| `AUTH_REQUIRE_EMAIL_VERIFICATION` | Não | `"false"` em dev, `"true"` em produção |
+| `ADMIN_BOOTSTRAP` / `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Não | Cria conta admin automaticamente em dev |
 | `BREVO_API_KEY` | Sim (email) | app.brevo.com → Settings → API Keys |
 | `EMAIL_FROM_ADDRESS` | Sim (email) | Seu domínio verificado no Brevo |
-| `ANTHROPIC_API_KEY` | Sim (NLP/IA) | console.anthropic.com |
+| `GROQ_API_KEY` | Sim (NLP/IA) | console.groq.com/keys |
 | `TELEGRAM_BOT_TOKEN` | Sim (bot) | @BotFather no Telegram |
-| `GOOGLE_CLIENT_ID/SECRET` | Não (OAuth) | console.cloud.google.com |
-| `PLUGGY_*` | Fase 3 | pluggy.ai |
-| `WHATSAPP_*` | Fase 2 | Meta Developer Portal |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Não (OAuth) | console.cloud.google.com |
+| `PLUGGY_CLIENT_ID` / `PLUGGY_CLIENT_SECRET` | Não | pluggy.ai — só necessário com `NEXT_PUBLIC_ENABLE_PLUGGY=true` |
+| `MERCADOPAGO_ACCESS_TOKEN` / `MERCADOPAGO_PUBLIC_KEY` / `MERCADOPAGO_WEBHOOK_SECRET` | Não | mercadopago.com.br/developers — fallback; pode ser configurado direto em `/admin/payment-methods` |
+| `NEXT_PUBLIC_ENABLE_PLUGGY` | Não | `apps/web` — `"true"` para mostrar o botão de conexão bancária |
+| `WHATSAPP_*` | Não | Meta Developer Portal — integração ainda não implementada |

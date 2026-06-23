@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Pencil, Trash2, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CategoryIcon } from "@/components/ui/category-icon";
@@ -13,6 +14,97 @@ interface TransactionListProps {
   isLoading: boolean;
   onEdit: (t: Transaction) => void;
   onDelete: (id: string) => void;
+}
+
+type ColumnKey = "date" | "description" | "category" | "account" | "amount";
+
+const DEFAULT_WIDTHS: Record<ColumnKey, number> = {
+  date: 90,
+  description: 200,
+  category: 160,
+  account: 140,
+  amount: 120,
+};
+
+const MIN_WIDTH = 80;
+const STORAGE_KEY = "transactions-column-widths";
+
+function loadWidths(): Record<ColumnKey, number> | null {
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (!stored) return null;
+    return { ...DEFAULT_WIDTHS, ...JSON.parse(stored) };
+  } catch {
+    return null;
+  }
+}
+
+function useColumnWidths() {
+  const [widths, setWidths] = useState<Record<ColumnKey, number>>(DEFAULT_WIDTHS);
+
+  // só lê localStorage depois da hidratação, pra renderização inicial bater com o servidor
+  useEffect(() => {
+    const stored = loadWidths();
+    if (stored) setWidths(stored);
+  }, []);
+
+  const startResize = (key: ColumnKey, startX: number) => {
+    const startWidth = widths[key];
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.userSelect = "none";
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const next = Math.max(MIN_WIDTH, startWidth + (e.clientX - startX));
+      setWidths((prev) => ({ ...prev, [key]: next }));
+    };
+    const handleMouseUp = () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = previousUserSelect;
+      setWidths((prev) => {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(prev));
+        return prev;
+      });
+    };
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
+
+  return { widths, startResize };
+}
+
+function pinnedWidth(px: number): React.CSSProperties {
+  return { width: px, minWidth: px, maxWidth: px, overflow: "hidden" };
+}
+
+function ResizableTh({
+  column,
+  widths,
+  startResize,
+  className,
+  children,
+}: {
+  column: ColumnKey;
+  widths: Record<ColumnKey, number>;
+  startResize: (key: ColumnKey, startX: number) => void;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <th
+      className={`relative px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide ${className ?? "text-left"}`}
+      style={pinnedWidth(widths[column])}
+    >
+      {children}
+      <span
+        onMouseDown={(e) => {
+          e.preventDefault();
+          startResize(column, e.clientX);
+        }}
+        className="absolute right-0 top-0 bottom-0 z-10 w-2 cursor-col-resize hover:bg-primary/40"
+      />
+    </th>
+  );
 }
 
 function SkeletonRow() {
@@ -41,6 +133,9 @@ function SkeletonCard() {
 }
 
 export function TransactionList({ transactions, isLoading, onEdit, onDelete }: TransactionListProps) {
+  const { widths, startResize } = useColumnWidths();
+  const td = (column: ColumnKey) => pinnedWidth(widths[column]);
+
   const handleDelete = (id: string) => {
     if (window.confirm("Deletar esta transação?")) onDelete(id);
   };
@@ -60,15 +155,15 @@ export function TransactionList({ transactions, isLoading, onEdit, onDelete }: T
   return (
     <>
       {/* Desktop table */}
-      <div className="hidden md:block bg-card rounded-2xl border border-border/60 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="hidden md:block bg-card rounded-2xl border border-border/60 shadow-sm overflow-x-auto">
+        <table className="text-sm" style={{ tableLayout: "fixed", minWidth: "100%" }}>
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Data</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Descrição</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Categoria</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Conta</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wide">Valor</th>
+              <ResizableTh column="date" widths={widths} startResize={startResize}>Data</ResizableTh>
+              <ResizableTh column="description" widths={widths} startResize={startResize}>Descrição</ResizableTh>
+              <ResizableTh column="category" widths={widths} startResize={startResize}>Categoria</ResizableTh>
+              <ResizableTh column="account" widths={widths} startResize={startResize}>Conta</ResizableTh>
+              <ResizableTh column="amount" widths={widths} startResize={startResize} className="text-right">Valor</ResizableTh>
               <th className="px-4 py-3 w-16" />
             </tr>
           </thead>
@@ -77,12 +172,13 @@ export function TransactionList({ transactions, isLoading, onEdit, onDelete }: T
               ? Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
               : transactions.map((t) => (
                   <tr key={t.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap" style={td("date")}>
                       {formatShortDate(t.date)}
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-foreground truncate max-w-[200px]">{t.description}</p>
+                    <td className="px-4 py-3" style={td("description")}>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="font-medium text-foreground truncate min-w-0">{t.description}</p>
+                        {t.paymentMethod === "credit" && <Badge variant="default">💳 Crédito</Badge>}
                         {t.group && (
                           <Badge variant="default">
                             <Users size={10} /> {t.group.name}
@@ -90,18 +186,18 @@ export function TransactionList({ transactions, isLoading, onEdit, onDelete }: T
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" style={td("category")}>
                       {t.category ? (
-                        <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-2 text-xs text-muted-foreground min-w-0 max-w-full">
                           <CategoryIcon icon={t.category.icon} iconUrl={t.category.iconUrl} color={t.category.color} size="sm" />
-                          {t.category.name}
+                          <span className="truncate">{t.category.name}</span>
                         </span>
                       ) : (
                         <span className="text-xs text-muted-foreground/50">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{t.account.name}</td>
-                    <td className="px-4 py-3 text-right font-semibold">
+                    <td className="px-4 py-3 text-xs text-muted-foreground truncate" style={td("account")}>{t.account.name}</td>
+                    <td className="px-4 py-3 text-right font-semibold whitespace-nowrap" style={td("amount")}>
                       <span
                         className={
                           t.type === "income"
@@ -156,11 +252,14 @@ export function TransactionList({ transactions, isLoading, onEdit, onDelete }: T
                   <p className="text-xs text-muted-foreground truncate">
                     {t.category?.name ?? "Sem categoria"} · {formatShortDate(t.date)}
                   </p>
-                  {t.group && (
-                    <Badge variant="default" className="mt-1">
-                      <Users size={10} /> {t.group.name}
-                    </Badge>
-                  )}
+                  <div className="flex gap-1 mt-1">
+                    {t.paymentMethod === "credit" && <Badge variant="default">💳 Crédito</Badge>}
+                    {t.group && (
+                      <Badge variant="default">
+                        <Users size={10} /> {t.group.name}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <div className="text-right shrink-0">
                   <p

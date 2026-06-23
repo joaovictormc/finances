@@ -1,6 +1,6 @@
 {
-  "name": "Finances",
-  "short_name": "Finances",
+  "name": "ControlAI",
+  "short_name": "ControlAI",
   "description": "Finanças pessoais com IA, Open Finance e bot no Telegram",
   "start_url": "/overview",
   "scope": "/",

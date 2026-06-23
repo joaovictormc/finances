@@ -162,6 +162,7 @@ model FinancialAccount {
 
   // account details
   type        String   // checking | savings | credit_card | investment | wallet
+  hasCreditCard Boolean @default(false) // permite importar fatura de cartão (paymentMethod: credit) na mesma conta
   name        String
   institution String?  // Nubank, Itaú, etc.
   currency    String   @default("BRL")
@@ -224,6 +225,7 @@ model Transaction {
   group       Group?   @relation(fields: [groupId], references: [id])
 
   type        String   // income | expense | transfer
+  paymentMethod String @default("debit") // debit | credit (cartão de crédito vinculado à conta)
   amount      Decimal  @db.Decimal(15, 2)
   currency    String   @default("BRL")
   description String

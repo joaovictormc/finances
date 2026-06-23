@@ -6,13 +6,13 @@ import "./globals.css";
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 
 export const metadata: Metadata = {
-  title: { default: "Financeiro", template: "%s | Financeiro" },
+  title: { default: "ControlAI", template: "%s | ControlAI" },
   description: "Controle financeiro inteligente com IA, Open Finance e integração com WhatsApp",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Finances",
+    title: "ControlAI",
   },
   icons: {
     icon: [

@@ -1,6 +1,7 @@
 export type Transaction = {
   id: string;
   type: "income" | "expense" | "transfer";
+  paymentMethod?: "debit" | "credit";
   amount: string;
   description: string;
   date: string;
@@ -37,6 +38,9 @@ export type FinancialAccount = {
   color: string | null;
   groupId?: string | null;
   lastSyncedAt?: string | null;
+  hasCreditCard?: boolean;
+  isArchived?: boolean;
+  _count?: { transactions: number };
 };
 
 export type Budget = {

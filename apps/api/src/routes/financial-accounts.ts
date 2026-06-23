@@ -15,10 +15,11 @@ app.use("*", requireAuth);
 app.get("/", async (c) => {
   const userId = c.get("userId");
   const groupIds = await getUserGroupIds(userId);
+  const archived = c.req.query("archived") === "true";
 
   const accounts = await db.financialAccount.findMany({
     where: {
-      isArchived: false,
+      isArchived: archived,
       OR: [{ userId, groupId: null }, { groupId: { in: groupIds } }],
     },
     include: {
@@ -83,6 +84,28 @@ app.delete("/:id", async (c) => {
   });
 
   return c.json(account);
+});
+
+app.delete("/:id/permanent", async (c) => {
+  const userId = c.get("userId");
+  const id = c.req.param("id");
+
+  const existing = await db.financialAccount.findFirst({ where: { id } });
+  if (!existing) return c.json({ error: "Conta não encontrada" }, 404);
+  const canDelete =
+    existing.userId === userId ||
+    (existing.groupId && (await hasGroupRole(userId, existing.groupId, ["owner", "admin"])));
+  if (!canDelete) return c.json({ error: "Conta não encontrada" }, 404);
+  if (!existing.isArchived) {
+    return c.json({ error: "Arquive a conta antes de excluir definitivamente" }, 400);
+  }
+
+  await db.$transaction([
+    db.transaction.deleteMany({ where: { accountId: id } }),
+    db.financialAccount.delete({ where: { id } }),
+  ]);
+
+  return c.json({ success: true });
 });
 
 export default app;
