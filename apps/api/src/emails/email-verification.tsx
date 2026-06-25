@@ -11,7 +11,7 @@ export default function EmailVerification({ name = "usuário", url = "#" }: Prop
       <body style={{ fontFamily: "Arial, sans-serif", maxWidth: 600, margin: "0 auto", padding: 20 }}>
         <h1 style={{ color: "#111" }}>Confirme seu e-mail</h1>
         <p>Olá, {name}!</p>
-        <p>Clique no botão abaixo para confirmar seu e-mail e ativar sua conta no Financeiro:</p>
+        <p>Clique no botão abaixo para confirmar seu e-mail e ativar sua conta no ControlAI:</p>
         <a
           href={url}
           style={{

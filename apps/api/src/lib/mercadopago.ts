@@ -28,7 +28,7 @@ export async function createSubscriptionCheckout({ userId, email, plan }: Create
   const preapproval = new PreApproval(await getClient());
   const result = await preapproval.create({
     body: {
-      reason: `Finances — Plano ${planDef.name}`,
+      reason: `ControlAI — Plano ${planDef.name}`,
       external_reference: userId,
       payer_email: email,
       back_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/billing`,

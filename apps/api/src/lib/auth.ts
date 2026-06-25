@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { bearer } from "better-auth/plugins/bearer";
 import { db } from "@finances/db";
 
 // O handler de auth roda na API (porta 3001), então o baseURL precisa apontar para ela.
@@ -46,7 +47,7 @@ export const auth = betterAuth({
         const { sendEmail } = await import("./email");
         await sendEmail({
           to: user.email,
-          subject: "Confirme seu e-mail — Financeiro",
+          subject: "Confirme seu e-mail — ControlAI",
           template: "email-verification",
           data: { name: user.name, url },
         });
@@ -67,7 +68,7 @@ export const auth = betterAuth({
               const { sendEmail } = await import("./email");
               await sendEmail({
                 to: user.email,
-                subject: "Bem-vindo ao Financeiro! 💰",
+                subject: "Bem-vindo ao ControlAI! 💰",
                 template: "welcome",
                 data: { name: user.name },
               });
@@ -85,7 +86,14 @@ export const auth = betterAuth({
       maxAge: 60 * 5, // cache da sessão no cookie por 5 minutos
     },
   },
-  trustedOrigins: [APP_URL, API_URL],
+  trustedOrigins: [APP_URL, API_URL, "controlai://"],
+  // bearer: permite autenticar via header "Authorization: Bearer <token>",
+  // usado pelo app mobile (sem cookie jar confiável) — coexiste com o cookie do web.
+  // (o plugin server-side "expo" de @better-auth/expo não foi adicionado: ele traz
+  // zod v4 como dependência direta, conflitando com o zod v3 do projeto e quebrando
+  // a inferência de tipo de `auth` — TS2742. Só é necessário pra OAuth/deep-link no
+  // mobile, fora de escopo desta fase.)
+  plugins: [bearer()],
 });
 
 export type Auth = typeof auth;

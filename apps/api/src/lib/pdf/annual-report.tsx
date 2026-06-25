@@ -124,7 +124,7 @@ export function AnnualReportDocument({
           ))}
         </View>
 
-        <Text style={styles.footer}>Gerado automaticamente • Finances</Text>
+        <Text style={styles.footer}>Gerado automaticamente • ControlAI</Text>
       </Page>
     </Document>
   );

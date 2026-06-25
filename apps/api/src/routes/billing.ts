@@ -84,7 +84,7 @@ app.post("/checkout-pix", zValidator("json", CheckoutSchema), async (c) => {
 
   const payload = buildPixPayload({
     key: config.key,
-    receiverName: config.receiverName || "Finances",
+    receiverName: config.receiverName || "ControlAI",
     receiverCity: config.receiverCity || "Sao Paulo",
     amount: planDef.priceCents / 100,
     txid,

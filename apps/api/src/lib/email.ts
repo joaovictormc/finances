@@ -8,7 +8,7 @@ emailClient.setApiKey(
   process.env.BREVO_API_KEY ?? ""
 );
 
-const EMAIL_FROM_NAME = "Financeiro";
+const EMAIL_FROM_NAME = "ControlAI";
 const EMAIL_FROM_ADDRESS = process.env.EMAIL_FROM_ADDRESS ?? "noreply@labapp.com.br";
 
 export type EmailJob = {
