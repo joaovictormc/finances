@@ -2,12 +2,15 @@ import "../global.css";
 import { useEffect } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { View, ActivityIndicator } from "react-native";
+import { StatusBar } from "expo-status-bar";
 import { useSession } from "@/lib/auth-client";
+import { ThemeProvider, useTheme } from "@/lib/theme";
 
-export default function RootLayout() {
+function RootNavigator() {
   const { data: session, isPending } = useSession();
   const segments = useSegments();
   const router = useRouter();
+  const { scheme, colors } = useTheme();
 
   useEffect(() => {
     if (isPending) return;
@@ -22,16 +25,62 @@ export default function RootLayout() {
 
   if (isPending) {
     return (
-      <View className="flex-1 items-center justify-center bg-background dark:bg-background-dark">
+      <View
+        className="flex-1 items-center justify-center bg-background dark:bg-background-dark"
+        style={{ backgroundColor: colors.background }}
+      >
         <ActivityIndicator />
       </View>
     );
   }
 
+  // Header nativo precisa de cores explícitas pra acompanhar o tema.
+  const themedHeader = {
+    headerShown: true,
+    headerStyle: { backgroundColor: colors.card },
+    headerTitleStyle: { color: colors.foreground },
+    headerTintColor: colors.foreground,
+  } as const;
+  const modalHeaderOptions = { ...themedHeader, presentation: "modal" as const };
+  const stackHeaderOptions = themedHeader;
+
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(tabs)" />
-    </Stack>
+    <>
+      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="new-transaction"
+          options={{ ...modalHeaderOptions, title: "Nova Transação" }}
+        />
+        <Stack.Screen
+          name="new-account"
+          options={{ ...modalHeaderOptions, title: "Nova Conta" }}
+        />
+        <Stack.Screen name="bills" options={{ ...stackHeaderOptions, title: "Contas a Pagar" }} />
+        <Stack.Screen name="goals" options={{ ...stackHeaderOptions, title: "Metas" }} />
+        <Stack.Screen
+          name="new-bill"
+          options={{ ...modalHeaderOptions, title: "Nova Conta" }}
+        />
+        <Stack.Screen
+          name="new-goal"
+          options={{ ...modalHeaderOptions, title: "Nova Meta" }}
+        />
+        <Stack.Screen
+          name="add-savings"
+          options={{ ...modalHeaderOptions, title: "Adicionar ao poupado" }}
+        />
+      </Stack>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <RootNavigator />
+    </ThemeProvider>
   );
 }

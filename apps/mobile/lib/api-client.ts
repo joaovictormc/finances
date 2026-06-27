@@ -24,11 +24,15 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   // O plugin Expo do Better Auth guarda a sessão como cookie no expo-secure-store;
   // mandamos esse cookie de volta manualmente, já que não existe cookie jar de
   // navegador no app nativo (mesmo mecanismo recomendado pela doc do Better Auth/Expo).
+  // Também mandamos o header `Origin` (derivado do API_URL) pra passar na verificação
+  // de origin do Better Auth, que valida contra trustedOrigins.
+  const origin = new URL(API_URL).origin;
   const fetchInit: RequestInit = {
     method,
     headers: {
       "Content-Type": "application/json",
       Cookie: authClient.getCookie(),
+      Origin: origin,
     },
     cache: "no-store" as RequestCache,
   };

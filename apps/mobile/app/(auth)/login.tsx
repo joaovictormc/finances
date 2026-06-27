@@ -2,8 +2,10 @@ import { useState } from "react";
 import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
 import { Link, router } from "expo-router";
 import { signIn } from "@/lib/auth-client";
+import { useTheme } from "@/lib/theme";
 
 export default function LoginScreen() {
+  const { colors } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -11,20 +13,31 @@ export default function LoginScreen() {
 
   async function handleSubmit() {
     setError(null);
-    setLoading(true);
-    const { error } = await signIn.email({ email, password });
-    setLoading(false);
-
-    if (error) {
-      setError(
-        error.code === "INVALID_EMAIL_OR_PASSWORD"
-          ? "E-mail ou senha incorretos."
-          : error.message ?? "Não foi possível entrar. Tente novamente."
-      );
+    if (!email.trim() || !password) {
+      setError("Preencha e-mail e senha.");
       return;
     }
 
-    router.replace("/(tabs)");
+    setLoading(true);
+    try {
+      const { error } = await signIn.email({ email: email.trim(), password });
+
+      if (error) {
+        setError(
+          error.code === "INVALID_EMAIL_OR_PASSWORD"
+            ? "E-mail ou senha incorretos."
+            : error.message ?? "Não foi possível entrar. Tente novamente."
+        );
+        return;
+      }
+
+      router.replace("/(tabs)");
+    } catch {
+      // Erro de rede / servidor inacessível (não cai no `error` retornado).
+      setError("Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -39,6 +52,7 @@ export default function LoginScreen() {
       <TextInput
         className="mb-3 rounded-md border border-border bg-card px-3 py-3 text-foreground dark:border-border-dark dark:bg-card-dark dark:text-foreground-dark"
         placeholder="E-mail"
+        placeholderTextColor={colors.mutedForeground}
         autoCapitalize="none"
         autoComplete="email"
         keyboardType="email-address"
@@ -48,6 +62,7 @@ export default function LoginScreen() {
       <TextInput
         className="mb-4 rounded-md border border-border bg-card px-3 py-3 text-foreground dark:border-border-dark dark:bg-card-dark dark:text-foreground-dark"
         placeholder="Senha"
+        placeholderTextColor={colors.mutedForeground}
         secureTextEntry
         autoComplete="current-password"
         value={password}

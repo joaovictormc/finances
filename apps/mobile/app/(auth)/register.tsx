@@ -2,8 +2,10 @@ import { useState } from "react";
 import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
 import { Link, router } from "expo-router";
 import { signUp } from "@/lib/auth-client";
+import { useTheme } from "@/lib/theme";
 
 export default function RegisterScreen() {
+  const { colors } = useTheme();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -12,16 +14,30 @@ export default function RegisterScreen() {
 
   async function handleSubmit() {
     setError(null);
-    setLoading(true);
-    const { error } = await signUp.email({ name, email, password });
-    setLoading(false);
-
-    if (error) {
-      setError(error.message ?? "Não foi possível criar a conta. Tente novamente.");
+    if (!name.trim() || !email.trim() || !password) {
+      setError("Preencha nome, e-mail e senha.");
+      return;
+    }
+    if (password.length < 8) {
+      setError("A senha deve ter ao menos 8 caracteres.");
       return;
     }
 
-    router.replace("/(tabs)");
+    setLoading(true);
+    try {
+      const { error } = await signUp.email({ name: name.trim(), email: email.trim(), password });
+
+      if (error) {
+        setError(error.message ?? "Não foi possível criar a conta. Tente novamente.");
+        return;
+      }
+
+      router.replace("/(tabs)");
+    } catch {
+      setError("Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -36,6 +52,7 @@ export default function RegisterScreen() {
       <TextInput
         className="mb-3 rounded-md border border-border bg-card px-3 py-3 text-foreground dark:border-border-dark dark:bg-card-dark dark:text-foreground-dark"
         placeholder="Nome"
+        placeholderTextColor={colors.mutedForeground}
         autoComplete="name"
         value={name}
         onChangeText={setName}
@@ -43,6 +60,7 @@ export default function RegisterScreen() {
       <TextInput
         className="mb-3 rounded-md border border-border bg-card px-3 py-3 text-foreground dark:border-border-dark dark:bg-card-dark dark:text-foreground-dark"
         placeholder="E-mail"
+        placeholderTextColor={colors.mutedForeground}
         autoCapitalize="none"
         autoComplete="email"
         keyboardType="email-address"
@@ -52,6 +70,7 @@ export default function RegisterScreen() {
       <TextInput
         className="mb-4 rounded-md border border-border bg-card px-3 py-3 text-foreground dark:border-border-dark dark:bg-card-dark dark:text-foreground-dark"
         placeholder="Senha"
+        placeholderTextColor={colors.mutedForeground}
         secureTextEntry
         autoComplete="new-password"
         value={password}

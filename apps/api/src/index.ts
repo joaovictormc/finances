@@ -41,7 +41,8 @@ app.use(
   cors({
     origin: [
       process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-      "http://localhost:19006", // Expo web
+      "http://localhost:19006", // Expo web (SDK antigo)
+      "http://localhost:8081", // Expo web (SDK 54+)
     ],
     credentials: true,
     allowHeaders: ["Content-Type", "Authorization"],

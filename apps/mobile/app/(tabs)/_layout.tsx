@@ -1,9 +1,13 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { FinansTabBar } from "@/components/finans-tab-bar";
 
 export default function TabsLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: "#6366f1" }}>
+    <Tabs
+      tabBar={(props) => <FinansTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
       <Tabs.Screen
         name="index"
         options={{

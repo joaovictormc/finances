@@ -6,6 +6,13 @@ import { db } from "@finances/db";
 // O handler de auth roda na API (porta 3001), então o baseURL precisa apontar para ela.
 const API_URL = process.env.BETTER_AUTH_URL ?? "http://localhost:3001";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const EXPO_URL = process.env.EXPO_URL ?? "http://localhost:8081";
+// Origens de LAN usadas pelo app nativo (Expo Go no celular) ao falar com a API.
+// Em dev o telefone alcança a API pelo IP da máquina, não por localhost.
+const LAN_ORIGINS = (process.env.LAN_ORIGINS ?? "http://192.168.100.93:3001,http://192.168.100.17:3001")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
 
 // Em desenvolvimento/testes deixamos a verificação de e-mail desligada por padrão,
 // para permitir cadastro + login imediato sem depender de Brevo/Redis.
@@ -86,7 +93,7 @@ export const auth = betterAuth({
       maxAge: 60 * 5, // cache da sessão no cookie por 5 minutos
     },
   },
-  trustedOrigins: [APP_URL, API_URL, "controlai://"],
+  trustedOrigins: [APP_URL, API_URL, EXPO_URL, ...LAN_ORIGINS, "controlai://"],
   // bearer: permite autenticar via header "Authorization: Bearer <token>",
   // usado pelo app mobile (sem cookie jar confiável) — coexiste com o cookie do web.
   // (o plugin server-side "expo" de @better-auth/expo não foi adicionado: ele traz
