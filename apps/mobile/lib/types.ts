@@ -62,6 +62,23 @@ export type Goal = {
   groupId: string | null;
 };
 
+export type Budget = {
+  id: string;
+  name: string;
+  amount: string;
+  period: "weekly" | "monthly" | "yearly";
+  startDate: string;
+  endDate: string | null;
+  alertThreshold: string;
+  category: { id: string; name: string; icon: string | null; color: string | null } | null;
+  groupId: string | null;
+  // Campos calculados pelo endpoint GET /api/budgets.
+  spentAmount: number;
+  percentage: number;
+  isOverBudget: boolean;
+  isNearLimit: boolean;
+};
+
 export type MonthlyReport = {
   income: number;
   expense: number;

@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, TextInput, Pressable, FlatList, ActivityIndicator } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api-client";
-import { IconBadge } from "@/components/icon-badge";
+import { Screen } from "@/components/screen";
+import { useTheme } from "@/lib/theme";
+import { formatBRL } from "@/lib/format";
 import type { Transaction, PaginatedResponse } from "@/lib/types";
-
-function formatBRL(value: number) {
-  return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
 
 function formatShortDate(date: string) {
   const d = new Date(date);
@@ -22,6 +21,7 @@ const TYPE_OPTIONS = [
 ];
 
 export default function TransactionsScreen() {
+  const { colors } = useTheme();
   const [search, setSearch] = useState("");
   const [type, setType] = useState("");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -73,47 +73,48 @@ export default function TransactionsScreen() {
   };
 
   return (
-    <View className="flex-1 bg-background dark:bg-background-dark">
-      <View className="gap-2 border-b border-border p-4 dark:border-border-dark">
-        <View className="flex-row items-center gap-2">
+    <Screen>
+      <View className="gap-3 px-4 pb-3 pt-2">
+        <Text className="text-2xl font-bold text-foreground dark:text-foreground-dark">Transações</Text>
+        <View className="flex-row items-center gap-2 rounded-2xl bg-card px-3 dark:bg-card-dark">
+          <Ionicons name="search" size={18} color={colors.mutedForeground} />
           <TextInput
-            className="flex-1 rounded-md border border-border bg-card px-3 py-2 text-foreground dark:border-border-dark dark:bg-card-dark dark:text-foreground-dark"
+            className="flex-1 py-3 text-foreground dark:text-foreground-dark"
             placeholder="Buscar transações..."
+            placeholderTextColor={colors.mutedForeground}
             value={search}
             onChangeText={setSearch}
           />
-          <Pressable
-            onPress={() => router.push("/new-transaction")}
-            className="h-10 w-10 items-center justify-center rounded-md bg-primary dark:bg-primary-dark"
-          >
-            <Text className="text-lg font-bold text-primary-foreground dark:text-primary-foreground-dark">+</Text>
-          </Pressable>
         </View>
-        <View className="flex-row gap-2">
-          {TYPE_OPTIONS.map((opt) => (
-            <Pressable
-              key={opt.value}
-              onPress={() => setType(opt.value)}
-              className={`rounded-full px-3 py-1.5 ${type === opt.value ? "bg-primary dark:bg-primary-dark" : "bg-muted dark:bg-muted-dark"}`}
-            >
-              <Text
-                className={`text-xs font-medium ${type === opt.value ? "text-primary-foreground dark:text-primary-foreground-dark" : "text-muted-foreground dark:text-muted-foreground-dark"}`}
+        <View className="flex-row flex-wrap gap-2">
+          {TYPE_OPTIONS.map((opt) => {
+            const active = type === opt.value;
+            return (
+              <Pressable
+                key={opt.value}
+                onPress={() => setType(opt.value)}
+                className={`rounded-full px-3 py-1.5 ${active ? "bg-primary" : "bg-muted dark:bg-muted-dark"}`}
               >
-                {opt.label}
-              </Text>
-            </Pressable>
-          ))}
+                <Text
+                  className={`text-xs font-semibold ${active ? "text-primary-foreground" : "text-muted-foreground dark:text-muted-foreground-dark"}`}
+                >
+                  {opt.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
       </View>
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator />
+          <ActivityIndicator color={colors.primary} />
         </View>
       ) : (
         <FlatList
           data={transactions}
           keyExtractor={(t) => t.id}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48 }}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.4}
           ListEmptyComponent={
@@ -121,27 +122,40 @@ export default function TransactionsScreen() {
               Nenhuma transação encontrada.
             </Text>
           }
-          ListFooterComponent={loadingMore ? <ActivityIndicator className="py-4" /> : null}
-          renderItem={({ item: t }) => (
-            <View className="flex-row items-center gap-3 border-b border-border px-4 py-3 dark:border-border-dark">
-              <IconBadge icon={t.category?.icon} color={t.category?.color} size="sm" />
-              <View className="flex-1">
-                <Text className="text-sm font-medium text-foreground dark:text-foreground-dark">{t.description}</Text>
-                <Text className="text-xs text-muted-foreground dark:text-muted-foreground-dark">
-                  {t.category?.name ?? "Sem categoria"} · {formatShortDate(t.date)}
+          ListFooterComponent={loadingMore ? <ActivityIndicator className="py-4" color={colors.primary} /> : null}
+          renderItem={({ item: t }) => {
+            const isIncome = t.type === "income";
+            const isExpense = t.type === "expense";
+            return (
+              <View className="flex-row items-center gap-3 border-b border-border py-3 dark:border-border-dark">
+                <View
+                  className="h-10 w-10 items-center justify-center rounded-full"
+                  style={{ backgroundColor: isIncome ? "rgba(34,197,94,0.14)" : "rgba(20,20,43,0.06)" }}
+                >
+                  <Ionicons
+                    name={isIncome ? "arrow-down" : isExpense ? "arrow-up" : "swap-horizontal"}
+                    size={18}
+                    color={isIncome ? "#22c55e" : colors.foreground}
+                  />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-medium text-foreground dark:text-foreground-dark">{t.description}</Text>
+                  <Text className="text-xs text-muted-foreground dark:text-muted-foreground-dark">
+                    {t.category?.name ?? "Sem categoria"} · {formatShortDate(t.date)}
+                  </Text>
+                </View>
+                <Text
+                  className="text-sm font-bold"
+                  style={{ color: isIncome ? "#22c55e" : isExpense ? colors.foreground : "#95A4B7" }}
+                >
+                  {isExpense ? "-" : isIncome ? "+" : ""}
+                  {formatBRL(Number(t.amount))}
                 </Text>
               </View>
-              <Text
-                className="text-sm font-semibold"
-                style={{ color: t.type === "income" ? "#22c55e" : t.type === "expense" ? "#ef4444" : "#6366f1" }}
-              >
-                {t.type === "expense" ? "-" : t.type === "income" ? "+" : ""}
-                {formatBRL(Number(t.amount))}
-              </Text>
-            </View>
-          )}
+            );
+          }}
         />
       )}
-    </View>
+    </Screen>
   );
 }

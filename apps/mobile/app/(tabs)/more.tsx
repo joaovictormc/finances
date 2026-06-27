@@ -10,7 +10,8 @@ const THEME_OPTIONS: { value: ThemePreference; label: string; icon: keyof typeof
   { value: "system", label: "Sistema", icon: "phone-portrait-outline" },
 ];
 
-const MENU_ITEMS: { href: "/bills" | "/goals"; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+const MENU_ITEMS: { href: "/bills" | "/goals" | "/budgets"; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { href: "/budgets", label: "Orçamentos", icon: "pie-chart-outline" },
   { href: "/bills", label: "Contas a Pagar", icon: "receipt-outline" },
   { href: "/goals", label: "Metas", icon: "flag-outline" },
 ];
