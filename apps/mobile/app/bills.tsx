@@ -81,7 +81,10 @@ export default function BillsScreen() {
           renderItem={({ item: b }) => {
             const badge = dueBadge(b);
             return (
-              <View className="flex-row items-center gap-3 rounded-xl border border-border bg-card p-4 dark:border-border-dark dark:bg-card-dark">
+              <Pressable
+                onPress={() => router.push({ pathname: "/edit-bill", params: { id: b.id } })}
+                className="flex-row items-center gap-3 rounded-xl border border-border bg-card p-4 dark:border-border-dark dark:bg-card-dark"
+              >
                 <IconBadge icon={b.category?.icon ?? "📄"} />
                 <View className="flex-1">
                   <View className="flex-row flex-wrap items-center gap-2">
@@ -98,7 +101,7 @@ export default function BillsScreen() {
                 <Text className="text-right text-sm font-semibold text-foreground dark:text-foreground-dark">
                   {b.expectedAmount ? formatBRL(b.expectedAmount) : "Variável"}
                 </Text>
-              </View>
+              </Pressable>
             );
           }}
         />

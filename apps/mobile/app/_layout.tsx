@@ -62,6 +62,11 @@ function RootNavigator() {
         <Stack.Screen name="goals" options={{ ...stackHeaderOptions, title: "Metas" }} />
         <Stack.Screen name="budgets" options={{ ...stackHeaderOptions, title: "Orçamentos" }} />
         <Stack.Screen name="new-budget" options={{ ...modalHeaderOptions, title: "Novo Orçamento" }} />
+        <Stack.Screen name="edit-transaction" options={{ ...modalHeaderOptions, title: "Editar Transação" }} />
+        <Stack.Screen name="edit-account" options={{ ...modalHeaderOptions, title: "Editar Conta" }} />
+        <Stack.Screen name="edit-bill" options={{ ...modalHeaderOptions, title: "Editar Conta Recorrente" }} />
+        <Stack.Screen name="edit-goal" options={{ ...modalHeaderOptions, title: "Editar Meta" }} />
+        <Stack.Screen name="edit-budget" options={{ ...modalHeaderOptions, title: "Editar Orçamento" }} />
         <Stack.Screen
           name="new-bill"
           options={{ ...modalHeaderOptions, title: "Nova Conta" }}

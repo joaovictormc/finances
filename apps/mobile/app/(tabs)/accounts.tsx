@@ -66,7 +66,10 @@ export default function AccountsScreen() {
             </Text>
           }
           renderItem={({ item: a }) => (
-            <View className="flex-row items-center gap-3 rounded-2xl border border-border bg-card p-4 dark:border-border-dark dark:bg-card-dark">
+            <Pressable
+              onPress={() => router.push({ pathname: "/edit-account", params: { id: a.id } })}
+              className="flex-row items-center gap-3 rounded-2xl border border-border bg-card p-4 dark:border-border-dark dark:bg-card-dark"
+            >
               <IconBadge icon={TYPE_ICONS[a.type] ?? "🏦"} color={a.color} />
               <View className="flex-1">
                 <Text className="font-semibold text-foreground dark:text-foreground-dark">{a.name}</Text>
@@ -76,7 +79,7 @@ export default function AccountsScreen() {
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
-            </View>
+            </Pressable>
           )}
         />
       )}

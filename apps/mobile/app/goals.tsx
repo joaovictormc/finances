@@ -1,8 +1,10 @@
 import { useCallback, useState } from "react";
 import { View, Text, Pressable, FlatList, ActivityIndicator } from "react-native";
 import { router, useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api-client";
 import { IconBadge } from "@/components/icon-badge";
+import { useTheme } from "@/lib/theme";
 import { ProgressBar } from "@/components/progress-bar";
 import { formatBRL, formatDate, daysUntil } from "@/lib/format";
 import type { Goal } from "@/lib/types";
@@ -15,6 +17,7 @@ function deadlineLabel(targetDate: string): string {
 }
 
 export default function GoalsScreen() {
+  const { colors } = useTheme();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -70,6 +73,12 @@ export default function GoalsScreen() {
                       </Text>
                     ) : null}
                   </View>
+                  <Pressable
+                    onPress={() => router.push({ pathname: "/edit-goal", params: { id: g.id } })}
+                    hitSlop={8}
+                  >
+                    <Ionicons name="pencil-outline" size={18} color={colors.mutedForeground} />
+                  </Pressable>
                 </View>
 
                 <ProgressBar value={pct} color={g.color} />

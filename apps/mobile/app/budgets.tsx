@@ -59,7 +59,10 @@ export default function BudgetsScreen() {
             const spent = b.spentAmount;
             const limit = Number(b.amount);
             return (
-              <View className="gap-3 rounded-2xl border border-border bg-card p-4 dark:border-border-dark dark:bg-card-dark">
+              <Pressable
+                onPress={() => router.push({ pathname: "/edit-budget", params: { id: b.id } })}
+                className="gap-3 rounded-2xl border border-border bg-card p-4 dark:border-border-dark dark:bg-card-dark"
+              >
                 <View className="flex-row items-center gap-3">
                   <IconBadge icon={b.category?.icon ?? "📊"} />
                   <View className="flex-1">
@@ -79,7 +82,7 @@ export default function BudgetsScreen() {
                 <Text className="text-xs text-muted-foreground dark:text-muted-foreground-dark">
                   {formatBRL(spent)} de {formatBRL(limit)}
                 </Text>
-              </View>
+              </Pressable>
             );
           }}
         />

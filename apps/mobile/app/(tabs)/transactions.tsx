@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, TextInput, Pressable, FlatList, ActivityIndicator } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api-client";
 import { Screen } from "@/components/screen";
@@ -127,7 +127,10 @@ export default function TransactionsScreen() {
             const isIncome = t.type === "income";
             const isExpense = t.type === "expense";
             return (
-              <View className="flex-row items-center gap-3 border-b border-border py-3 dark:border-border-dark">
+              <Pressable
+                onPress={() => router.push({ pathname: "/edit-transaction", params: { id: t.id } })}
+                className="flex-row items-center gap-3 border-b border-border py-3 dark:border-border-dark"
+              >
                 <View
                   className="h-10 w-10 items-center justify-center rounded-full"
                   style={{ backgroundColor: isIncome ? "rgba(34,197,94,0.14)" : "rgba(20,20,43,0.06)" }}
@@ -151,7 +154,7 @@ export default function TransactionsScreen() {
                   {isExpense ? "-" : isIncome ? "+" : ""}
                   {formatBRL(Number(t.amount))}
                 </Text>
-              </View>
+              </Pressable>
             );
           }}
         />
