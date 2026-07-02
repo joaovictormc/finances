@@ -145,6 +145,7 @@ export default function TransactionsScreen() {
                   <Text className="text-sm font-medium text-foreground dark:text-foreground-dark">{t.description}</Text>
                   <Text className="text-xs text-muted-foreground dark:text-muted-foreground-dark">
                     {t.category?.name ?? "Sem categoria"} · {formatShortDate(t.date)}
+                    {t.paymentMethod === "credit" ? " · 💳 Crédito" : ""}
                   </Text>
                 </View>
                 <Text

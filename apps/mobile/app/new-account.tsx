@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Switch } from "react-native";
 import { router } from "expo-router";
 import { api } from "@/lib/api-client";
 import { useTheme } from "@/lib/theme";
-import type { Group } from "@/lib/types";
+import { StatementImport } from "@/components/statement-import";
+import type { FinancialAccount, Group } from "@/lib/types";
 
 const TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "checking", label: "Conta Corrente" },
@@ -19,9 +20,13 @@ export default function NewAccountScreen() {
   const [type, setType] = useState("checking");
   const [institution, setInstitution] = useState("");
   const [groupId, setGroupId] = useState("");
+  const [hasCreditCard, setHasCreditCard] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [step, setStep] = useState<"form" | "import">("form");
+  const [createdAccount, setCreatedAccount] = useState<FinancialAccount | null>(null);
 
   useEffect(() => {
     api.get<Group[]>("/api/groups").then(setGroups).catch(() => {});
@@ -36,18 +41,39 @@ export default function NewAccountScreen() {
 
     setSaving(true);
     try {
-      await api.post("/api/accounts", {
+      const account = await api.post<FinancialAccount>("/api/accounts", {
         name: name.trim(),
         type,
         institution: institution.trim() || undefined,
         groupId: groupId || undefined,
+        hasCreditCard,
       });
-      router.back();
+      setCreatedAccount(account);
+      setStep("import");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao salvar conta.");
     } finally {
       setSaving(false);
     }
+  }
+
+  if (step === "import" && createdAccount) {
+    return (
+      <ScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16 }}>
+        <Text className="mb-1 text-lg font-semibold text-foreground dark:text-foreground-dark">
+          Conta &quot;{createdAccount.name}&quot; criada!
+        </Text>
+
+        <StatementImport account={createdAccount} />
+
+        <Pressable
+          onPress={() => router.back()}
+          className="mt-3 items-center rounded-md border border-border py-3 dark:border-border-dark"
+        >
+          <Text className="text-sm font-medium text-foreground dark:text-foreground-dark">Concluir</Text>
+        </Pressable>
+      </ScrollView>
+    );
   }
 
   return (
@@ -82,6 +108,22 @@ export default function NewAccountScreen() {
         value={institution}
         onChangeText={setInstitution}
       />
+
+      <View className="mb-4 flex-row items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 dark:border-border-dark dark:bg-card-dark">
+        <View className="flex-1">
+          <Text className="text-sm font-medium text-foreground dark:text-foreground-dark">
+            Tem cartão de crédito vinculado
+          </Text>
+          <Text className="mt-0.5 text-xs text-muted-foreground dark:text-muted-foreground-dark">
+            Permite escolher débito ou crédito ao lançar transações nessa conta.
+          </Text>
+        </View>
+        <Switch
+          value={hasCreditCard}
+          onValueChange={setHasCreditCard}
+          trackColor={{ true: colors.primary }}
+        />
+      </View>
 
       {groups.length > 0 && (
         <>

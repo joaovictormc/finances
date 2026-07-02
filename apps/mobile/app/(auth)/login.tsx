@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
-import { Link, router } from "expo-router";
+import { Link } from "expo-router";
 import { signIn } from "@/lib/auth-client";
 import { useTheme } from "@/lib/theme";
 
@@ -31,7 +31,10 @@ export default function LoginScreen() {
         return;
       }
 
-      router.replace("/(tabs)");
+      // Não navegamos manualmente: o layout raiz observa `useSession()` e
+      // redireciona pra (tabs) assim que a sessão propagar. Navegar aqui
+      // também causava um loop de redirect (login -> tabs -> login) porque
+      // a sessão ainda não tinha propagado no momento do replace manual.
     } catch {
       // Erro de rede / servidor inacessível (não cai no `error` retornado).
       setError("Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.");

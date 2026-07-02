@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Alert, View, Text, TextInput, Pressable, ScrollView, ActivityIndicator } from "react-native";
+import { Alert, View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Switch } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { api } from "@/lib/api-client";
 import { useTheme } from "@/lib/theme";
+import { StatementImport } from "@/components/statement-import";
 import type { FinancialAccount } from "@/lib/types";
 
 const TYPE_OPTIONS = [
@@ -20,6 +21,9 @@ export default function EditAccountScreen() {
   const [name, setName] = useState("");
   const [type, setType] = useState("checking");
   const [institution, setInstitution] = useState("");
+  const [hasCreditCard, setHasCreditCard] = useState(false);
+  const [account, setAccount] = useState<FinancialAccount | null>(null);
+  const [showImport, setShowImport] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +37,8 @@ export default function EditAccountScreen() {
           setName(acc.name);
           setType(acc.type);
           setInstitution(acc.institution ?? "");
+          setHasCreditCard(acc.hasCreditCard ?? false);
+          setAccount(acc);
         } else {
           setError("Conta não encontrada.");
         }
@@ -46,11 +52,13 @@ export default function EditAccountScreen() {
     if (!name.trim()) { setError("Informe o nome da conta."); return; }
     setSaving(true);
     try {
-      await api.patch(`/api/accounts/${id}`, {
+      const updated = await api.patch<FinancialAccount>(`/api/accounts/${id}`, {
         name: name.trim(),
         type,
         institution: institution.trim() || undefined,
+        hasCreditCard,
       });
+      setAccount(updated);
       router.back();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao salvar.");
@@ -116,12 +124,46 @@ export default function EditAccountScreen() {
 
       <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Instituição (opcional)</Text>
       <TextInput
-        className="mb-6 rounded-md border border-border bg-card px-3 py-3 text-foreground dark:border-border-dark dark:bg-card-dark dark:text-foreground-dark"
+        className="mb-4 rounded-md border border-border bg-card px-3 py-3 text-foreground dark:border-border-dark dark:bg-card-dark dark:text-foreground-dark"
         placeholder="Ex: Nubank, Itaú, Bradesco"
         placeholderTextColor={colors.mutedForeground}
         value={institution}
         onChangeText={setInstitution}
       />
+
+      <View className="mb-6 flex-row items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 dark:border-border-dark dark:bg-card-dark">
+        <View className="flex-1">
+          <Text className="text-sm font-medium text-foreground dark:text-foreground-dark">
+            Tem cartão de crédito vinculado
+          </Text>
+          <Text className="mt-0.5 text-xs text-muted-foreground dark:text-muted-foreground-dark">
+            Permite escolher débito ou crédito ao lançar transações nessa conta.
+          </Text>
+        </View>
+        <Switch
+          value={hasCreditCard}
+          onValueChange={setHasCreditCard}
+          trackColor={{ true: colors.primary }}
+        />
+      </View>
+
+      <Pressable
+        onPress={() => setShowImport((v) => !v)}
+        className="mb-6 flex-row items-center justify-between rounded-xl border border-border bg-card p-4 dark:border-border-dark dark:bg-card-dark"
+      >
+        <Text className="text-sm font-medium text-foreground dark:text-foreground-dark">
+          📄 Importar extrato (CSV/OFX)
+        </Text>
+        <Text className="text-sm text-muted-foreground dark:text-muted-foreground-dark">
+          {showImport ? "Fechar" : "Abrir"}
+        </Text>
+      </Pressable>
+
+      {showImport && account && (
+        <View className="mb-6">
+          <StatementImport account={account} />
+        </View>
+      )}
 
       {error && <Text className="mb-3 text-sm text-destructive dark:text-destructive-dark">{error}</Text>}
 

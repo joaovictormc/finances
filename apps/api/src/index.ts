@@ -34,6 +34,13 @@ import "./jobs/workers/bill-detector.worker";
 
 const app = new Hono();
 
+// Origens de LAN (IP local da máquina) usadas pelo Expo web/nativo — mesma
+// lista usada em trustedOrigins (lib/auth.ts), que muda quando o IP da rede muda.
+const LAN_ORIGINS = (process.env.LAN_ORIGINS ?? "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use("*", logger());
 app.use(
@@ -43,6 +50,7 @@ app.use(
       process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
       "http://localhost:19006", // Expo web (SDK antigo)
       "http://localhost:8081", // Expo web (SDK 54+)
+      ...LAN_ORIGINS,
     ],
     credentials: true,
     allowHeaders: ["Content-Type", "Authorization"],

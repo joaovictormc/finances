@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
-import { Link, router } from "expo-router";
+import { Link } from "expo-router";
 import { signUp } from "@/lib/auth-client";
 import { useTheme } from "@/lib/theme";
 
@@ -32,7 +32,9 @@ export default function RegisterScreen() {
         return;
       }
 
-      router.replace("/(tabs)");
+      // Não navegamos manualmente: o layout raiz observa `useSession()` e
+      // redireciona pra (tabs) assim que a sessão propagar (evita loop de
+      // redirect entre login/register e tabs).
     } catch {
       setError("Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.");
     } finally {

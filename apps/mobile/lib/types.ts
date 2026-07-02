@@ -1,6 +1,7 @@
 export type Transaction = {
   id: string;
   type: "income" | "expense" | "transfer";
+  paymentMethod?: "debit" | "credit";
   amount: string;
   description: string;
   date: string;
@@ -31,11 +32,35 @@ export type FinancialAccount = {
   institution: string | null;
   color: string | null;
   groupId?: string | null;
+  hasCreditCard?: boolean;
 };
+
+export type GroupRole = "owner" | "admin" | "member" | "viewer";
 
 export type Group = {
   id: string;
   name: string;
+  ownerId?: string;
+  inviteCode?: string;
+  createdAt?: string;
+  role?: GroupRole;
+  memberCount?: number;
+};
+
+export type GroupMember = {
+  userId: string;
+  name: string;
+  email: string;
+  role: GroupRole;
+  joinedAt: string;
+};
+
+export type GroupDetail = Group & {
+  ownerId: string;
+  inviteCode: string;
+  createdAt: string;
+  role: GroupRole;
+  members: GroupMember[];
 };
 
 export type RecurringBill = {

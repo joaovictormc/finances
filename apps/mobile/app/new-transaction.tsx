@@ -6,11 +6,17 @@ import { useTheme } from "@/lib/theme";
 import type { Category, FinancialAccount } from "@/lib/types";
 
 type TransactionType = "expense" | "income" | "transfer";
+type PaymentMethod = "debit" | "credit";
 
 const TYPE_TABS: { value: TransactionType; label: string }[] = [
   { value: "expense", label: "Gasto" },
   { value: "income", label: "Receita" },
   { value: "transfer", label: "Transferência" },
+];
+
+const PAYMENT_METHOD_TABS: { value: PaymentMethod; label: string }[] = [
+  { value: "debit", label: "Débito" },
+  { value: "credit", label: "Crédito" },
 ];
 
 function flattenCategories(cats: Category[]): Category[] {
@@ -29,6 +35,7 @@ function todayIso() {
 export default function NewTransactionScreen() {
   const { colors } = useTheme();
   const [type, setType] = useState<TransactionType>("expense");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("debit");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(todayIso());
@@ -75,6 +82,7 @@ export default function NewTransactionScreen() {
     try {
       await api.post("/api/transactions", {
         type,
+        paymentMethod: selectedAccount?.hasCreditCard ? paymentMethod : "debit",
         amount: numericAmount,
         description: description.trim(),
         accountId,
@@ -91,6 +99,7 @@ export default function NewTransactionScreen() {
   }
 
   const flatCategories = flattenCategories(categories);
+  const selectedAccount = accounts.find((a) => a.id === accountId);
 
   return (
     <ScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16 }}>
@@ -148,6 +157,27 @@ export default function NewTransactionScreen() {
               </Pressable>
             ))}
           </View>
+
+          {selectedAccount?.hasCreditCard && (
+            <>
+              <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Forma de pagamento</Text>
+              <View className="mb-4 flex-row gap-1.5 rounded-lg bg-muted p-1 dark:bg-muted-dark">
+                {PAYMENT_METHOD_TABS.map((tab) => (
+                  <Pressable
+                    key={tab.value}
+                    onPress={() => setPaymentMethod(tab.value)}
+                    className={`flex-1 items-center rounded-md py-2 ${paymentMethod === tab.value ? "bg-primary dark:bg-primary-dark" : ""}`}
+                  >
+                    <Text
+                      className={`text-sm font-medium ${paymentMethod === tab.value ? "text-primary-foreground dark:text-primary-foreground-dark" : "text-muted-foreground dark:text-muted-foreground-dark"}`}
+                    >
+                      {tab.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          )}
 
           <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Categoria</Text>
           <View className="mb-4 flex-row flex-wrap gap-2">
