@@ -113,3 +113,42 @@ export type MonthlyReport = {
     total: number;
   }>;
 };
+
+export type PlanId = "free" | "pro" | "familia";
+
+export type PlanDefinition = {
+  id: PlanId;
+  name: string;
+  priceCents: number;
+  maxBankConnections: number | null;
+  historyMonths: number | null;
+  channels: Array<"telegram" | "whatsapp">;
+  aiInsights: boolean;
+  maxGroupMembers: number;
+};
+
+export type Subscription = {
+  plan: PlanId;
+  status: string;
+  currentPeriodEnd: string | null;
+  canceledAt: string | null;
+  hasIntegrationsModule?: boolean;
+  hasFamilyModule?: boolean;
+};
+
+export type AvailablePaymentMethods = {
+  mercadopago: boolean;
+  pix: boolean;
+};
+
+export type PixCheckout = {
+  payload: string;
+  txid: string;
+  amount: number;
+};
+
+export type ReferralSummary = {
+  total: number;
+  rewardsGranted: number;
+  referrals: Array<{ id: string; referredName: string; rewardGranted: boolean; createdAt: string }>;
+};

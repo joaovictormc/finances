@@ -26,6 +26,7 @@
       "expo-web-browser",
       "expo-secure-store",
       "expo-document-picker",
+      "expo-file-system",
       "expo-router"
     ]
   }

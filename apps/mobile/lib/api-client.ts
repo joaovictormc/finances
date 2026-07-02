@@ -1,8 +1,14 @@
 import { Platform } from "react-native";
 import { authClient } from "./auth-client";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001";
+export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001";
 const isWeb = Platform.OS === "web";
+
+/** Headers de auth pro nativo (cookie manual + Origin); undefined na web, onde `credentials: include` já resolve. */
+export function nativeAuthHeaders(): Record<string, string> | undefined {
+  if (isWeb) return undefined;
+  return { Cookie: authClient.getCookie(), Origin: new URL(API_URL).origin };
+}
 
 type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
