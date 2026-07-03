@@ -44,7 +44,15 @@ export async function detectRecurringBills(userId: string) {
   since.setDate(since.getDate() - 120);
 
   const transactions = await db.transaction.findMany({
-    where: { userId, type: "expense", isIgnored: false, date: { gte: since } },
+    where: {
+      userId,
+      type: "expense",
+      isIgnored: false,
+      date: { gte: since },
+      // Só Pix/boleto contam como "conta fixa" — cartão (débito/crédito) e
+      // dinheiro são pagamentos variáveis por natureza, mesmo quando repetem.
+      paymentMethod: { in: ["pix", "boleto"] },
+    },
     select: {
       id: true,
       date: true,

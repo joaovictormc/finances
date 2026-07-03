@@ -101,11 +101,13 @@ não há "excluir minha conta de usuário"), exportar/apagar dados pessoais
 
 ## Decisões já tomadas
 
-- **Sinal de Pix/boleto**: sem mudança de schema. Detectar por **regex na
-  `description`** da transação (`/\bpix\b/i`, `/\bboleto\b/i`), já que os
-  bancos costumam rotular assim no extrato importado (CSV/OFX). Limite
-  conhecido e aceito: depende de o banco rotular a transação dessa forma —
-  não é 100% garantido pra todo banco.
+- **Sinal de Pix/boleto**: ~~sem mudança de schema, via regex na
+  `description`~~ — **superado antes da Fase 5**: o campo `paymentMethod`
+  ganhou os valores `"pix"` e `"boleto"` (além de `debit`/`credit`) como
+  parte de uma extensão pedida à parte (categorização manual de forma de
+  pagamento em qualquer transação). A Fase 5 filtra direto por
+  `paymentMethod: { in: ["pix", "boleto"] }`, mais confiável que regex na
+  descrição.
 - **MFA**: TOTP (app autenticador, tipo Google Authenticator/Authy) +
   códigos de backup, via plugin oficial `twoFactor` do better-auth. Sem
   SMS (evita contratar/pagar um provedor externo tipo Twilio).
@@ -118,7 +120,7 @@ não há "excluir minha conta de usuário"), exportar/apagar dados pessoais
 | **2** | Botão mostrar/ocultar senha nos formulários de login/registro (web + mobile) | Baixa |
 | **3** | Política de senha forte + indicador de força visual (schema compartilhado client+server) | Média |
 | **4** | Gráfico de barras (6 meses, receita x despesa) + navegação de mês na Visão Geral do mobile, usando `BarChart` de `react-native-gifted-charts` | Média |
-| **5** | IA de recorrência: filtrar candidatos por regex Pix/boleto na descrição, excluindo cartão débito/crédito do agrupamento | Baixa |
+| **5** | IA de recorrência: filtrar candidatos por `paymentMethod: pix\|boleto`, excluindo cartão débito/crédito e dinheiro do agrupamento | Baixa |
 | **6** | Configurações extras: Perfil real (`authClient.updateUser`), Notificações realmente persistidas (novo campo/tabela + rota), vínculo do bot do Telegram dentro da tela de Configurações do mobile | Média-Alta |
 | **7** | Rate limiting em `/api/auth/*` + hardening explícito de cookie/sessão (`secure`/`sameSite`/`httpOnly`/`expiresIn`) | Média |
 | **8** | MFA (TOTP + backup codes via plugin `twoFactor` do better-auth) — migration Prisma, enrollment com QR code, verificação no login em ambas plataformas | Alta |
