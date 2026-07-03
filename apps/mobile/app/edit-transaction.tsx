@@ -69,6 +69,12 @@ export default function EditTransactionScreen() {
       .catch(() => {});
   }, [type, loading]);
 
+  const selectedAccount = accounts.find((a) => a.id === accountId);
+
+  useEffect(() => {
+    if (paymentMethod === "credit" && !selectedAccount?.hasCreditCard) setPaymentMethod("debit");
+  }, [selectedAccount, paymentMethod]);
+
   async function handleSave() {
     setError(null);
     const numericAmount = Number(amount.replace(",", "."));
@@ -124,11 +130,6 @@ export default function EditTransactionScreen() {
   }
 
   const flatCategories = flattenCategories(categories);
-  const selectedAccount = accounts.find((a) => a.id === accountId);
-
-  useEffect(() => {
-    if (paymentMethod === "credit" && !selectedAccount?.hasCreditCard) setPaymentMethod("debit");
-  }, [selectedAccount, paymentMethod]);
 
   const paymentMethodTabs = selectedAccount?.hasCreditCard
     ? [...BASE_PAYMENT_METHOD_TABS, { value: "credit" as const, label: "Crédito" }]
