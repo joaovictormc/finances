@@ -11,6 +11,14 @@ import { useToast } from "@/components/ui/toast-provider";
 import type { Category, FinancialAccount, Group, Transaction } from "@/lib/types";
 
 type TransactionType = "expense" | "income" | "transfer";
+type PaymentMethod = "debit" | "credit" | "pix" | "cash" | "boleto";
+
+const BASE_PAYMENT_METHOD_OPTIONS: { value: PaymentMethod; label: string }[] = [
+  { value: "debit", label: "Débito" },
+  { value: "pix", label: "Pix" },
+  { value: "cash", label: "Dinheiro" },
+  { value: "boleto", label: "Boleto" },
+];
 
 interface TransactionFormProps {
   transaction?: Transaction | null;
@@ -40,7 +48,7 @@ function flattenCategories(cats: Category[], type: string): Category[] {
 export function TransactionForm({ transaction, categories, accounts, groups, onSuccess }: TransactionFormProps) {
   const { toast } = useToast();
   const [type, setType] = useState<TransactionType>(transaction?.type ?? "expense");
-  const [paymentMethod, setPaymentMethod] = useState<"debit" | "credit">(transaction?.paymentMethod ?? "debit");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(transaction?.paymentMethod ?? "debit");
   const [amountCents, setAmountCents] = useState(Math.round(Number(transaction?.amount ?? 0) * 100));
   const [description, setDescription] = useState(transaction?.description ?? "");
   const [groupId, setGroupId] = useState(transaction?.groupId ?? "");
@@ -61,6 +69,14 @@ export function TransactionForm({ transaction, categories, accounts, groups, onS
   const availableAccounts = accounts.filter((a) => (groupId ? a.groupId === groupId : !a.groupId));
   const selectedAccount = accounts.find((a) => a.id === accountId);
 
+  useEffect(() => {
+    if (paymentMethod === "credit" && !selectedAccount?.hasCreditCard) setPaymentMethod("debit");
+  }, [selectedAccount, paymentMethod]);
+
+  const paymentMethodOptions = selectedAccount?.hasCreditCard
+    ? [...BASE_PAYMENT_METHOD_OPTIONS, { value: "credit" as const, label: "Crédito" }]
+    : BASE_PAYMENT_METHOD_OPTIONS;
+
   const validate = () => {
     const e: Record<string, string> = {};
     if (amountCents <= 0) e.amount = "Informe o valor";
@@ -78,7 +94,7 @@ export function TransactionForm({ transaction, categories, accounts, groups, onS
     try {
       const payload = {
         type,
-        paymentMethod: selectedAccount?.hasCreditCard ? paymentMethod : "debit",
+        paymentMethod,
         amount: amountCents / 100,
         description: description.trim(),
         accountId,
@@ -154,17 +170,12 @@ export function TransactionForm({ transaction, categories, accounts, groups, onS
         error={errors.accountId}
       />
 
-      {selectedAccount?.hasCreditCard && (
-        <Select
-          label="Forma de pagamento"
-          value={paymentMethod}
-          onChange={(e) => setPaymentMethod(e.target.value as "debit" | "credit")}
-          options={[
-            { value: "debit", label: "Débito" },
-            { value: "credit", label: "Crédito" },
-          ]}
-        />
-      )}
+      <Select
+        label="Forma de pagamento"
+        value={paymentMethod}
+        onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+        options={paymentMethodOptions}
+      />
 
       <Select
         label="Categoria"

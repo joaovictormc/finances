@@ -1,7 +1,7 @@
 export type Transaction = {
   id: string;
   type: "income" | "expense" | "transfer";
-  paymentMethod?: "debit" | "credit";
+  paymentMethod?: "debit" | "credit" | "pix" | "cash" | "boleto";
   amount: string;
   description: string;
   date: string;

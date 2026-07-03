@@ -6,6 +6,7 @@ import { api } from "@/lib/api-client";
 import { Screen } from "@/components/screen";
 import { useTheme } from "@/lib/theme";
 import { formatBRL } from "@/lib/format";
+import { PAYMENT_METHOD_BADGE } from "@/lib/payment-methods";
 import type { Transaction, PaginatedResponse } from "@/lib/types";
 
 function formatShortDate(date: string) {
@@ -145,7 +146,7 @@ export default function TransactionsScreen() {
                   <Text className="text-sm font-medium text-foreground dark:text-foreground-dark">{t.description}</Text>
                   <Text className="text-xs text-muted-foreground dark:text-muted-foreground-dark">
                     {t.category?.name ?? "Sem categoria"} · {formatShortDate(t.date)}
-                    {t.paymentMethod === "credit" ? " · 💳 Crédito" : ""}
+                    {t.paymentMethod && PAYMENT_METHOD_BADGE[t.paymentMethod] ? ` · ${PAYMENT_METHOD_BADGE[t.paymentMethod]}` : ""}
                   </Text>
                 </View>
                 <Text

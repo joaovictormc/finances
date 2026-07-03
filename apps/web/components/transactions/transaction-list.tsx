@@ -9,6 +9,15 @@ import { formatBRL, formatShortDate } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
 import { ArrowLeftRight } from "lucide-react";
 
+// Débito é o método implícito (sem selo); os demais ganham um selo pra
+// diferenciar de relance na listagem.
+const PAYMENT_METHOD_BADGE: Partial<Record<NonNullable<Transaction["paymentMethod"]>, string>> = {
+  credit: "💳 Crédito",
+  pix: "⚡ Pix",
+  cash: "💵 Dinheiro",
+  boleto: "🧾 Boleto",
+};
+
 interface TransactionListProps {
   transactions: Transaction[];
   isLoading: boolean;
@@ -178,7 +187,9 @@ export function TransactionList({ transactions, isLoading, onEdit, onDelete }: T
                     <td className="px-4 py-3" style={td("description")}>
                       <div className="flex items-center gap-2 min-w-0">
                         <p className="font-medium text-foreground truncate min-w-0">{t.description}</p>
-                        {t.paymentMethod === "credit" && <Badge variant="default">💳 Crédito</Badge>}
+                        {t.paymentMethod && PAYMENT_METHOD_BADGE[t.paymentMethod] && (
+                          <Badge variant="default">{PAYMENT_METHOD_BADGE[t.paymentMethod]}</Badge>
+                        )}
                         {t.group && (
                           <Badge variant="default">
                             <Users size={10} /> {t.group.name}

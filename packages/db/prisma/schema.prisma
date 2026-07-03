@@ -225,7 +225,7 @@ model Transaction {
   group       Group?   @relation(fields: [groupId], references: [id])
 
   type        String   // income | expense | transfer
-  paymentMethod String @default("debit") // debit | credit (cartão de crédito vinculado à conta)
+  paymentMethod String @default("debit") // debit | credit (cartão vinculado à conta) | pix | cash | boleto
   amount      Decimal  @db.Decimal(15, 2)
   currency    String   @default("BRL")
   description String

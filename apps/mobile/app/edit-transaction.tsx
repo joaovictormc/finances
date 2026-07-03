@@ -3,20 +3,15 @@ import { Alert, View, Text, TextInput, Pressable, ScrollView, ActivityIndicator 
 import { router, useLocalSearchParams } from "expo-router";
 import { api } from "@/lib/api-client";
 import { useTheme } from "@/lib/theme";
+import { BASE_PAYMENT_METHOD_TABS, type PaymentMethod } from "@/lib/payment-methods";
 import type { Category, FinancialAccount, Transaction } from "@/lib/types";
 
 type TxType = "expense" | "income" | "transfer";
-type PaymentMethod = "debit" | "credit";
 
 const TYPE_TABS: { value: TxType; label: string }[] = [
   { value: "expense", label: "Gasto" },
   { value: "income", label: "Receita" },
   { value: "transfer", label: "Transferência" },
-];
-
-const PAYMENT_METHOD_TABS: { value: PaymentMethod; label: string }[] = [
-  { value: "debit", label: "Débito" },
-  { value: "credit", label: "Crédito" },
 ];
 
 function flattenCategories(cats: Category[]): Category[] {
@@ -84,7 +79,7 @@ export default function EditTransactionScreen() {
     try {
       await api.patch(`/api/transactions/${id}`, {
         type,
-        paymentMethod: selectedAccount?.hasCreditCard ? paymentMethod : "debit",
+        paymentMethod,
         amount: numericAmount,
         description: description.trim(),
         accountId,
@@ -130,6 +125,14 @@ export default function EditTransactionScreen() {
 
   const flatCategories = flattenCategories(categories);
   const selectedAccount = accounts.find((a) => a.id === accountId);
+
+  useEffect(() => {
+    if (paymentMethod === "credit" && !selectedAccount?.hasCreditCard) setPaymentMethod("debit");
+  }, [selectedAccount, paymentMethod]);
+
+  const paymentMethodTabs = selectedAccount?.hasCreditCard
+    ? [...BASE_PAYMENT_METHOD_TABS, { value: "credit" as const, label: "Crédito" }]
+    : BASE_PAYMENT_METHOD_TABS;
 
   return (
     <ScrollView
@@ -182,26 +185,18 @@ export default function EditTransactionScreen() {
         ))}
       </View>
 
-      {selectedAccount?.hasCreditCard && (
-        <>
-          <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Forma de pagamento</Text>
-          <View className="mb-4 flex-row gap-1.5 rounded-lg bg-muted p-1 dark:bg-muted-dark">
-            {PAYMENT_METHOD_TABS.map((tab) => (
-              <Pressable
-                key={tab.value}
-                onPress={() => setPaymentMethod(tab.value)}
-                className={`flex-1 items-center rounded-md py-2 ${paymentMethod === tab.value ? "bg-primary" : ""}`}
-              >
-                <Text
-                  className={`text-sm font-medium ${paymentMethod === tab.value ? "text-primary-foreground" : "text-muted-foreground dark:text-muted-foreground-dark"}`}
-                >
-                  {tab.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </>
-      )}
+      <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Forma de pagamento</Text>
+      <View className="mb-4 flex-row flex-wrap gap-2">
+        {paymentMethodTabs.map((tab) => (
+          <Pressable
+            key={tab.value}
+            onPress={() => setPaymentMethod(tab.value)}
+            className={`rounded-full border px-3 py-1.5 ${paymentMethod === tab.value ? "border-primary bg-primary/10" : "border-border dark:border-border-dark"}`}
+          >
+            <Text className="text-xs font-medium text-foreground dark:text-foreground-dark">{tab.label}</Text>
+          </Pressable>
+        ))}
+      </View>
 
       <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Categoria</Text>
       <View className="mb-4 flex-row flex-wrap gap-2">

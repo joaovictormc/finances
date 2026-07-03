@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const TransactionTypeSchema = z.enum(["income", "expense", "transfer"]);
-export const PaymentMethodSchema = z.enum(["debit", "credit"]);
+export const PaymentMethodSchema = z.enum(["debit", "credit", "pix", "cash", "boleto"]);
 
 export const CreateTransactionSchema = z.object({
   accountId: z.string().min(1),
