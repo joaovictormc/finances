@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-nativ
 import { Link } from "expo-router";
 import { signUp } from "@/lib/auth-client";
 import { useTheme } from "@/lib/theme";
+import { PasswordInput } from "@/components/password-input";
 
 export default function RegisterScreen() {
   const { colors } = useTheme();
@@ -69,11 +70,9 @@ export default function RegisterScreen() {
         value={email}
         onChangeText={setEmail}
       />
-      <TextInput
-        className="mb-4 rounded-md border border-border bg-card px-3 py-3 text-foreground dark:border-border-dark dark:bg-card-dark dark:text-foreground-dark"
+      <PasswordInput
+        className="mb-4"
         placeholder="Senha"
-        placeholderTextColor={colors.mutedForeground}
-        secureTextEntry
         autoComplete="new-password"
         value={password}
         onChangeText={setPassword}
