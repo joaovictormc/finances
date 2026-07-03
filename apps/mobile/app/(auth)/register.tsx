@@ -4,6 +4,8 @@ import { Link } from "expo-router";
 import { signUp } from "@/lib/auth-client";
 import { useTheme } from "@/lib/theme";
 import { PasswordInput } from "@/components/password-input";
+import { PasswordStrengthMeter } from "@/components/password-strength-meter";
+import { PasswordPolicySchema } from "@finances/validations";
 
 export default function RegisterScreen() {
   const { colors } = useTheme();
@@ -19,8 +21,9 @@ export default function RegisterScreen() {
       setError("Preencha nome, e-mail e senha.");
       return;
     }
-    if (password.length < 8) {
-      setError("A senha deve ter ao menos 8 caracteres.");
+    const passwordCheck = PasswordPolicySchema.safeParse(password);
+    if (!passwordCheck.success) {
+      setError(passwordCheck.error.issues[0]?.message ?? "Senha inválida.");
       return;
     }
 
@@ -70,13 +73,15 @@ export default function RegisterScreen() {
         value={email}
         onChangeText={setEmail}
       />
-      <PasswordInput
-        className="mb-4"
-        placeholder="Senha"
-        autoComplete="new-password"
-        value={password}
-        onChangeText={setPassword}
-      />
+      <View className="mb-4">
+        <PasswordInput
+          placeholder="Senha"
+          autoComplete="new-password"
+          value={password}
+          onChangeText={setPassword}
+        />
+        <PasswordStrengthMeter password={password} />
+      </View>
 
       {error && <Text className="mb-3 text-sm text-destructive dark:text-destructive-dark">{error}</Text>}
 

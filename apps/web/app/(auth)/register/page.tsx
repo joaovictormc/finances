@@ -6,7 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordStrengthMeter } from "@/components/ui/password-strength-meter";
 import { api } from "@/lib/api-client";
+import { PasswordPolicySchema } from "@finances/validations";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -25,8 +27,9 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
 
-    if (password.length < 8) {
-      setError("A senha deve ter pelo menos 8 caracteres.");
+    const passwordCheck = PasswordPolicySchema.safeParse(password);
+    if (!passwordCheck.success) {
+      setError(passwordCheck.error.issues[0]?.message ?? "Senha inválida.");
       return;
     }
 
@@ -85,15 +88,18 @@ export default function RegisterPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <Input
-          label="Senha"
-          type="password"
-          required
-          autoComplete="new-password"
-          placeholder="Mínimo 8 caracteres"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div>
+          <Input
+            label="Senha"
+            type="password"
+            required
+            autoComplete="new-password"
+            placeholder="Mínimo 8 caracteres, com letras e números"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <PasswordStrengthMeter password={password} />
+        </div>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 

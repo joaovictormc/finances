@@ -4,3 +4,4 @@ export * from "./bot-message.schema";
 export * from "./financial-account.schema";
 export * from "./goal.schema";
 export * from "./group.schema";
+export * from "./password.schema";

@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { auth } from "./lib/auth";
+import { enforcePasswordPolicy } from "./middleware/password-policy";
 import { bootstrapAdmin } from "./lib/bootstrap-admin";
 import { telegramWebhookHandler } from "./routes/bots/telegram";
 import telegramLinkRoute from "./routes/bots/telegram-link";
@@ -62,6 +63,7 @@ app.use(
 app.get("/health", (c) => c.json({ status: "ok", ts: new Date().toISOString() }));
 
 // ── Better Auth handler (handles /api/auth/* requests) ────────────────────────
+app.use("/api/auth/*", enforcePasswordPolicy);
 app.on(["GET", "POST"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 // ── Bot webhooks ──────────────────────────────────────────────────────────────
