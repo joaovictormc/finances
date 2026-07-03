@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { View, Text, ScrollView, ActivityIndicator, Pressable } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { PieChart } from "react-native-gifted-charts";
+import { PieChart, BarChart } from "react-native-gifted-charts";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
@@ -24,28 +24,56 @@ export default function OverviewScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { data: session } = useSession();
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
   const [report, setReport] = useState<MonthlyReport | null>(null);
+  const [history, setHistory] = useState<{ label: string; income: number; expense: number }[]>([]);
   const [recent, setRecent] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
+
+  function navigateMonth(delta: number) {
+    const d = new Date(year, month - 1 + delta, 1);
+    setYear(d.getFullYear());
+    setMonth(d.getMonth() + 1);
+  }
+
   const load = useCallback(async () => {
     try {
-      const now = new Date();
-      const [reportData, recentData] = await Promise.all([
+      // Mês selecionado + 5 anteriores, pra alimentar o gráfico de barras.
+      const sixMonths = Array.from({ length: 6 }, (_, i) => {
+        const d = new Date(year, month - 1 - (5 - i), 1);
+        return { year: d.getFullYear(), month: d.getMonth() + 1 };
+      });
+
+      const [reportData, recentData, ...historyReports] = await Promise.all([
         api.get<MonthlyReport>("/api/transactions/reports/monthly", {
-          year: now.getFullYear(),
-          month: now.getMonth() + 1,
+          year: sixMonths[5].year,
+          month: sixMonths[5].month,
         }),
         api.get<PaginatedResponse<Transaction>>("/api/transactions", { page: 1, limit: 5 }),
+        ...sixMonths.slice(0, 5).map((m) =>
+          api.get<MonthlyReport>("/api/transactions/reports/monthly", { year: m.year, month: m.month })
+        ),
       ]);
+
       setReport(reportData);
       setRecent(recentData.data);
+      setHistory(
+        sixMonths.map((m, i) => ({
+          label: MONTHS[m.month - 1],
+          income: (i < 5 ? historyReports[i]?.income : reportData.income) ?? 0,
+          expense: (i < 5 ? historyReports[i]?.expense : reportData.expense) ?? 0,
+        }))
+      );
     } catch {
       // mantém a tela com os dados já carregados se a request falhar
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [year, month]);
 
   useFocusEffect(
     useCallback(() => {
@@ -64,12 +92,18 @@ export default function OverviewScreen() {
   const income = report?.income ?? 0;
   const expense = report?.expense ?? 0;
   const balance = report?.balance ?? income - expense;
-  const monthLabel = `${MONTHS[new Date().getMonth()]} ${new Date().getFullYear()}`;
+  const monthLabel = `${MONTHS[month - 1]} ${year}`;
 
   const pieData = (report?.byCategory ?? [])
     .filter((row) => row.total > 0)
     .slice(0, 8)
     .map((row, i) => ({ value: row.total, color: SLICE_COLORS[i % SLICE_COLORS.length] }));
+
+  const maxHistoryValue = Math.max(1, ...history.flatMap((h) => [h.income, h.expense]));
+  const barData = history.flatMap((h) => [
+    { value: h.income, label: h.label, spacing: 2, labelWidth: 28, frontColor: "#22c55e" },
+    { value: h.expense, frontColor: "#ef4444" },
+  ]);
 
   return (
     <ScrollView
@@ -103,10 +137,29 @@ export default function OverviewScreen() {
           <Text className="text-xs font-medium" style={{ color: "#95A4B7" }}>
             Saldo do mês
           </Text>
-          <View className="rounded-full px-3 py-1" style={{ backgroundColor: "rgba(254,220,51,0.16)" }}>
-            <Text className="text-[11px] font-semibold" style={{ color: "#FEDC33" }}>
-              {monthLabel}
-            </Text>
+          <View className="flex-row items-center gap-1">
+            <Pressable
+              onPress={() => navigateMonth(-1)}
+              accessibilityLabel="Mês anterior"
+              className="h-6 w-6 items-center justify-center rounded-full"
+              style={{ backgroundColor: "rgba(255,255,255,0.08)" }}
+            >
+              <Ionicons name="chevron-back" size={14} color="#95A4B7" />
+            </Pressable>
+            <View className="rounded-full px-3 py-1" style={{ backgroundColor: "rgba(254,220,51,0.16)" }}>
+              <Text className="text-[11px] font-semibold" style={{ color: "#FEDC33" }}>
+                {monthLabel}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => navigateMonth(1)}
+              disabled={isCurrentMonth}
+              accessibilityLabel="Próximo mês"
+              className="h-6 w-6 items-center justify-center rounded-full"
+              style={{ backgroundColor: "rgba(255,255,255,0.08)", opacity: isCurrentMonth ? 0.3 : 1 }}
+            >
+              <Ionicons name="chevron-forward" size={14} color="#95A4B7" />
+            </Pressable>
           </View>
         </View>
         <Text className="mt-2 text-3xl font-bold text-white">{formatBRL(balance)}</Text>
@@ -145,6 +198,41 @@ export default function OverviewScreen() {
             Sem gastos neste mês
           </Text>
         )}
+      </View>
+
+      {/* Receitas x Gastos — 6 meses */}
+      <View className="mb-4 rounded-3xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
+        <View className="mb-3 flex-row items-center justify-between">
+          <Text className="text-base font-semibold text-foreground dark:text-foreground-dark">
+            Receitas x Gastos
+          </Text>
+          <View className="flex-row items-center gap-3">
+            <View className="flex-row items-center gap-1">
+              <View className="h-2 w-2 rounded-full" style={{ backgroundColor: "#22c55e" }} />
+              <Text className="text-[11px] text-muted-foreground dark:text-muted-foreground-dark">Receitas</Text>
+            </View>
+            <View className="flex-row items-center gap-1">
+              <View className="h-2 w-2 rounded-full" style={{ backgroundColor: "#ef4444" }} />
+              <Text className="text-[11px] text-muted-foreground dark:text-muted-foreground-dark">Gastos</Text>
+            </View>
+          </View>
+        </View>
+        <BarChart
+          data={barData}
+          height={140}
+          barWidth={14}
+          spacing={20}
+          maxValue={maxHistoryValue * 1.15}
+          roundedTop
+          hideRules
+          xAxisThickness={0}
+          yAxisThickness={0}
+          yAxisTextStyle={{ color: colors.mutedForeground, fontSize: 10 }}
+          xAxisLabelTextStyle={{ color: colors.mutedForeground, fontSize: 10 }}
+          noOfSections={3}
+          yAxisLabelWidth={40}
+          formatYLabel={(v) => `${(Number(v) / 1000).toFixed(0)}k`}
+        />
       </View>
 
       {/* Movimentações recentes */}
