@@ -25,6 +25,11 @@ export type ThemeColors = {
   // Paleta "Finans": amarelo de marca + cinza-azulado de item inativo.
   primary: string;
   tabInactive: string;
+  // Cores semânticas de receita/gasto (gráficos, ícones) — mesmos valores
+  // do tailwind.config.js (success/destructive), pra não hardcodar hex
+  // repetido em cada tela que precisa passar cor pra um prop nativo.
+  success: string;
+  destructive: string;
 };
 
 export const THEME_COLORS: Record<"light" | "dark", ThemeColors> = {
@@ -36,6 +41,8 @@ export const THEME_COLORS: Record<"light" | "dark", ThemeColors> = {
     border: "#e4e4e7",
     primary: "#FEDC33",
     tabInactive: "#95A4B7",
+    success: "#22c55e",
+    destructive: "#ef4444",
   },
   dark: {
     background: "#0f0f12",
@@ -45,6 +52,8 @@ export const THEME_COLORS: Record<"light" | "dark", ThemeColors> = {
     border: "#2e2e33",
     primary: "#FEDC33",
     tabInactive: "#6b7787",
+    success: "#4ade80",
+    destructive: "#f87171",
   },
 };
 

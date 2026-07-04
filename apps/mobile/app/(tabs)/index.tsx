@@ -101,8 +101,8 @@ export default function OverviewScreen() {
 
   const maxHistoryValue = Math.max(1, ...history.flatMap((h) => [h.income, h.expense]));
   const barData = history.flatMap((h) => [
-    { value: h.income, label: h.label, spacing: 2, labelWidth: 28, frontColor: "#22c55e" },
-    { value: h.expense, frontColor: "#ef4444" },
+    { value: h.income, label: h.label, spacing: 2, labelWidth: 28, frontColor: colors.success },
+    { value: h.expense, frontColor: colors.destructive },
   ]);
 
   return (
@@ -132,7 +132,7 @@ export default function OverviewScreen() {
       </View>
 
       {/* Hero card: saldo do mês */}
-      <View className="mb-4 rounded-3xl p-5" style={{ backgroundColor: "#14142B" }}>
+      <View className="mb-4 rounded-2xl p-5" style={{ backgroundColor: "#14142B" }}>
         <View className="flex-row items-center justify-between">
           <Text className="text-xs font-medium" style={{ color: "#95A4B7" }}>
             Saldo do mês
@@ -167,7 +167,7 @@ export default function OverviewScreen() {
         <View className="mt-5 flex-row gap-3">
           <View className="flex-1 flex-row items-center gap-2 rounded-2xl p-3" style={{ backgroundColor: "rgba(255,255,255,0.06)" }}>
             <View className="h-8 w-8 items-center justify-center rounded-full" style={{ backgroundColor: "rgba(34,197,94,0.18)" }}>
-              <Ionicons name="arrow-down" size={16} color="#22c55e" />
+              <Ionicons name="arrow-down" size={16} color={colors.success} />
             </View>
             <View>
               <Text className="text-[11px]" style={{ color: "#95A4B7" }}>Receitas</Text>
@@ -176,7 +176,7 @@ export default function OverviewScreen() {
           </View>
           <View className="flex-1 flex-row items-center gap-2 rounded-2xl p-3" style={{ backgroundColor: "rgba(255,255,255,0.06)" }}>
             <View className="h-8 w-8 items-center justify-center rounded-full" style={{ backgroundColor: "rgba(239,68,68,0.18)" }}>
-              <Ionicons name="arrow-up" size={16} color="#ef4444" />
+              <Ionicons name="arrow-up" size={16} color={colors.destructive} />
             </View>
             <View>
               <Text className="text-[11px]" style={{ color: "#95A4B7" }}>Gastos</Text>
@@ -187,7 +187,7 @@ export default function OverviewScreen() {
       </View>
 
       {/* Gastos por categoria */}
-      <View className="mb-4 items-center rounded-3xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
+      <View className="mb-4 items-center rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
         <Text className="mb-3 self-start text-base font-semibold text-foreground dark:text-foreground-dark">
           Gastos por categoria
         </Text>
@@ -201,18 +201,18 @@ export default function OverviewScreen() {
       </View>
 
       {/* Receitas x Gastos — 6 meses */}
-      <View className="mb-4 rounded-3xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
+      <View className="mb-4 rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
         <View className="mb-3 flex-row items-center justify-between">
           <Text className="text-base font-semibold text-foreground dark:text-foreground-dark">
             Receitas x Gastos
           </Text>
           <View className="flex-row items-center gap-3">
             <View className="flex-row items-center gap-1">
-              <View className="h-2 w-2 rounded-full" style={{ backgroundColor: "#22c55e" }} />
+              <View className="h-2 w-2 rounded-full" style={{ backgroundColor: colors.success }} />
               <Text className="text-[11px] text-muted-foreground dark:text-muted-foreground-dark">Receitas</Text>
             </View>
             <View className="flex-row items-center gap-1">
-              <View className="h-2 w-2 rounded-full" style={{ backgroundColor: "#ef4444" }} />
+              <View className="h-2 w-2 rounded-full" style={{ backgroundColor: colors.destructive }} />
               <Text className="text-[11px] text-muted-foreground dark:text-muted-foreground-dark">Gastos</Text>
             </View>
           </View>
@@ -236,7 +236,7 @@ export default function OverviewScreen() {
       </View>
 
       {/* Movimentações recentes */}
-      <View className="rounded-3xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
+      <View className="rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
         <Text className="mb-1 text-base font-semibold text-foreground dark:text-foreground-dark">
           Movimentações recentes
         </Text>
@@ -248,7 +248,7 @@ export default function OverviewScreen() {
           recent.map((t, idx) => {
             const isIncome = t.type === "income";
             const isExpense = t.type === "expense";
-            const amountColor = isIncome ? "#22c55e" : isExpense ? "#14142B" : "#95A4B7";
+            const amountColor = isIncome ? colors.success : isExpense ? colors.foreground : colors.tabInactive;
             return (
               <View
                 key={t.id}
@@ -261,7 +261,7 @@ export default function OverviewScreen() {
                   <Ionicons
                     name={isIncome ? "arrow-down" : isExpense ? "arrow-up" : "swap-horizontal"}
                     size={18}
-                    color={isIncome ? "#22c55e" : colors.foreground}
+                    color={isIncome ? colors.success : colors.foreground}
                   />
                 </View>
                 <View className="flex-1">

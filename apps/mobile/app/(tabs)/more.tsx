@@ -33,13 +33,13 @@ export default function MoreScreen() {
         <Text className="text-2xl font-bold text-foreground dark:text-foreground-dark">Mais</Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-        <View className="mb-4 overflow-hidden rounded-xl border border-border dark:border-border-dark">
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 16 }}>
+        <View className="overflow-hidden rounded-2xl border border-border bg-card dark:border-border-dark dark:bg-card-dark">
           {MENU_ITEMS.map((item, idx) => (
             <Pressable
               key={item.href}
               onPress={() => router.push(item.href)}
-              className={`flex-row items-center justify-between bg-card px-4 py-3 dark:bg-card-dark ${
+              className={`flex-row items-center justify-between px-4 py-3.5 ${
                 idx > 0 ? "border-t border-border dark:border-border-dark" : ""
               }`}
             >
@@ -52,35 +52,38 @@ export default function MoreScreen() {
           ))}
         </View>
 
-        <Text className="mb-2 text-sm font-medium text-muted-foreground dark:text-muted-foreground-dark">
-          Tema
-        </Text>
-        <View className="mb-6 overflow-hidden rounded-xl border border-border dark:border-border-dark">
-          {THEME_OPTIONS.map((opt, idx) => {
-            const selected = preference === opt.value;
-            return (
-              <Pressable
-                key={opt.value}
-                onPress={() => setPreference(opt.value)}
-                className={`flex-row items-center justify-between bg-card px-4 py-3 dark:bg-card-dark ${
-                  idx > 0 ? "border-t border-border dark:border-border-dark" : ""
-                }`}
-              >
-                <View className="flex-row items-center gap-3">
-                  <Ionicons name={opt.icon} size={20} color={colors.foreground} />
-                  <Text className="text-base text-foreground dark:text-foreground-dark">{opt.label}</Text>
-                </View>
-                {selected && <Ionicons name="checkmark" size={20} color={colors.primary} />}
-              </Pressable>
-            );
-          })}
+        <View className="rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
+          <Text className="mb-1 text-base font-semibold text-foreground dark:text-foreground-dark">Tema</Text>
+          <Text className="mb-4 text-sm text-muted-foreground dark:text-muted-foreground-dark">
+            Escolha entre claro, escuro ou seguir o sistema
+          </Text>
+          <View className="overflow-hidden rounded-xl border border-border dark:border-border-dark">
+            {THEME_OPTIONS.map((opt, idx) => {
+              const selected = preference === opt.value;
+              return (
+                <Pressable
+                  key={opt.value}
+                  onPress={() => setPreference(opt.value)}
+                  className={`flex-row items-center justify-between px-4 py-3 ${
+                    idx > 0 ? "border-t border-border dark:border-border-dark" : ""
+                  }`}
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name={opt.icon} size={20} color={colors.foreground} />
+                    <Text className="text-base text-foreground dark:text-foreground-dark">{opt.label}</Text>
+                  </View>
+                  {selected && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         <Pressable
           onPress={() => signOut()}
-          className="flex-row items-center justify-center gap-2 rounded-xl border border-border py-3 dark:border-border-dark"
+          className="flex-row items-center justify-center gap-2 rounded-2xl border border-border bg-card py-3.5 dark:border-border-dark dark:bg-card-dark"
         >
-          <Ionicons name="log-out-outline" size={18} color="#ef4444" />
+          <Ionicons name="log-out-outline" size={18} color={colors.destructive} />
           <Text className="text-sm font-medium text-destructive dark:text-destructive-dark">Sair</Text>
         </Pressable>
       </ScrollView>

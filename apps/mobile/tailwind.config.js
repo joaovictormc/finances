@@ -22,6 +22,7 @@ module.exports = {
         navy: { DEFAULT: "#14142B", dark: "#ededed" },
         "tab-inactive": { DEFAULT: "#95A4B7", dark: "#6b7787" },
         destructive: { DEFAULT: "#ef4444", dark: "#f87171" },
+        success: { DEFAULT: "#22c55e", dark: "#4ade80" },
       },
     },
   },

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Sun, Moon, ArrowRight, CreditCard, FileDown } from "lucide-react";
-import { useTheme } from "@/app/providers/theme-provider";
+import { Sun, Moon, Monitor, ArrowRight, CreditCard, FileDown } from "lucide-react";
+import { useTheme, type ThemePreference } from "@/app/providers/theme-provider";
 import { authClient, useSession } from "@/lib/auth-client";
 import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -21,8 +21,14 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 const CURRENT_YEAR = new Date().getFullYear();
 const REPORT_YEARS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
 
+const THEME_OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
+  { value: "light", label: "Claro", icon: Sun },
+  { value: "dark", label: "Escuro", icon: Moon },
+  { value: "system", label: "Sistema", icon: Monitor },
+];
+
 export default function SettingsPage() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const { data: session } = useSession();
   const [reportYear, setReportYear] = useState(String(CURRENT_YEAR));
@@ -173,30 +179,22 @@ export default function SettingsPage() {
         {/* Theme section */}
         <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
           <h2 className="text-base font-semibold mb-1">Tema</h2>
-          <p className="text-sm text-muted-foreground mb-4">Escolha entre o tema claro ou escuro</p>
+          <p className="text-sm text-muted-foreground mb-4">Escolha entre claro, escuro ou seguir o sistema</p>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => theme === "dark" && toggleTheme()}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                theme === "light"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "border border-border text-muted-foreground hover:bg-accent"
-              }`}
-            >
-              <Sun size={16} />
-              Claro
-            </button>
-            <button
-              onClick={() => theme === "light" && toggleTheme()}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                theme === "dark"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "border border-border text-muted-foreground hover:bg-accent"
-              }`}
-            >
-              <Moon size={16} />
-              Escuro
-            </button>
+            {THEME_OPTIONS.map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                onClick={() => setTheme(value)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  theme === value
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "border border-border text-muted-foreground hover:bg-accent"
+                }`}
+              >
+                <Icon size={16} />
+                {label}
+              </button>
+            ))}
           </div>
         </section>
 
