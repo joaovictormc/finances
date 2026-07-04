@@ -2,6 +2,24 @@ import { z } from "zod";
 
 export const TransactionTypeSchema = z.enum(["income", "expense", "transfer"]);
 export const PaymentMethodSchema = z.enum(["debit", "credit", "pix", "cash", "boleto"]);
+export type PaymentMethod = z.infer<typeof PaymentMethodSchema>;
+
+// Débito é o método implícito (padrão, sem selo); os demais aparecem como
+// opção pra qualquer tipo de transação — crédito só quando a conta
+// selecionada tem cartão (hasCreditCard), então fica de fora da lista base.
+export const BASE_PAYMENT_METHOD_OPTIONS: { value: PaymentMethod; label: string }[] = [
+  { value: "debit", label: "Débito" },
+  { value: "pix", label: "Pix" },
+  { value: "cash", label: "Dinheiro" },
+  { value: "boleto", label: "Boleto" },
+];
+
+export const PAYMENT_METHOD_BADGE: Partial<Record<PaymentMethod, string>> = {
+  credit: "💳 Crédito",
+  pix: "⚡ Pix",
+  cash: "💵 Dinheiro",
+  boleto: "🧾 Boleto",
+};
 
 export const CreateTransactionSchema = z.object({
   accountId: z.string().min(1),

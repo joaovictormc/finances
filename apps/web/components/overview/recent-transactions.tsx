@@ -3,13 +3,7 @@ import { CategoryIcon } from "@/components/ui/category-icon";
 import { Badge } from "@/components/ui/badge";
 import { formatBRL, formatShortDate } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
-
-const PAYMENT_METHOD_BADGE: Partial<Record<NonNullable<Transaction["paymentMethod"]>, string>> = {
-  credit: "💳 Crédito",
-  pix: "⚡ Pix",
-  cash: "💵 Dinheiro",
-  boleto: "🧾 Boleto",
-};
+import { PAYMENT_METHOD_BADGE } from "@finances/validations";
 
 export function RecentTransactions({ transactions }: { transactions: Transaction[] }) {
   return (

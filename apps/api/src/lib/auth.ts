@@ -3,6 +3,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { bearer } from "better-auth/plugins/bearer";
 import { twoFactor } from "better-auth/plugins/two-factor";
 import { APIError } from "better-auth/api";
+import { MIN_PASSWORD_LENGTH } from "@finances/validations";
 import { db } from "@finances/db";
 
 // O handler de auth roda na API (porta 3001), então o baseURL precisa apontar para ela.
@@ -52,7 +53,7 @@ const betterAuthResult = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification,
-    minPasswordLength: 8,
+    minPasswordLength: MIN_PASSWORD_LENGTH,
     // Redefinição de senha por e-mail. Revoga as outras sessões ativas ao
     // trocar a senha — se alguém pediu reset é porque a senha antiga pode
     // estar comprometida, então desloga os outros dispositivos por segurança.
@@ -137,11 +138,13 @@ const betterAuthResult = betterAuth({
       maxAge: 60 * 5, // cache da sessão no cookie por 5 minutos
     },
   },
-  // secure/httpOnly/sameSite já eram os defaults implícitos do better-auth
-  // (secure calculado por heurística a partir da baseURL); deixamos explícito
-  // aqui pra não depender dessa inferência.
+  // secure/httpOnly/sameSite já eram os defaults implícitos do better-auth.
+  // useSecureCookies fica atrelado ao protocolo real da baseURL (em vez de
+  // NODE_ENV === "production") porque nada no deploy desta API garante essa
+  // env var — se ficar sem setar, um NODE_ENV !== "production" em HTTPS
+  // derrubaria o Secure do cookie de sessão silenciosamente.
   advanced: {
-    useSecureCookies: process.env.NODE_ENV === "production",
+    useSecureCookies: API_URL.startsWith("https://"),
     defaultCookieAttributes: {
       httpOnly: true,
       sameSite: "lax",
@@ -152,15 +155,18 @@ const betterAuthResult = betterAuth({
   // endpoints de /api/auth/*. As regras mais rígidas de cadastro/reset de
   // senha (3 tentativas por 10-60s) já vêm embutidas no better-auth e
   // continuam valendo por cima deste teto geral. O login (/sign-in/email)
-  // ganha uma regra própria mais generosa — o default embutido (3 tentativas
-  // /10s) é agressivo demais pra uso real (typo de senha, testar 2FA, etc.)
-  // e derrubava o login com um "Too many requests" silencioso no app.
+  // ganha uma regra própria um pouco mais generosa — o default embutido (3
+  // tentativas/10s) derrubava o login com "Too many requests" silencioso em
+  // uso real (typo de senha, testar 2FA). customRules SUBSTITUI a regra
+  // embutida em vez de somar a ela (confirmado lendo resolveRateLimitConfig
+  // do better-auth), então o valor aqui precisa continuar sendo, por si só,
+  // uma proteção séria contra força bruta — não só "generoso o bastante".
   rateLimit: {
     enabled: true,
     window: 60,
     max: 100,
     customRules: {
-      "/sign-in/email": { window: 60, max: 15 },
+      "/sign-in/email": { window: 30, max: 6 },
     },
   },
   trustedOrigins: [APP_URL, API_URL, EXPO_URL, ...LAN_ORIGINS, "controlai://"],

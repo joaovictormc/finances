@@ -23,62 +23,69 @@ export async function sendNotification(userId: string, input: NotificationInput)
     return;
   }
 
-  if (user?.email && profile?.notifyEmail !== false) {
-    const notification = await db.notification.create({
-      data: {
-        userId,
-        type: input.type,
-        channel: "email",
-        title: input.title,
-        body: input.body,
-        metadata: input.metadata as Prisma.InputJsonValue | undefined,
-      },
-    });
+  // Email e Telegram são canais independentes — rodam em paralelo em vez de
+  // sequenciais, já que um atraso/falha num não deve segurar o outro (isso
+  // importa especialmente em lotes, ex: alertas de orçamento pra vários
+  // membros de um grupo, onde a latência de cada chamada se acumulava).
+  await Promise.allSettled([
+    (async () => {
+      if (!user?.email || profile?.notifyEmail === false) return;
+      const notification = await db.notification.create({
+        data: {
+          userId,
+          type: input.type,
+          channel: "email",
+          title: input.title,
+          body: input.body,
+          metadata: input.metadata as Prisma.InputJsonValue | undefined,
+        },
+      });
 
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: input.title,
-        template: input.emailTemplate ?? "ai-insight",
-        data: input.emailData ?? { title: input.title, body: input.body, name: user.name },
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: input.title,
+          template: input.emailTemplate ?? "ai-insight",
+          data: input.emailData ?? { title: input.title, body: input.body, name: user.name },
+        });
+        await db.notification.update({
+          where: { id: notification.id },
+          data: { status: "sent", sentAt: new Date() },
+        });
+      } catch (err) {
+        await db.notification.update({
+          where: { id: notification.id },
+          data: { status: "failed", error: (err as Error).message },
+        });
+      }
+    })(),
+    (async () => {
+      if (!profile?.telegramChatId || profile?.notifyTelegram === false) return;
+      const notification = await db.notification.create({
+        data: {
+          userId,
+          type: input.type,
+          channel: "telegram",
+          title: input.title,
+          body: input.body,
+          metadata: input.metadata as Prisma.InputJsonValue | undefined,
+        },
       });
-      await db.notification.update({
-        where: { id: notification.id },
-        data: { status: "sent", sentAt: new Date() },
-      });
-    } catch (err) {
-      await db.notification.update({
-        where: { id: notification.id },
-        data: { status: "failed", error: (err as Error).message },
-      });
-    }
-  }
 
-  if (profile?.telegramChatId && profile?.notifyTelegram !== false) {
-    const notification = await db.notification.create({
-      data: {
-        userId,
-        type: input.type,
-        channel: "telegram",
-        title: input.title,
-        body: input.body,
-        metadata: input.metadata as Prisma.InputJsonValue | undefined,
-      },
-    });
-
-    try {
-      await bot.api.sendMessage(Number(profile.telegramChatId), `*${input.title}*\n\n${input.body}`, {
-        parse_mode: "Markdown",
-      });
-      await db.notification.update({
-        where: { id: notification.id },
-        data: { status: "sent", sentAt: new Date() },
-      });
-    } catch (err) {
-      await db.notification.update({
-        where: { id: notification.id },
-        data: { status: "failed", error: (err as Error).message },
-      });
-    }
-  }
+      try {
+        await bot.api.sendMessage(Number(profile.telegramChatId), `*${input.title}*\n\n${input.body}`, {
+          parse_mode: "Markdown",
+        });
+        await db.notification.update({
+          where: { id: notification.id },
+          data: { status: "sent", sentAt: new Date() },
+        });
+      } catch (err) {
+        await db.notification.update({
+          where: { id: notification.id },
+          data: { status: "failed", error: (err as Error).message },
+        });
+      }
+    })(),
+  ]);
 }

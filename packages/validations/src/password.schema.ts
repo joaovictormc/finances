@@ -8,6 +8,12 @@ const UPPER = /[A-Z]/;
 const DIGIT = /[0-9]/;
 const SYMBOL = /[^a-zA-Z0-9]/;
 
+// Fonte única do tamanho mínimo — reusada pelo better-auth (minPasswordLength)
+// além do PasswordPolicySchema abaixo, pra não terem que ser sincronizados
+// manualmente em dois lugares.
+export const MIN_PASSWORD_LENGTH = 8;
+export const MAX_PASSWORD_LENGTH = 128;
+
 export type PasswordStrength = "muito-fraca" | "fraca" | "media" | "forte";
 
 export function scorePassword(password: string): { score: number; classes: number; strength: PasswordStrength } {
@@ -23,8 +29,8 @@ export function scorePassword(password: string): { score: number; classes: numbe
 
 export const PasswordPolicySchema = z
   .string()
-  .min(8, "A senha deve ter pelo menos 8 caracteres")
-  .max(128, "A senha deve ter no máximo 128 caracteres")
+  .min(MIN_PASSWORD_LENGTH, `A senha deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres`)
+  .max(MAX_PASSWORD_LENGTH, `A senha deve ter no máximo ${MAX_PASSWORD_LENGTH} caracteres`)
   .refine((pw) => [LOWER, UPPER, DIGIT, SYMBOL].filter((re) => re.test(pw)).length >= 3, {
     message: "A senha deve combinar pelo menos 3 destes: letra maiúscula, letra minúscula, número e símbolo",
   });

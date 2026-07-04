@@ -6,6 +6,27 @@ const app = new Hono<{ Variables: AuthVariables }>();
 
 app.use("*", requireAuth);
 
+// Teto de segurança pras listas potencialmente grandes do export (não é
+// paginação de verdade — é só pra evitar que uma conta muito antiga carregue
+// dezenas de milhares de linhas em memória numa única resposta síncrona).
+// Cobre décadas de uso real; se algum dia precisar exportar mais que isso,
+// vale trocar por um job assíncrono em vez de aumentar o número.
+const EXPORT_LIST_LIMIT = 5000;
+const EXPORT_MESSAGES_PER_CONVERSATION_LIMIT = 500;
+
+// Roda um objeto de promises em paralelo preservando as chaves — evita o
+// desalinhamento silencioso de um Promise.all posicional (uma reordenação
+// futura não some com o nome do campo).
+async function parallel<T extends Record<string, Promise<unknown>>>(
+  promises: T
+): Promise<{ [K in keyof T]: Awaited<T[K]> }> {
+  const entries = Object.entries(promises);
+  const results = await Promise.all(entries.map(([, p]) => p));
+  return Object.fromEntries(entries.map(([key], i) => [key, results[i]])) as {
+    [K in keyof T]: Awaited<T[K]>;
+  };
+}
+
 // Exporta todos os dados pessoais do usuário em JSON (LGPD, art. 18, IV/V).
 // Exclui deliberadamente sessões, contas OAuth/senha e segredos de 2FA — não
 // são "dados pessoais" que fazem sentido num export de portabilidade, e
@@ -14,44 +35,41 @@ app.use("*", requireAuth);
 app.get("/export", async (c) => {
   const userId = c.get("userId");
 
-  const [
-    user,
-    profile,
-    financialAccounts,
-    transactions,
-    categories,
-    budgets,
-    goals,
-    recurringBills,
-    notifications,
-    aiInsights,
-    subscription,
-    referralCode,
-    referralsMade,
-    referredBy,
-    groupMemberships,
-    openFinanceConsents,
-    botConversations,
-  ] = await Promise.all([
-    db.user.findUnique({
+  const data = await parallel({
+    user: db.user.findUnique({
       where: { id: userId },
       select: { id: true, name: true, email: true, emailVerified: true, role: true, createdAt: true, updatedAt: true },
     }),
-    db.userProfile.findUnique({ where: { userId } }),
-    db.financialAccount.findMany({ where: { userId } }),
-    db.transaction.findMany({ where: { userId } }),
-    db.category.findMany({ where: { userId } }),
-    db.budget.findMany({ where: { userId } }),
-    db.goal.findMany({ where: { userId } }),
-    db.recurringBill.findMany({ where: { userId } }),
-    db.notification.findMany({ where: { userId } }),
-    db.aiInsight.findMany({ where: { userId } }),
-    db.subscription.findUnique({ where: { userId } }),
-    db.referralCode.findUnique({ where: { userId } }),
-    db.referral.findMany({ where: { referrerId: userId } }),
-    db.referral.findUnique({ where: { referredId: userId } }),
-    db.groupMember.findMany({ where: { userId }, include: { group: { select: { id: true, name: true } } } }),
-    db.openFinanceConsent.findMany({
+    profile: db.userProfile.findUnique({ where: { userId } }),
+    financialAccounts: db.financialAccount.findMany({ where: { userId } }),
+    transactions: db.transaction.findMany({
+      where: { userId },
+      orderBy: { date: "desc" },
+      take: EXPORT_LIST_LIMIT,
+    }),
+    categories: db.category.findMany({ where: { userId } }),
+    budgets: db.budget.findMany({ where: { userId } }),
+    goals: db.goal.findMany({ where: { userId } }),
+    recurringBills: db.recurringBill.findMany({ where: { userId } }),
+    notifications: db.notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: EXPORT_LIST_LIMIT,
+    }),
+    aiInsights: db.aiInsight.findMany({
+      where: { userId },
+      orderBy: { generatedAt: "desc" },
+      take: EXPORT_LIST_LIMIT,
+    }),
+    subscription: db.subscription.findUnique({ where: { userId } }),
+    referralCode: db.referralCode.findUnique({ where: { userId } }),
+    referralsMade: db.referral.findMany({ where: { referrerId: userId } }),
+    referredBy: db.referral.findUnique({ where: { referredId: userId } }),
+    groupMemberships: db.groupMember.findMany({
+      where: { userId },
+      include: { group: { select: { id: true, name: true } } },
+    }),
+    openFinanceConsents: db.openFinanceConsent.findMany({
       where: { userId },
       select: {
         id: true,
@@ -67,29 +85,24 @@ app.get("/export", async (c) => {
         revokedAt: true,
       },
     }),
-    db.botConversation.findMany({ where: { userId }, include: { messages: true } }),
-  ]);
+    botConversations: db.botConversation.findMany({
+      where: { userId },
+      include: {
+        messages: {
+          orderBy: { createdAt: "desc" },
+          take: EXPORT_MESSAGES_PER_CONVERSATION_LIMIT,
+        },
+      },
+    }),
+  });
 
   const exportData = {
     exportedAt: new Date().toISOString(),
-    user,
+    ...data,
     // telegramChatId é BigInt — JSON.stringify não serializa BigInt nativamente.
-    profile: profile ? { ...profile, telegramChatId: profile.telegramChatId?.toString() ?? null } : null,
-    financialAccounts,
-    transactions,
-    categories,
-    budgets,
-    goals,
-    recurringBills,
-    notifications,
-    aiInsights,
-    subscription,
-    referralCode,
-    referralsMade,
-    referredBy,
-    groupMemberships,
-    openFinanceConsents,
-    botConversations,
+    profile: data.profile
+      ? { ...data.profile, telegramChatId: data.profile.telegramChatId?.toString() ?? null }
+      : null,
   };
 
   c.header(

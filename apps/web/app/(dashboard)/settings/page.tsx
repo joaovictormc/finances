@@ -52,10 +52,12 @@ export default function SettingsPage() {
   }, []);
 
   async function updatePref(key: keyof NotificationPreferences, value: boolean) {
+    const previous = prefs;
     setPrefs((prev) => (prev ? { ...prev, [key]: value } : prev));
     try {
       await api.patch<NotificationPreferences>("/api/settings/notifications", { [key]: value });
     } catch {
+      setPrefs(previous);
       toast({ title: "Erro ao salvar preferência", variant: "error" });
     }
   }

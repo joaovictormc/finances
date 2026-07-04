@@ -103,6 +103,12 @@ app.post("/", zValidator("json", CreateTransactionSchema), async (c) => {
   });
   if (!account) return c.json({ error: "Conta não encontrada" }, 404);
 
+  // A restrição "crédito só em conta com cartão" antes só existia na tela
+  // (useEffect); uma chamada direta à API conseguia burlar. Reforça aqui.
+  if (data.paymentMethod === "credit" && !account.hasCreditCard) {
+    return c.json({ error: "Esta conta não tem cartão de crédito habilitado" }, 400);
+  }
+
   const transaction = await db.transaction.create({
     data: {
       ...data,
@@ -132,6 +138,15 @@ app.patch("/:id", zValidator("json", UpdateTransactionSchema), async (c) => {
     existing.userId === userId ||
     (existing.groupId && (await hasGroupRole(userId, existing.groupId, ["owner", "admin"])));
   if (!canEdit) return c.json({ error: "Transação não encontrada" }, 404);
+
+  const effectivePaymentMethod = data.paymentMethod ?? existing.paymentMethod;
+  if (effectivePaymentMethod === "credit") {
+    const effectiveAccountId = data.accountId ?? existing.accountId;
+    const account = await db.financialAccount.findFirst({ where: { id: effectiveAccountId } });
+    if (!account?.hasCreditCard) {
+      return c.json({ error: "Esta conta não tem cartão de crédito habilitado" }, 400);
+    }
+  }
 
   const transaction = await db.transaction.update({
     where: { id },

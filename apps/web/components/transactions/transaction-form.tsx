@@ -9,16 +9,9 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-client";
 import { useToast } from "@/components/ui/toast-provider";
 import type { Category, FinancialAccount, Group, Transaction } from "@/lib/types";
+import { BASE_PAYMENT_METHOD_OPTIONS, type PaymentMethod } from "@finances/validations";
 
 type TransactionType = "expense" | "income" | "transfer";
-type PaymentMethod = "debit" | "credit" | "pix" | "cash" | "boleto";
-
-const BASE_PAYMENT_METHOD_OPTIONS: { value: PaymentMethod; label: string }[] = [
-  { value: "debit", label: "Débito" },
-  { value: "pix", label: "Pix" },
-  { value: "cash", label: "Dinheiro" },
-  { value: "boleto", label: "Boleto" },
-];
 
 interface TransactionFormProps {
   transaction?: Transaction | null;

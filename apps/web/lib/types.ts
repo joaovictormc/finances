@@ -1,7 +1,9 @@
+import type { PaymentMethod } from "@finances/validations";
+
 export type Transaction = {
   id: string;
   type: "income" | "expense" | "transfer";
-  paymentMethod?: "debit" | "credit" | "pix" | "cash" | "boleto";
+  paymentMethod?: PaymentMethod;
   amount: string;
   description: string;
   date: string;
