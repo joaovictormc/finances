@@ -52,6 +52,7 @@ async function renderEmailTemplate(
   const { renderAsync } = await import("@react-email/render");
   const templates: Record<string, () => Promise<{ default: unknown }>> = {
     "email-verification": () => import("../emails/email-verification"),
+    "reset-password": () => import("../emails/reset-password"),
     welcome: () => import("../emails/welcome"),
     "bill-reminder": () => import("../emails/bill-reminder"),
     "budget-alert": () => import("../emails/budget-alert"),

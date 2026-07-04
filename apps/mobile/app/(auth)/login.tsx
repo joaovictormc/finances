@@ -150,12 +150,20 @@ export default function LoginScreen() {
         onChangeText={setEmail}
       />
       <PasswordInput
-        className="mb-4"
+        className="mb-1"
         placeholder="Senha"
         autoComplete="current-password"
         value={password}
         onChangeText={setPassword}
       />
+
+      <Link href="/(auth)/forgot-password" asChild>
+        <Pressable className="mb-4">
+          <Text className="text-right text-sm font-medium text-primary dark:text-primary-dark">
+            Esqueci minha senha
+          </Text>
+        </Pressable>
+      </Link>
 
       {error && <Text className="mb-3 text-sm text-destructive dark:text-destructive-dark">{error}</Text>}
 
