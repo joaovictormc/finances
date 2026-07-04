@@ -12,6 +12,8 @@ import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast-provider";
 import { ReferralSection } from "@/components/settings/referral-section";
 import { TwoFactorSection } from "@/components/settings/two-factor-section";
+import { ChangePasswordSection } from "@/components/settings/change-password-section";
+import { DeleteAccountSection } from "@/components/settings/delete-account-section";
 import { TelegramLink } from "@/components/bot/telegram-link";
 import type { NotificationPreferences } from "@/lib/types";
 
@@ -28,6 +30,7 @@ export default function SettingsPage() {
 
   const [name, setName] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (session?.user?.name) setName(session.user.name);
@@ -91,6 +94,26 @@ export default function SettingsPage() {
     }
   };
 
+  const handleExportData = async () => {
+    setIsExporting(true);
+    try {
+      const res = await fetch(`${API_URL}/api/user/export`, { credentials: "include" });
+      if (!res.ok) throw new Error("Falha ao exportar dados");
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `meus-dados-controlai-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: "Erro ao exportar seus dados", variant: "error" });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="max-w-2xl">
       <div className="mb-6">
@@ -138,8 +161,13 @@ export default function SettingsPage() {
         {/* Security section */}
         <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
           <h2 className="text-base font-semibold mb-1">Segurança</h2>
-          <p className="text-sm text-muted-foreground mb-4">Autenticação em duas etapas (2FA)</p>
-          <TwoFactorSection />
+          <p className="text-sm text-muted-foreground mb-4">Senha e autenticação em duas etapas</p>
+          <div className="space-y-6">
+            <ChangePasswordSection />
+            <div className="border-t border-border pt-4">
+              <TwoFactorSection />
+            </div>
+          </div>
         </section>
 
         {/* Theme section */}
@@ -227,6 +255,23 @@ export default function SettingsPage() {
               enabled={prefs?.aiInsightsEnabled ?? true}
               onToggle={(v) => updatePref("aiInsightsEnabled", v)}
             />
+          </div>
+        </section>
+
+        {/* LGPD section */}
+        <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
+          <h2 className="text-base font-semibold mb-1">Meus dados</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Baixe uma cópia de todos os seus dados ou exclua sua conta permanentemente
+          </p>
+          <div className="flex flex-col gap-4">
+            <Button variant="outline" size="sm" onClick={handleExportData} loading={isExporting} className="w-fit">
+              <FileDown size={16} />
+              Baixar meus dados (JSON)
+            </Button>
+            <div className="border-t border-border pt-4">
+              <DeleteAccountSection />
+            </div>
           </div>
         </section>
       </div>

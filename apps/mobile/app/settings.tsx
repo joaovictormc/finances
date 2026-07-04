@@ -9,6 +9,8 @@ import { authClient, useSession } from "@/lib/auth-client";
 import { useTheme, type ThemeColors } from "@/lib/theme";
 import { TelegramLink } from "@/components/telegram-link";
 import { TwoFactorSection } from "@/components/two-factor-section";
+import { ChangePasswordSection } from "@/components/change-password-section";
+import { DeleteAccountSection } from "@/components/delete-account-section";
 import type { NotificationPreferences, ReferralSummary } from "@/lib/types";
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -124,6 +126,43 @@ export default function SettingsScreen() {
     }
   }
 
+  const [exportingData, setExportingData] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  async function handleExportData() {
+    setExportError(null);
+    setExportingData(true);
+    try {
+      const path = "/api/user/export";
+      const filename = `meus-dados-controlai-${new Date().toISOString().slice(0, 10)}.json`;
+
+      if (Platform.OS === "web") {
+        const res = await fetch(`${API_URL}${path}`, { credentials: "include" });
+        if (!res.ok) throw new Error("Falha ao exportar dados");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        const dest = new File(Paths.cache, filename);
+        await File.downloadFileAsync(`${API_URL}${path}`, dest, {
+          headers: nativeAuthHeaders(),
+          idempotent: true,
+        });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(dest.uri);
+        }
+      }
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : "Erro ao exportar seus dados.");
+    } finally {
+      setExportingData(false);
+    }
+  }
+
   return (
     <ScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16, gap: 16 }}>
       <View className="rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
@@ -167,8 +206,10 @@ export default function SettingsScreen() {
       <View className="rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
         <Text className="mb-1 text-base font-semibold text-foreground dark:text-foreground-dark">Segurança</Text>
         <Text className="mb-4 text-sm text-muted-foreground dark:text-muted-foreground-dark">
-          Autenticação em duas etapas (2FA)
+          Senha e autenticação em duas etapas
         </Text>
+        <ChangePasswordSection />
+        <View className="my-4 border-t border-border dark:border-border-dark" />
         <TwoFactorSection />
       </View>
 
@@ -309,6 +350,38 @@ export default function SettingsScreen() {
             )}
           </>
         )}
+      </View>
+
+      <View className="rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
+        <Text className="mb-1 text-base font-semibold text-foreground dark:text-foreground-dark">Meus dados</Text>
+        <Text className="mb-4 text-sm text-muted-foreground dark:text-muted-foreground-dark">
+          Baixe uma cópia de todos os seus dados ou exclua sua conta permanentemente.
+        </Text>
+
+        {exportError && (
+          <Text className="mb-3 text-sm text-destructive dark:text-destructive-dark">{exportError}</Text>
+        )}
+
+        <Pressable
+          onPress={handleExportData}
+          disabled={exportingData}
+          className="mb-4 flex-row items-center justify-center gap-2 rounded-md border border-border py-3 dark:border-border-dark"
+        >
+          {exportingData ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : (
+            <>
+              <Ionicons name="download-outline" size={16} color={colors.foreground} />
+              <Text className="text-sm font-medium text-foreground dark:text-foreground-dark">
+                Baixar meus dados (JSON)
+              </Text>
+            </>
+          )}
+        </Pressable>
+
+        <View className="border-t border-border pt-4 dark:border-border-dark">
+          <DeleteAccountSection />
+        </View>
       </View>
     </ScrollView>
   );

@@ -24,6 +24,7 @@ import reportsRoute from "./routes/reports";
 import referralsRoute from "./routes/referrals";
 import adminRoute from "./routes/admin";
 import settingsRoute from "./routes/settings";
+import userRoute from "./routes/user";
 import { registerRepeatableJobs } from "./jobs/scheduler";
 
 // Start BullMQ workers
@@ -90,6 +91,7 @@ app.route("/api/reports", reportsRoute);
 app.route("/api/referrals", referralsRoute);
 app.route("/api/admin", adminRoute);
 app.route("/api/settings", settingsRoute);
+app.route("/api/user", userRoute);
 
 app.onError((err, c) => {
   console.error("[api] erro não tratado:", err);

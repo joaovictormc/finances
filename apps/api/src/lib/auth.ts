@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { bearer } from "better-auth/plugins/bearer";
 import { twoFactor } from "better-auth/plugins/two-factor";
+import { APIError } from "better-auth/api";
 import { db } from "@finances/db";
 
 // O handler de auth roda na API (porta 3001), então o baseURL precisa apontar para ela.
@@ -31,11 +32,44 @@ const betterAuthResult = betterAuth({
     additionalFields: {
       role: { type: "string", defaultValue: "user", input: false },
     },
+    deleteUser: {
+      enabled: true,
+      // Bloqueia a exclusão se o usuário for dono de algum grupo compartilhado —
+      // sem isso, o grupo ficaria "órfão" (a relação Group.owner não tem
+      // onDelete: Cascade/SetNull definido). O usuário precisa excluir ou
+      // transferir o grupo pela tela de Grupos antes de excluir a conta.
+      beforeDelete: async (user) => {
+        const ownedGroups = await db.group.count({ where: { ownerId: user.id } });
+        if (ownedGroups > 0) {
+          throw new APIError("BAD_REQUEST", {
+            message:
+              "Você é dono de um ou mais grupos compartilhados. Exclua ou transfira esses grupos antes de excluir sua conta.",
+          });
+        }
+      },
+    },
   },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification,
     minPasswordLength: 8,
+    // Redefinição de senha por e-mail. Revoga as outras sessões ativas ao
+    // trocar a senha — se alguém pediu reset é porque a senha antiga pode
+    // estar comprometida, então desloga os outros dispositivos por segurança.
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, url }) => {
+      try {
+        const { sendEmail } = await import("./email");
+        await sendEmail({
+          to: user.email,
+          subject: "Redefinir senha — ControlAI",
+          template: "reset-password",
+          data: { name: user.name, url },
+        });
+      } catch (err) {
+        console.error("[auth] Falha ao enfileirar e-mail de redefinição de senha:", err);
+      }
+    },
   },
   ...(hasGoogleOAuth
     ? {
@@ -115,13 +149,19 @@ const betterAuthResult = betterAuth({
   },
   // Antes ficava implícito em "habilitado só em produção" (default do
   // better-auth). Agora é explícito e sempre ligado, com um teto geral pros
-  // endpoints de /api/auth/*. As regras mais rígidas de login/cadastro/reset
-  // de senha (3 tentativas por 10-60s) já vêm embutidas no better-auth e
-  // continuam valendo por cima deste teto geral.
+  // endpoints de /api/auth/*. As regras mais rígidas de cadastro/reset de
+  // senha (3 tentativas por 10-60s) já vêm embutidas no better-auth e
+  // continuam valendo por cima deste teto geral. O login (/sign-in/email)
+  // ganha uma regra própria mais generosa — o default embutido (3 tentativas
+  // /10s) é agressivo demais pra uso real (typo de senha, testar 2FA, etc.)
+  // e derrubava o login com um "Too many requests" silencioso no app.
   rateLimit: {
     enabled: true,
     window: 60,
     max: 100,
+    customRules: {
+      "/sign-in/email": { window: 60, max: 15 },
+    },
   },
   trustedOrigins: [APP_URL, API_URL, EXPO_URL, ...LAN_ORIGINS, "controlai://"],
   // bearer: permite autenticar via header "Authorization: Bearer <token>",
