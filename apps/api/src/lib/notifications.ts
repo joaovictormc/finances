@@ -23,7 +23,7 @@ export async function sendNotification(userId: string, input: NotificationInput)
     return;
   }
 
-  if (user?.email) {
+  if (user?.email && profile?.notifyEmail !== false) {
     const notification = await db.notification.create({
       data: {
         userId,
@@ -54,7 +54,7 @@ export async function sendNotification(userId: string, input: NotificationInput)
     }
   }
 
-  if (profile?.telegramChatId) {
+  if (profile?.telegramChatId && profile?.notifyTelegram !== false) {
     const notification = await db.notification.create({
       data: {
         userId,

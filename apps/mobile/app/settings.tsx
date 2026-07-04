@@ -1,18 +1,21 @@
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, ScrollView, ActivityIndicator, Platform, Share } from "react-native";
+import { View, Text, TextInput, Pressable, Switch, ScrollView, ActivityIndicator, Platform, Share } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import * as Sharing from "expo-sharing";
 import { File, Paths } from "expo-file-system";
 import { api, API_URL, nativeAuthHeaders } from "@/lib/api-client";
-import { useTheme } from "@/lib/theme";
-import type { ReferralSummary } from "@/lib/types";
+import { authClient, useSession } from "@/lib/auth-client";
+import { useTheme, type ThemeColors } from "@/lib/theme";
+import { TelegramLink } from "@/components/telegram-link";
+import type { NotificationPreferences, ReferralSummary } from "@/lib/types";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const REPORT_YEARS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
 
 export default function SettingsScreen() {
   const { colors } = useTheme();
+  const { data: session } = useSession();
 
   const [reportYear, setReportYear] = useState(CURRENT_YEAR);
   const [downloading, setDownloading] = useState(false);
@@ -34,6 +37,45 @@ export default function SettingsScreen() {
       .catch(() => {})
       .finally(() => setLoadingReferrals(false));
   }, []);
+
+  const [name, setName] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (session?.user?.name) setName(session.user.name);
+  }, [session?.user?.name]);
+
+  async function handleSaveProfile() {
+    if (!name.trim()) return;
+    setProfileError(null);
+    setSavingProfile(true);
+    try {
+      await authClient.updateUser({ name: name.trim() });
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : "Erro ao atualizar perfil.");
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
+  const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
+
+  useEffect(() => {
+    api
+      .get<NotificationPreferences>("/api/settings/notifications")
+      .then(setPrefs)
+      .catch(() => {});
+  }, []);
+
+  async function updatePref(key: keyof NotificationPreferences, value: boolean) {
+    setPrefs((prev) => (prev ? { ...prev, [key]: value } : prev));
+    try {
+      await api.patch<NotificationPreferences>("/api/settings/notifications", { [key]: value });
+    } catch {
+      // reverte silenciosamente se a chamada falhar; próximo GET corrige o estado
+    }
+  }
 
   async function handleCopyReferralLink() {
     if (!referralLink) return;
@@ -83,6 +125,82 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16, gap: 16 }}>
+      <View className="rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
+        <Text className="mb-4 text-base font-semibold text-foreground dark:text-foreground-dark">Perfil</Text>
+
+        <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Nome</Text>
+        <TextInput
+          className="mb-4 rounded-md border border-border bg-card px-3 py-3 text-foreground dark:border-border-dark dark:bg-card-dark dark:text-foreground-dark"
+          value={name}
+          onChangeText={setName}
+          placeholder="Seu nome completo"
+          placeholderTextColor={colors.mutedForeground}
+        />
+
+        <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Email</Text>
+        <TextInput
+          className="mb-4 rounded-md border border-border bg-muted px-3 py-3 text-muted-foreground dark:border-border-dark dark:bg-muted-dark dark:text-muted-foreground-dark"
+          value={session?.user?.email ?? ""}
+          editable={false}
+        />
+
+        {profileError && (
+          <Text className="mb-3 text-sm text-destructive dark:text-destructive-dark">{profileError}</Text>
+        )}
+
+        <Pressable
+          onPress={handleSaveProfile}
+          disabled={savingProfile}
+          className="items-center rounded-md bg-primary py-3 dark:bg-primary-dark"
+        >
+          {savingProfile ? (
+            <ActivityIndicator color="#14142B" />
+          ) : (
+            <Text className="text-sm font-medium text-primary-foreground dark:text-primary-foreground-dark">
+              Salvar perfil
+            </Text>
+          )}
+        </Pressable>
+      </View>
+
+      <View className="rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
+        <Text className="mb-1 text-base font-semibold text-foreground dark:text-foreground-dark">Telegram</Text>
+        <Text className="mb-4 text-sm text-muted-foreground dark:text-muted-foreground-dark">
+          Vincule sua conta ao bot pra registrar gastos e receber notificações pelo Telegram.
+        </Text>
+        <TelegramLink />
+      </View>
+
+      <View className="rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
+        <Text className="mb-1 text-base font-semibold text-foreground dark:text-foreground-dark">Notificações</Text>
+        <Text className="mb-4 text-sm text-muted-foreground dark:text-muted-foreground-dark">
+          Configure como deseja receber alertas.
+        </Text>
+
+        <NotificationRow
+          label="Alertas por email"
+          description="Receba avisos de orçamento e vencimentos por email"
+          value={prefs?.notifyEmail ?? true}
+          onChange={(v) => updatePref("notifyEmail", v)}
+          colors={colors}
+        />
+        <NotificationRow
+          label="Telegram Bot"
+          description="Receba notificações e gerencie finanças pelo Telegram"
+          value={prefs?.notifyTelegram ?? true}
+          onChange={(v) => updatePref("notifyTelegram", v)}
+          colors={colors}
+        />
+        <NotificationRow
+          label="Alertas preditivos"
+          description="Avisos quando você estiver no caminho de ultrapassar um orçamento"
+          value={prefs?.aiInsightsEnabled ?? true}
+          onChange={(v) => updatePref("aiInsightsEnabled", v)}
+          colors={colors}
+          last
+        />
+      </View>
+
       <View className="rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
         <Text className="mb-1 text-base font-semibold text-foreground dark:text-foreground-dark">Relatório anual</Text>
         <Text className="mb-4 text-sm text-muted-foreground dark:text-muted-foreground-dark">
@@ -184,5 +302,31 @@ export default function SettingsScreen() {
         )}
       </View>
     </ScrollView>
+  );
+}
+
+function NotificationRow({
+  label,
+  description,
+  value,
+  onChange,
+  colors,
+  last = false,
+}: {
+  label: string;
+  description: string;
+  value: boolean;
+  onChange: (value: boolean) => void;
+  colors: ThemeColors;
+  last?: boolean;
+}) {
+  return (
+    <View className={`flex-row items-center gap-3 py-3 ${last ? "" : "border-b border-border dark:border-border-dark"}`}>
+      <View className="flex-1">
+        <Text className="text-sm font-medium text-foreground dark:text-foreground-dark">{label}</Text>
+        <Text className="mt-0.5 text-xs text-muted-foreground dark:text-muted-foreground-dark">{description}</Text>
+      </View>
+      <Switch value={value} onValueChange={onChange} trackColor={{ true: colors.primary }} />
+    </View>
   );
 }

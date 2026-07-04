@@ -108,6 +108,8 @@ model UserProfile {
   defaultCurrency String    @default("BRL")
   timezone        String    @default("America/Sao_Paulo")
   aiInsightsEnabled Boolean @default(true)
+  notifyEmail     Boolean   @default(true)
+  notifyTelegram  Boolean   @default(true)
   onboardingCompletedAt DateTime?
 
   createdAt       DateTime  @default(now())

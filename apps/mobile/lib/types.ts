@@ -152,3 +152,9 @@ export type ReferralSummary = {
   rewardsGranted: number;
   referrals: Array<{ id: string; referredName: string; rewardGranted: boolean; createdAt: string }>;
 };
+
+export type NotificationPreferences = {
+  notifyEmail: boolean;
+  notifyTelegram: boolean;
+  aiInsightsEnabled: boolean;
+};

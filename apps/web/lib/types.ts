@@ -119,3 +119,9 @@ export type RecurringBill = {
   category: { id: string; name: string; icon: string | null; iconUrl?: string | null } | null;
   createdAt: string;
 };
+
+export type NotificationPreferences = {
+  notifyEmail: boolean;
+  notifyTelegram: boolean;
+  aiInsightsEnabled: boolean;
+};

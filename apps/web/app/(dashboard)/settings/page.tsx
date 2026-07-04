@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Sun, Moon, ArrowRight, CreditCard, FileDown } from "lucide-react";
 import { useTheme } from "@/app/providers/theme-provider";
+import { authClient, useSession } from "@/lib/auth-client";
+import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast-provider";
 import { ReferralSection } from "@/components/settings/referral-section";
+import { TelegramLink } from "@/components/bot/telegram-link";
+import type { NotificationPreferences } from "@/lib/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 const CURRENT_YEAR = new Date().getFullYear();
@@ -17,12 +21,51 @@ const REPORT_YEARS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
+  const { data: session } = useSession();
   const [reportYear, setReportYear] = useState(String(CURRENT_YEAR));
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const [name, setName] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  useEffect(() => {
+    if (session?.user?.name) setName(session.user.name);
+  }, [session?.user?.name]);
+
+  const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
+
+  useEffect(() => {
+    api
+      .get<NotificationPreferences>("/api/settings/notifications")
+      .then(setPrefs)
+      .catch(() => {});
+  }, []);
+
+  async function updatePref(key: keyof NotificationPreferences, value: boolean) {
+    setPrefs((prev) => (prev ? { ...prev, [key]: value } : prev));
+    try {
+      await api.patch<NotificationPreferences>("/api/settings/notifications", { [key]: value });
+    } catch {
+      toast({ title: "Erro ao salvar preferência", variant: "error" });
+    }
+  }
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({ title: "Perfil atualizado!", variant: "success" });
+    if (!name.trim()) return;
+    setSavingProfile(true);
+    try {
+      await authClient.updateUser({ name: name.trim() });
+      toast({ title: "Perfil atualizado!", variant: "success" });
+    } catch (err) {
+      toast({
+        title: "Erro ao atualizar perfil",
+        description: err instanceof Error ? err.message : undefined,
+        variant: "error",
+      });
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const handleDownloadReport = async () => {
@@ -74,9 +117,20 @@ export default function SettingsPage() {
         <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
           <h2 className="text-base font-semibold mb-4">Perfil</h2>
           <form onSubmit={handleSaveProfile} className="space-y-4">
-            <Input label="Nome" placeholder="Seu nome completo" />
-            <Input label="Email" type="email" placeholder="seu@email.com.br" />
-            <Button type="submit" size="sm">Salvar perfil</Button>
+            <Input
+              label="Nome"
+              placeholder="Seu nome completo"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <Input
+              label="Email"
+              type="email"
+              value={session?.user?.email ?? ""}
+              disabled
+              title="O email não pode ser alterado por aqui"
+            />
+            <Button type="submit" size="sm" loading={savingProfile}>Salvar perfil</Button>
           </form>
         </section>
 
@@ -133,14 +187,38 @@ export default function SettingsPage() {
 
         <ReferralSection />
 
+        {/* Telegram section */}
+        <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
+          <h2 className="text-base font-semibold mb-1">Telegram</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Vincule sua conta ao bot pra registrar gastos e receber notificações pelo Telegram
+          </p>
+          <TelegramLink />
+        </section>
+
         {/* Notifications section */}
         <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
           <h2 className="text-base font-semibold mb-1">Notificações</h2>
           <p className="text-sm text-muted-foreground mb-4">Configure como deseja receber alertas</p>
           <div className="space-y-3">
-            <ToggleRow label="Alertas por email" description="Receba avisos de orçamento e vencimentos por email" />
-            <ToggleRow label="Telegram Bot" description="Receba notificações e gerencie finanças pelo Telegram" />
-            <ToggleRow label="Alertas preditivos" description="Avisos quando você estiver no caminho de ultrapassar um orçamento" defaultOn />
+            <ToggleRow
+              label="Alertas por email"
+              description="Receba avisos de orçamento e vencimentos por email"
+              enabled={prefs?.notifyEmail ?? true}
+              onToggle={(v) => updatePref("notifyEmail", v)}
+            />
+            <ToggleRow
+              label="Telegram Bot"
+              description="Receba notificações e gerencie finanças pelo Telegram"
+              enabled={prefs?.notifyTelegram ?? true}
+              onToggle={(v) => updatePref("notifyTelegram", v)}
+            />
+            <ToggleRow
+              label="Alertas preditivos"
+              description="Avisos quando você estiver no caminho de ultrapassar um orçamento"
+              enabled={prefs?.aiInsightsEnabled ?? true}
+              onToggle={(v) => updatePref("aiInsightsEnabled", v)}
+            />
           </div>
         </section>
       </div>
@@ -151,14 +229,14 @@ export default function SettingsPage() {
 function ToggleRow({
   label,
   description,
-  defaultOn = false,
+  enabled,
+  onToggle,
 }: {
   label: string;
   description: string;
-  defaultOn?: boolean;
+  enabled: boolean;
+  onToggle: (value: boolean) => void;
 }) {
-  const [enabled, setEnabled] = useState(defaultOn);
-
   return (
     <div className="flex items-start gap-4 py-3 border-b border-border last:border-0">
       <div className="flex-1">
@@ -166,7 +244,7 @@ function ToggleRow({
         <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
       </div>
       <button
-        onClick={() => setEnabled(!enabled)}
+        onClick={() => onToggle(!enabled)}
         className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
           enabled ? "bg-primary" : "bg-muted"
         }`}

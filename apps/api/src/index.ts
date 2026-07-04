@@ -23,6 +23,7 @@ import mercadopagoWebhookRoute from "./routes/webhooks/mercadopago";
 import reportsRoute from "./routes/reports";
 import referralsRoute from "./routes/referrals";
 import adminRoute from "./routes/admin";
+import settingsRoute from "./routes/settings";
 import { registerRepeatableJobs } from "./jobs/scheduler";
 
 // Start BullMQ workers
@@ -88,6 +89,7 @@ app.route("/api/webhooks/mercadopago", mercadopagoWebhookRoute);
 app.route("/api/reports", reportsRoute);
 app.route("/api/referrals", referralsRoute);
 app.route("/api/admin", adminRoute);
+app.route("/api/settings", settingsRoute);
 
 app.onError((err, c) => {
   console.error("[api] erro não tratado:", err);
