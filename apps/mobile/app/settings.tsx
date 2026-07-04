@@ -8,6 +8,7 @@ import { api, API_URL, nativeAuthHeaders } from "@/lib/api-client";
 import { authClient, useSession } from "@/lib/auth-client";
 import { useTheme, type ThemeColors } from "@/lib/theme";
 import { TelegramLink } from "@/components/telegram-link";
+import { TwoFactorSection } from "@/components/two-factor-section";
 import type { NotificationPreferences, ReferralSummary } from "@/lib/types";
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -161,6 +162,14 @@ export default function SettingsScreen() {
             </Text>
           )}
         </Pressable>
+      </View>
+
+      <View className="rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
+        <Text className="mb-1 text-base font-semibold text-foreground dark:text-foreground-dark">Segurança</Text>
+        <Text className="mb-4 text-sm text-muted-foreground dark:text-muted-foreground-dark">
+          Autenticação em duas etapas (2FA)
+        </Text>
+        <TwoFactorSection />
       </View>
 
       <View className="rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">

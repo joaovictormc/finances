@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast-provider";
 import { ReferralSection } from "@/components/settings/referral-section";
+import { TwoFactorSection } from "@/components/settings/two-factor-section";
 import { TelegramLink } from "@/components/bot/telegram-link";
 import type { NotificationPreferences } from "@/lib/types";
 
@@ -132,6 +133,13 @@ export default function SettingsPage() {
             />
             <Button type="submit" size="sm" loading={savingProfile}>Salvar perfil</Button>
           </form>
+        </section>
+
+        {/* Security section */}
+        <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
+          <h2 className="text-base font-semibold mb-1">Segurança</h2>
+          <p className="text-sm text-muted-foreground mb-4">Autenticação em duas etapas (2FA)</p>
+          <TwoFactorSection />
         </section>
 
         {/* Theme section */}

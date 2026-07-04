@@ -18,12 +18,16 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  const [needsTwoFactor, setNeedsTwoFactor] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [useBackupCode, setUseBackupCode] = useState(false);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    const { error } = await authClient.signIn.email({ email, password });
+    const { data, error } = await authClient.signIn.email({ email, password });
 
     if (error) {
       setLoading(false);
@@ -39,6 +43,36 @@ function LoginForm() {
       return;
     }
 
+    setLoading(false);
+
+    // O redirect de 2FA vem de um hook do better-auth que não está tipado na
+    // resposta padrão do signIn.email — só existe em runtime quando o usuário
+    // tem 2FA ativado.
+    if ((data as { twoFactorRedirect?: boolean } | null)?.twoFactorRedirect) {
+      setNeedsTwoFactor(true);
+      return;
+    }
+
+    router.push(callbackURL);
+    router.refresh();
+  }
+
+  async function handleVerifyTwoFactor(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const { error } = useBackupCode
+      ? await authClient.twoFactor.verifyBackupCode({ code: twoFactorCode })
+      : await authClient.twoFactor.verifyTotp({ code: twoFactorCode });
+
+    setLoading(false);
+
+    if (error) {
+      setError(useBackupCode ? "Código de backup inválido." : "Código inválido. Tente novamente.");
+      return;
+    }
+
     router.push(callbackURL);
     router.refresh();
   }
@@ -47,6 +81,51 @@ function LoginForm() {
     setError(null);
     setGoogleLoading(true);
     await authClient.signIn.social({ provider: "google", callbackURL });
+  }
+
+  if (needsTwoFactor) {
+    return (
+      <>
+        <h2 className="mb-1 text-lg font-semibold">Verificação em duas etapas</h2>
+        <p className="mb-6 text-sm text-muted-foreground">
+          {useBackupCode
+            ? "Digite um dos seus códigos de backup."
+            : "Digite o código de 6 dígitos do seu app autenticador."}
+        </p>
+
+        <form onSubmit={handleVerifyTwoFactor} className="space-y-4">
+          <Input
+            label={useBackupCode ? "Código de backup" : "Código de 6 dígitos"}
+            autoFocus
+            inputMode={useBackupCode ? "text" : "numeric"}
+            maxLength={useBackupCode ? 11 : 6}
+            placeholder={useBackupCode ? "xxxxx-xxxxx" : "000000"}
+            value={twoFactorCode}
+            onChange={(e) =>
+              setTwoFactorCode(useBackupCode ? e.target.value : e.target.value.replace(/\D/g, ""))
+            }
+          />
+
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          <Button type="submit" loading={loading} className="w-full">
+            Confirmar
+          </Button>
+        </form>
+
+        <button
+          type="button"
+          onClick={() => {
+            setUseBackupCode((v) => !v);
+            setTwoFactorCode("");
+            setError(null);
+          }}
+          className="mt-4 text-center text-sm text-muted-foreground hover:underline w-full"
+        >
+          {useBackupCode ? "Usar código do app autenticador" : "Perdeu acesso? Usar código de backup"}
+        </button>
+      </>
+    );
   }
 
   return (

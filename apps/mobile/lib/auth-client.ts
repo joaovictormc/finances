@@ -1,5 +1,6 @@
 import { createAuthClient } from "better-auth/react";
 import { expoClient } from "@better-auth/expo/client";
+import { twoFactorClient } from "better-auth/client/plugins";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
@@ -21,8 +22,9 @@ export const authClient = createAuthClient({
     credentials: isWeb ? "include" : undefined,
   },
   plugins: isWeb
-    ? []
+    ? [twoFactorClient()]
     : [
+        twoFactorClient(),
         // expo-secure-store não tem implementação real na web (o módulo web
         // exporta um objeto vazio), então esse plugin — que persiste o cookie
         // de sessão nele — só pode rodar no nativo. Na web isso falhava

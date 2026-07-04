@@ -21,12 +21,14 @@ model User {
   emailVerified Boolean
   image         String?
   role          String    @default("user") // user | support | admin
+  twoFactorEnabled Boolean @default(false)
   createdAt     DateTime
   updatedAt     DateTime
 
   // Better Auth relations
   sessions   Session[]
   accounts   Account[]
+  twoFactor  TwoFactor?
 
   // App relations
   profile         UserProfile?
@@ -116,6 +118,17 @@ model UserProfile {
   updatedAt       DateTime  @updatedAt
 
   @@map("user_profiles")
+}
+
+model TwoFactor {
+  id          String  @id @default(cuid())
+  secret      String
+  backupCodes String
+  userId      String  @unique
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verified    Boolean @default(true)
+
+  @@map("two_factor")
 }
 
 // ─────────────────────────────────────────────

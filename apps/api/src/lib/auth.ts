@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { bearer } from "better-auth/plugins/bearer";
+import { twoFactor } from "better-auth/plugins/two-factor";
 import { db } from "@finances/db";
 
 // O handler de auth roda na API (porta 3001), então o baseURL precisa apontar para ela.
@@ -23,7 +24,7 @@ const requireEmailVerification =
 const hasGoogleOAuth =
   !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET;
 
-export const auth = betterAuth({
+const betterAuthResult = betterAuth({
   baseURL: API_URL,
   database: prismaAdapter(db, { provider: "postgresql" }),
   user: {
@@ -88,8 +89,15 @@ export const auth = betterAuth({
     },
   },
   session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 dias — igual ao default do better-auth, mas explícito
-    updateAge: 60 * 60 * 24, // renova a sessão a cada 1 dia de uso — default explícito
+    // Expiração absoluta de 30 dias: disableSessionRefresh faz o expiresIn
+    // NÃO deslizar com o uso (o default do better-auth renovaria a sessão a
+    // cada acesso via updateAge). Passados 30 dias da criação da sessão, ela
+    // expira de verdade e o usuário precisa logar de novo — o que, com 2FA
+    // ativado e sem "lembrar este dispositivo" (nunca usamos trustDevice nas
+    // chamadas de verifyTotp/verifyBackupCode), também exige o código do
+    // autenticador de novo. Vale igual pra web e mobile, é config de servidor.
+    expiresIn: 60 * 60 * 24 * 30,
+    disableSessionRefresh: true,
     cookieCache: {
       enabled: true,
       maxAge: 60 * 5, // cache da sessão no cookie por 5 minutos
@@ -122,7 +130,28 @@ export const auth = betterAuth({
   // zod v4 como dependência direta, conflitando com o zod v3 do projeto e quebrando
   // a inferência de tipo de `auth` — TS2742. Só é necessário pra OAuth/deep-link no
   // mobile, fora de escopo desta fase.)
-  plugins: [bearer()],
+  // twoFactor: só TOTP (app autenticador) + códigos de backup — sem SMS/email OTP
+  // (otpOptions não configurado), decisão já tomada no roadmap desta fase.
+  plugins: [bearer(), twoFactor()],
 });
 
-export type Auth = typeof auth;
+// O plugin twoFactor() usa zod v4 internamente (better-auth depende de ^4.3.6),
+// enquanto o resto do monorepo usa zod v3 — isso faz o tipo inferido de `auth`
+// referenciar um módulo zod v4 interno "não portável" (TS2742), e apps/api e
+// apps/mobile ainda resolvem versões ligeiramente diferentes do pacote
+// better-auth no pnpm, o que torna qualquer anotação de tipo "cheia"
+// inconsistente entre os dois (TS2322 comparando tipos "iguais" mas de
+// módulos diferentes). Como só usamos `handler` e `api.getSession` em todo
+// o app, exportamos apenas essa superfície mínima em vez de lutar contra
+// esse problema de resolução de dependências.
+type MinimalAuth = {
+  handler: (request: Request) => Promise<Response>;
+  api: {
+    getSession: (opts: { headers: Headers }) => Promise<{
+      session: { id: string; token: string; userId: string; expiresAt: Date };
+      user: { id: string; email: string; name: string; role: string; twoFactorEnabled: boolean };
+    } | null>;
+  };
+};
+
+export const auth = betterAuthResult as unknown as MinimalAuth;
