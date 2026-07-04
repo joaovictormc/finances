@@ -88,10 +88,32 @@ export const auth = betterAuth({
     },
   },
   session: {
+    expiresIn: 60 * 60 * 24 * 7, // 7 dias — igual ao default do better-auth, mas explícito
+    updateAge: 60 * 60 * 24, // renova a sessão a cada 1 dia de uso — default explícito
     cookieCache: {
       enabled: true,
       maxAge: 60 * 5, // cache da sessão no cookie por 5 minutos
     },
+  },
+  // secure/httpOnly/sameSite já eram os defaults implícitos do better-auth
+  // (secure calculado por heurística a partir da baseURL); deixamos explícito
+  // aqui pra não depender dessa inferência.
+  advanced: {
+    useSecureCookies: process.env.NODE_ENV === "production",
+    defaultCookieAttributes: {
+      httpOnly: true,
+      sameSite: "lax",
+    },
+  },
+  // Antes ficava implícito em "habilitado só em produção" (default do
+  // better-auth). Agora é explícito e sempre ligado, com um teto geral pros
+  // endpoints de /api/auth/*. As regras mais rígidas de login/cadastro/reset
+  // de senha (3 tentativas por 10-60s) já vêm embutidas no better-auth e
+  // continuam valendo por cima deste teto geral.
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 100,
   },
   trustedOrigins: [APP_URL, API_URL, EXPO_URL, ...LAN_ORIGINS, "controlai://"],
   // bearer: permite autenticar via header "Authorization: Bearer <token>",
