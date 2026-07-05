@@ -1,129 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Sun, Moon, Monitor, ArrowRight, CreditCard, FileDown } from "lucide-react";
-import { useTheme, type ThemePreference } from "@/app/providers/theme-provider";
-import { authClient, useSession } from "@/lib/auth-client";
-import { api } from "@/lib/api-client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast-provider";
+import { ArrowRight, CreditCard } from "lucide-react";
+import { ProfileSection } from "@/components/settings/profile-section";
+import { ThemeSection } from "@/components/settings/theme-section";
+import { AnnualReportSection } from "@/components/settings/annual-report-section";
+import { NotificationsSection } from "@/components/settings/notifications-section";
+import { DataExportSection } from "@/components/settings/data-export-section";
 import { ReferralSection } from "@/components/settings/referral-section";
 import { TwoFactorSection } from "@/components/settings/two-factor-section";
 import { ChangePasswordSection } from "@/components/settings/change-password-section";
-import { DeleteAccountSection } from "@/components/settings/delete-account-section";
 import { TelegramLink } from "@/components/bot/telegram-link";
-import type { NotificationPreferences } from "@/lib/types";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-const CURRENT_YEAR = new Date().getFullYear();
-const REPORT_YEARS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
-
-const THEME_OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
-  { value: "light", label: "Claro", icon: Sun },
-  { value: "dark", label: "Escuro", icon: Moon },
-  { value: "system", label: "Sistema", icon: Monitor },
-];
 
 export default function SettingsPage() {
-  const { theme, setTheme } = useTheme();
-  const { toast } = useToast();
-  const { data: session } = useSession();
-  const [reportYear, setReportYear] = useState(String(CURRENT_YEAR));
-  const [isDownloading, setIsDownloading] = useState(false);
-
-  const [name, setName] = useState("");
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-
-  useEffect(() => {
-    if (session?.user?.name) setName(session.user.name);
-  }, [session?.user?.name]);
-
-  const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
-
-  useEffect(() => {
-    api
-      .get<NotificationPreferences>("/api/settings/notifications")
-      .then(setPrefs)
-      .catch(() => {});
-  }, []);
-
-  async function updatePref(key: keyof NotificationPreferences, value: boolean) {
-    const previous = prefs;
-    setPrefs((prev) => (prev ? { ...prev, [key]: value } : prev));
-    try {
-      await api.patch<NotificationPreferences>("/api/settings/notifications", { [key]: value });
-    } catch {
-      setPrefs(previous);
-      toast({ title: "Erro ao salvar preferência", variant: "error" });
-    }
-  }
-
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-    setSavingProfile(true);
-    try {
-      await authClient.updateUser({ name: name.trim() });
-      toast({ title: "Perfil atualizado!", variant: "success" });
-    } catch (err) {
-      toast({
-        title: "Erro ao atualizar perfil",
-        description: err instanceof Error ? err.message : undefined,
-        variant: "error",
-      });
-    } finally {
-      setSavingProfile(false);
-    }
-  };
-
-  const handleDownloadReport = async () => {
-    setIsDownloading(true);
-    try {
-      const res = await fetch(`${API_URL}/api/reports/annual?year=${reportYear}`, {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Falha ao gerar relatório");
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `relatorio-anual-${reportYear}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      toast({ title: "Erro ao gerar relatório anual", variant: "error" });
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
-  const handleExportData = async () => {
-    setIsExporting(true);
-    try {
-      const res = await fetch(`${API_URL}/api/user/export`, { credentials: "include" });
-      if (!res.ok) throw new Error("Falha ao exportar dados");
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `meus-dados-controlai-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      toast({ title: "Erro ao exportar seus dados", variant: "error" });
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Configurações</h1>
         <p className="text-muted-foreground text-sm mt-1">Gerencie suas preferências pessoais</p>
@@ -145,28 +36,11 @@ export default function SettingsPage() {
           <ArrowRight size={16} className="text-muted-foreground shrink-0" />
         </Link>
 
-        {/* Profile section */}
         <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
           <h2 className="text-base font-semibold mb-4">Perfil</h2>
-          <form onSubmit={handleSaveProfile} className="space-y-4">
-            <Input
-              label="Nome"
-              placeholder="Seu nome completo"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <Input
-              label="Email"
-              type="email"
-              value={session?.user?.email ?? ""}
-              disabled
-              title="O email não pode ser alterado por aqui"
-            />
-            <Button type="submit" size="sm" loading={savingProfile}>Salvar perfil</Button>
-          </form>
+          <ProfileSection />
         </section>
 
-        {/* Security section */}
         <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
           <h2 className="text-base font-semibold mb-1">Segurança</h2>
           <p className="text-sm text-muted-foreground mb-4">Senha e autenticação em duas etapas</p>
@@ -178,52 +52,22 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* Theme section */}
         <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
           <h2 className="text-base font-semibold mb-1">Tema</h2>
           <p className="text-sm text-muted-foreground mb-4">Escolha entre claro, escuro ou seguir o sistema</p>
-          <div className="flex items-center gap-3">
-            {THEME_OPTIONS.map(({ value, label, icon: Icon }) => (
-              <button
-                key={value}
-                onClick={() => setTheme(value)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  theme === value
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "border border-border text-muted-foreground hover:bg-accent"
-                }`}
-              >
-                <Icon size={16} />
-                {label}
-              </button>
-            ))}
-          </div>
+          <ThemeSection />
         </section>
 
-        {/* Annual report section */}
         <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
           <h2 className="text-base font-semibold mb-1">Relatório anual</h2>
           <p className="text-sm text-muted-foreground mb-4">
             Baixe um PDF com o resumo mensal e as principais categorias de gasto do ano escolhido
           </p>
-          <div className="flex items-end gap-3">
-            <Select
-              label="Ano"
-              value={reportYear}
-              onChange={(e) => setReportYear(e.target.value)}
-              options={REPORT_YEARS.map((y) => ({ value: String(y), label: String(y) }))}
-              className="w-32"
-            />
-            <Button onClick={handleDownloadReport} loading={isDownloading} size="sm">
-              <FileDown size={16} />
-              Baixar PDF
-            </Button>
-          </div>
+          <AnnualReportSection />
         </section>
 
         <ReferralSection />
 
-        {/* Telegram section */}
         <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
           <h2 className="text-base font-semibold mb-1">Telegram</h2>
           <p className="text-sm text-muted-foreground mb-4">
@@ -232,82 +76,20 @@ export default function SettingsPage() {
           <TelegramLink />
         </section>
 
-        {/* Notifications section */}
         <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
           <h2 className="text-base font-semibold mb-1">Notificações</h2>
           <p className="text-sm text-muted-foreground mb-4">Configure como deseja receber alertas</p>
-          <div className="space-y-3">
-            <ToggleRow
-              label="Alertas por email"
-              description="Receba avisos de orçamento e vencimentos por email"
-              enabled={prefs?.notifyEmail ?? true}
-              onToggle={(v) => updatePref("notifyEmail", v)}
-            />
-            <ToggleRow
-              label="Telegram Bot"
-              description="Receba notificações e gerencie finanças pelo Telegram"
-              enabled={prefs?.notifyTelegram ?? true}
-              onToggle={(v) => updatePref("notifyTelegram", v)}
-            />
-            <ToggleRow
-              label="Alertas preditivos"
-              description="Avisos quando você estiver no caminho de ultrapassar um orçamento"
-              enabled={prefs?.aiInsightsEnabled ?? true}
-              onToggle={(v) => updatePref("aiInsightsEnabled", v)}
-            />
-          </div>
+          <NotificationsSection />
         </section>
 
-        {/* LGPD section */}
         <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
           <h2 className="text-base font-semibold mb-1">Meus dados</h2>
           <p className="text-sm text-muted-foreground mb-4">
             Baixe uma cópia de todos os seus dados ou exclua sua conta permanentemente
           </p>
-          <div className="flex flex-col gap-4">
-            <Button variant="outline" size="sm" onClick={handleExportData} loading={isExporting} className="w-fit">
-              <FileDown size={16} />
-              Baixar meus dados (JSON)
-            </Button>
-            <div className="border-t border-border pt-4">
-              <DeleteAccountSection />
-            </div>
-          </div>
+          <DataExportSection />
         </section>
       </div>
-    </div>
-  );
-}
-
-function ToggleRow({
-  label,
-  description,
-  enabled,
-  onToggle,
-}: {
-  label: string;
-  description: string;
-  enabled: boolean;
-  onToggle: (value: boolean) => void;
-}) {
-  return (
-    <div className="flex items-start gap-4 py-3 border-b border-border last:border-0">
-      <div className="flex-1">
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-      </div>
-      <button
-        onClick={() => onToggle(!enabled)}
-        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
-          enabled ? "bg-primary" : "bg-muted"
-        }`}
-      >
-        <span
-          className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
-            enabled ? "translate-x-6" : "translate-x-1"
-          }`}
-        />
-      </button>
     </div>
   );
 }

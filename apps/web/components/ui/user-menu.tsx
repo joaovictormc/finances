@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { authClient, useSession } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
 
-export function UserMenu() {
+export function UserMenu({ collapsed = false }: { collapsed?: boolean }) {
   const router = useRouter();
   const { data: session, isPending } = useSession();
   const [loading, setLoading] = useState(false);
@@ -27,14 +28,19 @@ export function UserMenu() {
   const initial = (user.name || user.email || "?").charAt(0).toUpperCase();
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+    <div className={cn("flex items-center gap-2", collapsed && "flex-col")}>
+      <div
+        title={collapsed ? user.name || user.email : undefined}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
+      >
         {initial}
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground">{user.name || "Usuário"}</p>
-        <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-      </div>
+      {!collapsed && (
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-foreground">{user.name || "Usuário"}</p>
+          <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+        </div>
+      )}
       <button
         type="button"
         onClick={handleSignOut}

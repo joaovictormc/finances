@@ -1,48 +1,26 @@
-import Link from "next/link";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { NavLinks } from "@/components/ui/nav-links";
 import { MobileSidebar } from "@/components/ui/mobile-sidebar";
 import { MobileBottomNav } from "@/components/ui/mobile-bottom-nav";
 import { ToastProvider } from "@/components/ui/toast-provider";
-import { UserMenu } from "@/components/ui/user-menu";
-import { Logo } from "@/components/ui/logo";
+import { DashboardSidebar } from "@/components/ui/dashboard-sidebar";
+import { SidebarProvider } from "@/app/providers/sidebar-provider";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
-      <div className="flex h-screen overflow-hidden flex-col lg:flex-row">
-        <MobileSidebar />
+      <SidebarProvider>
+        <div className="flex h-screen overflow-hidden flex-col lg:flex-row">
+          <MobileSidebar />
 
-        {/* Sidebar */}
-        <aside className="hidden lg:flex w-60 flex-col border-r border-border/60 bg-card">
-          <div className="flex h-14 items-center justify-between px-4 border-b border-border/60">
-            <Logo size={24} className="text-base" />
-            <ThemeToggle />
-          </div>
+          <DashboardSidebar />
 
-          <NavLinks />
+          {/* Main content */}
+          <main className="flex-1 overflow-auto pb-20 lg:pb-0">
+            <div className="max-w-7xl mx-auto p-6">{children}</div>
+          </main>
 
-          <div className="mt-auto border-t border-border p-4 space-y-3">
-            <div>
-              <p className="text-xs text-muted-foreground">Plano Gratuito</p>
-              <Link
-                href="/upgrade"
-                className="mt-0.5 block text-xs font-medium text-primary hover:underline"
-              >
-                Upgrade para Pro →
-              </Link>
-            </div>
-            <UserMenu />
-          </div>
-        </aside>
-
-        {/* Main content */}
-        <main className="flex-1 overflow-auto pb-20 lg:pb-0">
-          <div className="max-w-7xl mx-auto p-6">{children}</div>
-        </main>
-
-        <MobileBottomNav />
-      </div>
+          <MobileBottomNav />
+        </div>
+      </SidebarProvider>
     </ToastProvider>
   );
 }

@@ -41,7 +41,7 @@ type NavItem = {
   lockedMessage: string;
 };
 
-export function NavLinks() {
+export function NavLinks({ collapsed = false }: { collapsed?: boolean }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { toast } = useToast();
@@ -75,16 +75,22 @@ export function NavLinks() {
             onClick={() => {
               if (item.locked) toast({ title: item.lockedMessage, variant: "warning" });
             }}
+            title={collapsed ? item.label : undefined}
             className={cn(
               "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+              collapsed && "justify-center",
               active
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             )}
           >
-            <item.icon size={16} />
-            <span className="flex-1">{item.label}</span>
-            {item.locked && <Lock size={12} className="shrink-0 opacity-60" />}
+            <item.icon size={16} className="shrink-0" />
+            {!collapsed && (
+              <>
+                <span className="flex-1">{item.label}</span>
+                {item.locked && <Lock size={12} className="shrink-0 opacity-60" />}
+              </>
+            )}
           </Link>
         );
       })}
