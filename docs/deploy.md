@@ -1,0 +1,359 @@
+# Plano de deploy: mobile, homologação e produção
+
+## Contexto e decisões já tomadas
+
+Hoje (`docs/setup.md`) só existe o fluxo de desenvolvimento: tudo roda local
+(`pnpm dev`), conectando no PostgreSQL/Redis que já vivem no ZimaOS via
+Tailscale (`100.104.200.37`). Não existe nenhum ambiente publicado — nem
+homologação, nem produção — e o mobile só foi testado via Expo Go.
+
+Decisões tomadas antes de escrever este plano:
+
+- **Homologação roda no ZimaOS local**, com banco de dados separado do de
+  produção. Acesso só pela rede Tailscale (não precisa de domínio público
+  nem certificado — é ambiente interno).
+- **Produção roda numa VPS nova** (a provisionar) com **EasyPanel**, com
+  **domínio próprio** (a registrar) apontando para ela.
+- O banco de dados de **produção continua no ZimaOS** (mesma máquina que já
+  hospeda hoje), acessado pela VPS via Tailscale — só o código (API + Web)
+  muda de lugar. Mover o banco pra dentro da VPS é uma otimização futura,
+  fora de escopo deste plano.
+- Os workers do BullMQ (`apps/api/src/jobs/workers/*.worker.ts`) rodam
+  **dentro do mesmo processo da API** (importados direto em
+  `apps/api/src/index.ts`) — não existe um processo de worker separado hoje,
+  então o deploy da API já cobre os workers automaticamente.
+
+## Visão geral dos três ambientes
+
+| Ambiente | Código | Banco | Acesso |
+|---|---|---|---|
+| **Dev** (hoje) | Máquina local (`pnpm dev`) | Postgres/Redis no ZimaOS (Tailscale) | `localhost` |
+| **Homologação** | Containers Docker no ZimaOS | Postgres/Redis no ZimaOS (banco separado) | Só via Tailscale |
+| **Produção** | Containers Docker na VPS (EasyPanel) | Postgres/Redis no ZimaOS (banco de produção) | Domínio público (HTTPS) |
+
+Branch sugerida: `main` = produção, `staging` = homologação. Toda feature
+nova vai pra `staging` primeiro, é testada em homologação, e só depois vira
+PR/merge pra `main` (que dispara o deploy de produção no EasyPanel).
+
+---
+
+## Parte A — Compilar o mobile pra testar performance no dia a dia
+
+O app hoje só roda via Expo Go (`pnpm --filter @finances/mobile dev`), que
+tem overhead do próprio Expo Go e não reflete a performance real de um
+build standalone. Pra testar de verdade no dia a dia, precisa de um build
+instalável (APK no Android / build ad-hoc no iOS) via **EAS Build** (serviço
+gratuito da Expo pro tier usado aqui — só builds na nuvem deles, sem custo
+de infra própria).
+
+### A.1 — Pré-requisitos (uma vez só)
+
+```bash
+npm install -g eas-cli
+eas login          # cria conta grátis em expo.dev se não tiver
+```
+
+No **Android**: não precisa de mais nada, EAS assina o APK automaticamente
+com uma keystore gerada por eles.
+
+No **iOS**: precisa de uma conta Apple Developer paga (US$99/ano) pra gerar
+build instalável fora da App Store (mesmo em modo "ad-hoc"/interno). Se só
+tiver Android por agora, pule essa parte — o plano abaixo funciona igual só
+com Android.
+
+### A.2 — Criar `apps/mobile/eas.json`
+
+```json
+{
+  "cli": {
+    "version": ">= 12.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": { "EXPO_PUBLIC_API_URL": "http://SEU_IP_LOCAL:3001" }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "env": { "EXPO_PUBLIC_API_URL": "https://api.SEUDOMINIO.com.br" }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": { "EXPO_PUBLIC_API_URL": "https://api.SEUDOMINIO.com.br" }
+    }
+  }
+}
+```
+
+- `development`: dev client conectado no Metro da sua máquina (substitui o
+  Expo Go quando precisar de um módulo nativo que o Expo Go não tem).
+- **`preview`**: é o perfil pro seu uso diário — gera um APK que já aponta
+  pra API de produção real (depois que a Parte C estiver no ar). Instala no
+  celular e usa normalmente pra sentir a performance de verdade.
+- `production`: reservado pra quando for publicar na Play Store/App Store
+  (mesmo `EXPO_PUBLIC_API_URL`, mas com `autoIncrement` de versão).
+
+### A.3 — Gerar o build
+
+```bash
+cd apps/mobile
+eas build:configure          # só na primeira vez, confirma o projeto no EAS
+eas build --platform android --profile preview
+```
+
+O comando devolve um link (e um QR code) pra baixar o `.apk` direto no
+celular — não precisa de Play Store nem de instalar via USB. Builds do
+free tier do EAS demoram uns 10-20 min (fila compartilhada); dá pra rodar
+`eas build --profile preview --local` se quiser compilar na sua própria
+máquina em vez de esperar a fila (exige Android Studio/SDK instalado).
+
+### A.4 — Atualizar sem recompilar (opcional, EAS Update)
+
+Se quiser aplicar ajustes de JS/TSX sem gerar um novo APK a cada vez,
+`expo-updates` + `eas update` publica a atualização OTA pro app já
+instalado. Fica de fora deste plano inicial — só vale configurar se o ciclo
+de testar-ajustar-recompilar via EAS Build ficar lento demais na prática.
+
+---
+
+## Parte B — Homologação no ZimaOS
+
+### B.1 — Banco de dados de homologação
+
+Mais simples: um banco novo **no mesmo Postgres** que já roda no ZimaOS (não
+precisa de um segundo container Postgres).
+
+```bash
+ssh usuario@100.104.200.37
+docker exec -it finances_postgres psql -U finances -c "CREATE DATABASE finances_staging;"
+```
+
+Redis: usar o mesmo container, mas outro índice lógico (Redis tem 16 bancos
+por padrão) — não precisa instalar nada novo, só trocar a URL:
+
+```
+# Produção/dev:    redis://100.104.200.37:6379
+# Homologação:      redis://100.104.200.37:6379/1
+```
+
+### B.2 — Rodar a migration no banco de homologação
+
+```bash
+DATABASE_URL="postgresql://finances:SENHA@100.104.200.37:5432/finances_staging?schema=public" \
+  pnpm --filter @finances/db exec prisma db push
+```
+
+(Este projeto não usa `prisma migrate` — ver nota em `docs/setup.md` sobre
+schema ser aplicado direto. `db push` sincroniza o schema atual sem gerar
+histórico de migration, o que é aceitável pra homologação.)
+
+### B.3 — `.env.staging` (fica só no ZimaOS, nunca commitado)
+
+Copiar `.env.example` pra `.env.staging` e ajustar:
+
+```
+DATABASE_URL="postgresql://finances:SENHA@100.104.200.37:5432/finances_staging?schema=public"
+REDIS_URL="redis://100.104.200.37:6379/1"
+BETTER_AUTH_URL="http://100.104.200.37:3011"      # porta dedicada pra API de staging
+NEXT_PUBLIC_API_URL="http://100.104.200.37:3011"
+NEXT_PUBLIC_APP_URL="http://100.104.200.37:3010"  # porta dedicada pro web de staging
+AUTH_REQUIRE_EMAIL_VERIFICATION="false"
+ADMIN_BOOTSTRAP="true"                             # útil pra sempre ter uma conta de teste
+```
+
+Ideia das portas: produção/dev usam 3000/3001; homologação usa 3010/3011 —
+só uma convenção pra não colidir se algum dia rodar os dois ao mesmo tempo
+na mesma rede.
+
+### B.4 — `docker-compose.staging.yml` (na raiz do repo, ou direto no ZimaOS)
+
+```yaml
+services:
+  api-staging:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: .env.staging
+    ports:
+      - "3011:3001"
+    restart: unless-stopped
+
+  web-staging:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    env_file: .env.staging
+    ports:
+      - "3010:3000"
+    restart: unless-stopped
+```
+
+(Os `Dockerfile`s referenciados aqui são os mesmos da Parte C — ver C.2.
+Não precisa duplicar nada, o mesmo Dockerfile serve pra homologação e
+produção; o que muda é só o `.env`.)
+
+```bash
+# No ZimaOS, dentro de uma cópia do repo (git clone/pull da branch `staging`)
+docker compose -f docker-compose.staging.yml up -d --build
+```
+
+Depois disso, homologação fica acessível em `http://100.104.200.37:3010`
+(web) e `:3011` (API) — só pra quem estiver na rede Tailscale.
+
+### B.5 — Fluxo de trabalho
+
+1. Nova feature → branch a partir de `staging`.
+2. Merge na `staging` → `git pull` no ZimaOS → `docker compose -f
+   docker-compose.staging.yml up -d --build` → testar em
+   `100.104.200.37:3010`.
+3. Aprovado → PR de `staging` pra `main` → deploy de produção (Parte C)
+   acontece automaticamente via EasyPanel.
+
+---
+
+## Parte C — Produção: VPS + EasyPanel + domínio
+
+### C.1 — Provisionar a VPS
+
+Qualquer provedor serve; opções custo-baixo comuns: Hetzner, DigitalOcean,
+Contabo, Vultr. Especificação mínima confortável pra API+Web+Postgres client
+(sem o banco, que fica no ZimaOS): **2 vCPU / 4GB RAM**, Ubuntu 22.04/24.04.
+
+```bash
+# Na VPS, via SSH
+curl -sSL https://get.easypanel.io | sh
+```
+
+Ao final, o instalador mostra a URL pra acessar o painel do EasyPanel
+(`http://IP_DA_VPS:3000` por padrão) — acesse e crie o usuário admin.
+
+### C.2 — Conectar a VPS na rede Tailscale (pra falar com o Postgres do ZimaOS)
+
+```bash
+curl -fsSL https://tailscale.com/install.sh | sh
+tailscale up
+```
+
+Autorize o novo nó no [painel do Tailscale](https://login.tailscale.com/admin/machines).
+A partir daqui, a VPS consegue alcançar `100.104.200.37:5432` (Postgres) e
+`:6379` (Redis) como se estivesse na mesma rede — mesma forma que sua
+máquina de dev já acessa hoje.
+
+> Se os containers da API não conseguirem alcançar o Tailscale IP (alguns
+> setups de Docker isolam a rede do container do `tailscale0` do host):
+> habilite `net.ipv4.ip_forward=1` no host (`sysctl -w
+> net.ipv4.ip_forward=1`, e persista em `/etc/sysctl.conf`) — geralmente já
+> vem habilitado quando o Docker é instalado, mas vale confirmar.
+
+### C.3 — Dockerfiles do monorepo
+
+Turborepo + pnpm workspaces precisam de um Dockerfile por app, usando `turbo
+prune` pra copiar só o necessário (evita levar o monorepo inteiro pra dentro
+da imagem). Referência pra criar quando formos executar:
+
+**`apps/api/Dockerfile`**
+```dockerfile
+FROM node:20-slim AS base
+RUN corepack enable
+
+FROM base AS pruner
+WORKDIR /app
+COPY . .
+RUN npx turbo prune @finances/api --docker
+
+FROM base AS installer
+WORKDIR /app
+COPY --from=pruner /app/out/json/ .
+RUN pnpm install --frozen-lockfile
+
+FROM base AS builder
+WORKDIR /app
+COPY --from=installer /app .
+COPY --from=pruner /app/out/full/ .
+RUN pnpm --filter @finances/db exec prisma generate
+RUN pnpm turbo run build --filter=@finances/api
+
+FROM base AS runner
+WORKDIR /app
+COPY --from=builder /app .
+EXPOSE 3001
+CMD ["node", "apps/api/dist/index.js"]
+```
+
+**`apps/web/Dockerfile`** — mesma estrutura, trocando o filtro pra
+`@finances/web` e o `CMD` pra `node apps/web/server.js` (requer adicionar
+`output: "standalone"` em `apps/web/next.config.ts` antes de montar a
+imagem, senão o Next não gera esse `server.js` autocontido).
+
+Esses Dockerfiles precisam ser testados localmente (`docker build`) antes
+de confiar neles em produção — a estrutura acima é o padrão recomendado
+pela própria documentação do Turborepo pra monorepos com pnpm, mas cada
+dependência nativa do projeto (ex: `sharp`, Prisma) pode exigir um ajuste
+fino na primeira tentativa.
+
+### C.4 — Criar os apps no EasyPanel
+
+No painel do EasyPanel:
+
+1. **Criar projeto** (ex: `controlai`).
+2. **Adicionar serviço "App"** pra API:
+   - Fonte: repositório Git (GitHub) — conectar a conta e apontar pra
+     branch `main`.
+   - Build: "Dockerfile", caminho `apps/api/Dockerfile`, contexto de build
+     na raiz do repo (`.`).
+   - Variáveis de ambiente: colar o `.env` de produção (mesmo conteúdo do
+     `.env.staging` da Parte B, mas com `DATABASE_URL`/`REDIS_URL` do
+     banco de **produção**, não do de homologação).
+   - Porta interna: `3001`.
+3. **Repetir pra Web**, `apps/web/Dockerfile`, porta interna `3000`.
+4. Ativar **deploy automático** em cada push na branch `main` (o EasyPanel
+   já oferece isso via webhook do GitHub, configurado na tela do serviço).
+
+### C.5 — Domínio
+
+1. Registrar o domínio (Registro.br pra `.com.br`, ou qualquer registrador
+   pra `.com`/outros).
+2. No DNS do domínio, criar os registros:
+   - `A  @              → IP da VPS`   (ou `www`, como preferir pro site)
+   - `A  api            → IP da VPS`
+3. No EasyPanel, na aba "Domains" de cada serviço (web e api), adicionar o
+   domínio correspondente (`seudominio.com.br` pro web, `api.seudominio.com.br`
+   pra API) — o EasyPanel gera o certificado HTTPS (Let's Encrypt) automático
+   assim que o DNS propagar (pode levar de minutos a algumas horas).
+4. Atualizar as env vars dos serviços pra usar os domínios reais:
+   `NEXT_PUBLIC_APP_URL=https://seudominio.com.br`,
+   `NEXT_PUBLIC_API_URL=https://api.seudominio.com.br`,
+   `BETTER_AUTH_URL=https://api.seudominio.com.br`.
+5. Atualizar `apps/mobile/eas.json` (perfil `preview`/`production`) com o
+   mesmo domínio da API e gerar um novo build (Parte A).
+
+---
+
+## Ordem de execução recomendada
+
+1. **Parte B** (homologação no ZimaOS) — não depende de VPS/domínio, dá pra
+   fazer já e validar o fluxo de deploy via Docker num ambiente de baixo
+   risco.
+2. **Parte C.1-C.2** (VPS + EasyPanel + Tailscale) — provisionamento.
+3. **Parte C.3** (Dockerfiles) — testar build local antes de subir.
+4. **Parte C.4** (apps no EasyPanel apontando pra `main`).
+5. **Parte C.5** (domínio) — depende do DNS propagar, pode ficar rodando em
+   paralelo com o resto via IP da VPS enquanto isso.
+6. **Parte A** (build mobile) — fica melhor por último, depois que a API de
+   produção já estiver com domínio real, pra gerar o APK já apontando pro
+   endereço definitivo.
+
+## Verificação
+
+- Homologação: `curl http://100.104.200.37:3011/health` deve responder
+  `{"status":"ok"}`; abrir `100.104.200.37:3010` no navegador (com Tailscale
+  ativo) deve carregar a tela de login.
+- Produção: `curl https://api.seudominio.com.br/health` e abrir
+  `https://seudominio.com.br` no navegador, confirmar certificado HTTPS
+  válido.
+- Mobile: instalar o APK gerado pelo perfil `preview`, criar uma conta,
+  confirmar que as chamadas de rede vão pro domínio de produção (não pro
+  `localhost`).
