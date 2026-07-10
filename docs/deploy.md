@@ -141,6 +141,20 @@ por padrão) — não precisa instalar nada novo, só trocar a URL:
 
 ### B.2 — Rodar a migration no banco de homologação
 
+O Prisma CLI **não** carrega o `.env` da raiz do monorepo automaticamente —
+só a API faz isso na mão (`process.loadEnvFile` em `apps/api/src/env.ts`).
+Rodando `prisma db push` direto, é preciso definir `DATABASE_URL` na sessão
+do shell antes do comando.
+
+No PowerShell (Windows, shell padrão deste projeto):
+
+```powershell
+$env:DATABASE_URL = "postgresql://finances:SENHA@100.104.200.37:5432/finances_staging?schema=public"
+pnpm --filter @finances/db exec prisma db push
+```
+
+No bash/zsh (ex.: rodando direto no ZimaOS via SSH):
+
 ```bash
 DATABASE_URL="postgresql://finances:SENHA@100.104.200.37:5432/finances_staging?schema=public" \
   pnpm --filter @finances/db exec prisma db push
@@ -250,49 +264,17 @@ máquina de dev já acessa hoje.
 
 ### C.3 — Dockerfiles do monorepo
 
-Turborepo + pnpm workspaces precisam de um Dockerfile por app, usando `turbo
-prune` pra copiar só o necessário (evita levar o monorepo inteiro pra dentro
-da imagem). Referência pra criar quando formos executar:
+Já criados em `apps/api/Dockerfile` e `apps/web/Dockerfile` (+ `.dockerignore`
+na raiz), usando `turbo prune` pra copiar só o necessário de cada app (evita
+levar o monorepo inteiro pra dentro da imagem). `apps/web/next.config.ts` já
+tem `output: "standalone"` — necessário pro Next gerar o `server.js`
+autocontido que o Dockerfile do web espera.
 
-**`apps/api/Dockerfile`**
-```dockerfile
-FROM node:20-slim AS base
-RUN corepack enable
-
-FROM base AS pruner
-WORKDIR /app
-COPY . .
-RUN npx turbo prune @finances/api --docker
-
-FROM base AS installer
-WORKDIR /app
-COPY --from=pruner /app/out/json/ .
-RUN pnpm install --frozen-lockfile
-
-FROM base AS builder
-WORKDIR /app
-COPY --from=installer /app .
-COPY --from=pruner /app/out/full/ .
-RUN pnpm --filter @finances/db exec prisma generate
-RUN pnpm turbo run build --filter=@finances/api
-
-FROM base AS runner
-WORKDIR /app
-COPY --from=builder /app .
-EXPOSE 3001
-CMD ["node", "apps/api/dist/index.js"]
-```
-
-**`apps/web/Dockerfile`** — mesma estrutura, trocando o filtro pra
-`@finances/web` e o `CMD` pra `node apps/web/server.js` (requer adicionar
-`output: "standalone"` em `apps/web/next.config.ts` antes de montar a
-imagem, senão o Next não gera esse `server.js` autocontido).
-
-Esses Dockerfiles precisam ser testados localmente (`docker build`) antes
-de confiar neles em produção — a estrutura acima é o padrão recomendado
-pela própria documentação do Turborepo pra monorepos com pnpm, mas cada
-dependência nativa do projeto (ex: `sharp`, Prisma) pode exigir um ajuste
-fino na primeira tentativa.
+Como não há Docker disponível na máquina de dev (Windows sem Docker Desktop
+neste setup), o primeiro build real acontece direto no ZimaOS/VPS via
+`docker compose ... up -d --build` (Parte B.4 / C.4) — ajustes finos de
+dependência nativa (ex: Prisma exigindo `openssl` na imagem, já incluído nos
+Dockerfiles) aparecem no log do build nesse momento.
 
 ### C.4 — Criar os apps no EasyPanel
 
