@@ -33,7 +33,15 @@
       "expo-secure-store",
       "expo-document-picker",
       "expo-file-system",
-      "expo-router"
+      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": false
+          }
+        }
+      ]
     ],
     "extra": {
       "router": {},
