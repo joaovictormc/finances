@@ -314,6 +314,101 @@ No painel do EasyPanel:
 
 ---
 
+## Parte D — Alternativa self-hosted em LAN (ZimaOS ou servidor Linux)
+
+Caminho **paralelo** à Parte C (VPS + EasyPanel + domínio), pra quem quer só
+rodar API+Web em rede local, sem VPS nem domínio público. Usa um único
+arquivo de compose (`docker-compose.selfhosted.yml`) que sobe tanto no
+próprio ZimaOS (`192.168.1.2`) quanto num servidor Linux separado na mesma
+LAN (`192.168.1.4`) — o servidor Linux é um plano B caso rodar direto no
+ZimaOS dê erro (recurso, compatibilidade, etc.), não é obrigatório. Acesso
+externo (fora da LAN) continua sendo via Tailscale, como já configurado
+hoje — este compose não expõe nada além da rede local.
+
+### D.1 — Preflight de conectividade (só necessário se for rodar no servidor Linux)
+
+Antes de decidir entre o modo normal e o modo fallback, confirme que o
+servidor Linux (`192.168.1.4`) alcança o Postgres e o Redis do ZimaOS:
+
+```bash
+nc -zv 192.168.1.2 5432   # Postgres
+nc -zv 192.168.1.2 6379   # Redis
+```
+
+Se as duas portas responderem, siga com o **modo normal** (D.3). Se
+qualquer uma falhar (firewall, VLAN isolando os hosts, etc.), use o
+**modo fallback** (D.4).
+
+### D.2 — `.env.selfhosted`
+
+Copie `.env.selfhosted.example` (raiz do repo) para `.env.selfhosted` no
+host onde for rodar, e preencha as credenciais reais — esse arquivo nunca
+é commitado (já está no `.gitignore`). Ajuste `NEXT_PUBLIC_APP_URL`,
+`API_URL`, `NEXT_PUBLIC_API_URL` e `BETTER_AUTH_URL` pro IP do host que vai
+rodar os containers (`192.168.1.2` ou `192.168.1.4`).
+
+### D.3 — Modo normal (banco acessível na LAN)
+
+```bash
+docker compose -f docker-compose.selfhosted.yml up -d --build
+```
+
+Sobe só `api` e `web`, apontando pro Postgres/Redis do ZimaOS via
+`DATABASE_URL`/`REDIS_URL` do `.env.selfhosted` (Cenário A do template).
+
+### D.4 — Modo fallback (banco provisório, só para teste)
+
+Se o preflight (D.1) falhar, troque `DATABASE_URL`/`REDIS_URL` no
+`.env.selfhosted` pro Cenário B (apontando pro serviço `postgres`/`redis`
+local — ver comentários no template) e suba com o profile `local-db`:
+
+```bash
+# 1. Sobe o banco primeiro e espera ficar saudável
+docker compose -f docker-compose.selfhosted.yml --profile local-db up -d postgres redis
+docker compose -f docker-compose.selfhosted.yml ps   # confirmar "healthy"
+
+# 2. Aplica o schema no banco provisório
+DATABASE_URL="postgresql://finances:SENHA@localhost:5432/finances?schema=public" \
+  pnpm --filter @finances/db exec prisma db push
+
+# 3. Sobe api e web
+docker compose -f docker-compose.selfhosted.yml --profile local-db up -d --build api web
+```
+
+Esse Postgres/Redis local são **provisórios e para testes** — servem pra
+validar que a stack builda e sobe corretamente, não substituem o banco de
+produção do ZimaOS a longo prazo.
+
+### D.5 — Requisitos no host
+
+Confirme que o Docker Compose instalado suporta `profiles` (Compose V2,
+`docker compose version` ≥ 2.x) — tanto ZimaOS quanto uma instalação padrão
+de Docker Engine em Ubuntu/Debian já atendem isso.
+
+---
+
+## Parte E — Alternativas gratuitas para testar antes de produção
+
+Caso o self-hosted (Parte D) não seja viável (ex: sem acesso físico
+constante ao servidor Linux, muitos erros de rede/Docker), dá pra validar
+API+Web em serviços gratuitos antes de decidir sobre produção definitiva:
+
+| Componente | Serviço sugerido | Observação |
+|---|---|---|
+| **Web** (Next.js standalone) | [Vercel](https://vercel.com) | Free tier, zero-config pra Next.js — é o próprio criador do framework. |
+| **API** (Node + Prisma) | [Railway](https://railway.app) ou [Render](https://render.com) | Railway tem créditos grátis por período de teste; Render tem free tier permanente mas o serviço "dorme" após ~15 min de inatividade (primeira requisição fica lenta). |
+| **Postgres** | [Neon](https://neon.tech) ou [Supabase](https://supabase.com) | Free tier em ambos. **Sem extensão TimescaleDB** — o código já tolera isso (`transactions` funciona como Postgres puro, ver `docs/setup.md`). |
+| **Redis** | [Upstash](https://upstash.com) | Free tier serverless. Validar compatibilidade com os workers BullMQ (`apps/api/src/jobs/workers`) — comandos bloqueantes podem se comportar diferente num Redis serverless; testar a fila de verdade antes de confiar 100%. |
+
+Fluxo sugerido: suba Postgres (Neon/Supabase) e Redis (Upstash) primeiro,
+rode `prisma db push` contra eles, depois aponte a API (Railway/Render) e o
+Web (Vercel) pras URLs desses serviços via variáveis de ambiente — mesmo
+`.env` do `.env.selfhosted.example`, só trocando os valores de
+`DATABASE_URL`/`REDIS_URL`/`NEXT_PUBLIC_API_URL` etc. Isso valida se a
+aplicação builda e roda em produção antes de decidir sobre infra própria.
+
+---
+
 ## Ordem de execução recomendada
 
 1. **Parte B** (homologação no ZimaOS) — não depende de VPS/domínio, dá pra

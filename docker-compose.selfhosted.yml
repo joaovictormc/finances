@@ -1,0 +1,77 @@
+# Compose portátil: mesmo arquivo sobe no ZimaOS (192.168.1.2) ou no
+# servidor Linux (192.168.1.4). O banco (Postgres/TimescaleDB + Redis) mora
+# no ZimaOS por padrão — api/web apontam pra ele via DATABASE_URL/REDIS_URL
+# no .env.selfhosted (ver .env.selfhosted.example).
+#
+# Modo normal (banco já acessível na LAN):
+#   docker compose -f docker-compose.selfhosted.yml up -d --build
+#
+# Modo fallback (sem conectividade com o banco do ZimaOS — sobe Postgres e
+# Redis localmente pra teste, primeiro os dois, depois api/web):
+#   docker compose -f docker-compose.selfhosted.yml --profile local-db up -d postgres redis
+#   docker compose -f docker-compose.selfhosted.yml --profile local-db up -d --build api web
+#
+# Ver docs/deploy.md para o passo de preflight de conectividade e detalhes.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: .env.selfhosted
+    ports:
+      - "${API_PORT:-3001}:3001"
+    restart: unless-stopped
+    networks: [finances]
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    env_file: .env.selfhosted
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    restart: unless-stopped
+    networks: [finances]
+
+  # --- Fallback opcional, só sobe com --profile local-db ---
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: finances_selfhosted_postgres
+    profiles: ["local-db"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-finances}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-finances}
+      POSTGRES_DB: ${POSTGRES_DB:-finances}
+    ports:
+      - "5432:5432"
+    volumes:
+      - selfhosted_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-finances} -d ${POSTGRES_DB:-finances}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks: [finances]
+
+  redis:
+    image: redis:7-alpine
+    container_name: finances_selfhosted_redis
+    profiles: ["local-db"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - selfhosted_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks: [finances]
+
+networks:
+  finances:
+
+volumes:
+  selfhosted_postgres_data:
+  selfhosted_redis_data:
