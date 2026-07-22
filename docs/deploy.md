@@ -325,6 +325,20 @@ ZimaOS dê erro (recurso, compatibilidade, etc.), não é obrigatório. Acesso
 externo (fora da LAN) continua sendo via Tailscale, como já configurado
 hoje — este compose não expõe nada além da rede local.
 
+> **IP da LAN pode não bastar mesmo com os dois hosts no mesmo `/24`.**
+> `192.168.1.2` e `192.168.1.4` podem estar em VLANs diferentes ou atrás de
+> firewall entre segmentos — `nc -zv 192.168.1.2 5432` retornando
+> `No route to host` é justamente isso (visto em teste real: preflight do
+> D.1 falhou no servidor Linux). Nesse caso vá direto pro **modo fallback
+> (D.4)** — não adianta tentar outras portas ou IPs da mesma faixa. Se
+> quiser acesso externo (fora da LAN) ao ambiente rodando no servidor
+> Linux nesse cenário, use o **IP Tailscale do próprio servidor Linux**,
+> não o do ZimaOS (`100.104.200.37`) — são nós diferentes na malha
+> Tailscale, cada um com seu IP. Descubra o do servidor Linux com
+> `tailscale ip -4` (instale com
+> `curl -fsSL https://tailscale.com/install.sh | sh && tailscale up` se
+> ainda não estiver na malha).
+
 ### D.1 — Preflight de conectividade (só necessário se for rodar no servidor Linux)
 
 Antes de decidir entre o modo normal e o modo fallback, confirme que o
@@ -345,7 +359,9 @@ Copie `.env.selfhosted.example` (raiz do repo) para `.env.selfhosted` no
 host onde for rodar, e preencha as credenciais reais — esse arquivo nunca
 é commitado (já está no `.gitignore`). Ajuste `NEXT_PUBLIC_APP_URL`,
 `API_URL`, `NEXT_PUBLIC_API_URL` e `BETTER_AUTH_URL` pro IP do host que vai
-rodar os containers (`192.168.1.2` ou `192.168.1.4`).
+rodar os containers (`192.168.1.2` ou `192.168.1.4` pra acesso só na LAN;
+o IP Tailscale do próprio host — `tailscale ip -4`, diferente do IP
+Tailscale do ZimaOS — se quiser acessar de fora da LAN também).
 
 ### D.3 — Modo normal (banco acessível na LAN)
 
