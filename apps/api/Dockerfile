@@ -26,4 +26,4 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app .
 EXPOSE 3001
-CMD ["node", "apps/api/dist/index.js"]
+CMD ["pnpm", "--filter", "@finances/api", "exec", "tsx", "dist/index.js"]
