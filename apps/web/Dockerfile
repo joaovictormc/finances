@@ -18,6 +18,10 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=installer /app .
 COPY --from=pruner /app/out/full/ .
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
 RUN pnpm --filter @finances/db exec prisma generate
 RUN pnpm turbo run build --filter=@finances/web
 
