@@ -52,11 +52,19 @@ app.post("/checkout", zValidator("json", CheckoutSchema), async (c) => {
 
   const { preapprovalId, checkoutUrl } = await createSubscriptionCheckout({ userId, email: user.email, plan });
 
-  await db.subscription.upsert({
-    where: { userId },
-    update: { plan, status: "pending", mpPreapprovalId: preapprovalId },
-    create: { userId, plan, status: "pending", mpPreapprovalId: preapprovalId },
-  });
+  // Só grava "pending" na assinatura se não houver uma assinatura ATIVA hoje —
+  // sobrescrever plan/status aqui derrubaria o plano pago atual (getEffectivePlan
+  // trata status != "active" como free) mesmo sem o pagamento do novo plano ter
+  // sido confirmado ainda. A confirmação real (webhook do Mercado Pago) já sabe
+  // qual plano ativar a partir do valor pago, independente do que foi gravado aqui.
+  const existing = await db.subscription.findUnique({ where: { userId } });
+  if (existing?.status !== "active") {
+    await db.subscription.upsert({
+      where: { userId },
+      update: { plan, status: "pending", mpPreapprovalId: preapprovalId },
+      create: { userId, plan, status: "pending", mpPreapprovalId: preapprovalId },
+    });
+  }
 
   await db.paymentEvent.create({
     data: {
@@ -90,11 +98,16 @@ app.post("/checkout-pix", zValidator("json", CheckoutSchema), async (c) => {
     txid,
   });
 
-  await db.subscription.upsert({
-    where: { userId },
-    update: { plan, status: "pending", mpPreapprovalId: `pix:${txid}` },
-    create: { userId, plan, status: "pending", mpPreapprovalId: `pix:${txid}` },
-  });
+  // Mesmo motivo do /checkout: não sobrescrever uma assinatura ATIVA antes do
+  // pagamento Pix ser confirmado manualmente (ver /admin/payment-events/:id/confirm-pix).
+  const existingSubscription = await db.subscription.findUnique({ where: { userId } });
+  if (existingSubscription?.status !== "active") {
+    await db.subscription.upsert({
+      where: { userId },
+      update: { plan, status: "pending", mpPreapprovalId: `pix:${txid}` },
+      create: { userId, plan, status: "pending", mpPreapprovalId: `pix:${txid}` },
+    });
+  }
 
   await db.paymentEvent.create({
     data: {

@@ -7,9 +7,13 @@ import { NavLinks } from "@/components/ui/nav-links";
 import { UserMenu } from "@/components/ui/user-menu";
 import { Logo } from "@/components/ui/logo";
 import { useSidebar } from "@/app/providers/sidebar-provider";
+import { usePlanAccess } from "@/lib/use-plan-access";
+
+const PLAN_LABELS: Record<string, string> = { free: "Plano Gratuito", pro: "Plano Pro", familia: "Plano Família" };
 
 export function DashboardSidebar() {
   const { collapsed, toggleCollapsed } = useSidebar();
+  const { plan, loading } = usePlanAccess();
 
   return (
     <aside
@@ -35,15 +39,17 @@ export function DashboardSidebar() {
       <NavLinks collapsed={collapsed} />
 
       <div className="mt-auto border-t border-border p-4 space-y-3">
-        {!collapsed && (
+        {!collapsed && !loading && (
           <div>
-            <p className="text-xs text-muted-foreground">Plano Gratuito</p>
-            <Link
-              href="/upgrade"
-              className="mt-0.5 block text-xs font-medium text-primary hover:underline"
-            >
-              Upgrade para Pro →
-            </Link>
+            <p className="text-xs text-muted-foreground">{PLAN_LABELS[plan]}</p>
+            {plan !== "familia" && (
+              <Link
+                href="/settings/billing"
+                className="mt-0.5 block text-xs font-medium text-primary hover:underline"
+              >
+                {plan === "free" ? "Upgrade de plano →" : "Ver planos →"}
+              </Link>
+            )}
           </div>
         )}
         <UserMenu collapsed={collapsed} />

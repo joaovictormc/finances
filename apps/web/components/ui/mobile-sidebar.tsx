@@ -11,6 +11,9 @@ import {
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 import { Logo } from "./logo";
+import { usePlanAccess } from "@/lib/use-plan-access";
+
+const PLAN_LABELS: Record<string, string> = { free: "Plano Gratuito", pro: "Plano Pro", familia: "Plano Família" };
 
 const navItems = [
   { href: "/overview", label: "Visão Geral", icon: LayoutDashboard },
@@ -27,6 +30,7 @@ const navItems = [
 export function MobileSidebar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { plan, loading } = usePlanAccess();
 
   const currentPage = navItems.find((item) => pathname.startsWith(item.href));
 
@@ -97,7 +101,20 @@ export function MobileSidebar() {
         </nav>
 
         <div className="p-4 border-t border-border">
-          <p className="text-xs text-muted-foreground">Plano Gratuito</p>
+          {!loading && (
+            <>
+              <p className="text-xs text-muted-foreground">{PLAN_LABELS[plan]}</p>
+              {plan !== "familia" && (
+                <Link
+                  href="/settings/billing"
+                  onClick={() => setOpen(false)}
+                  className="mt-0.5 block text-xs font-medium text-primary hover:underline"
+                >
+                  {plan === "free" ? "Upgrade de plano →" : "Ver planos →"}
+                </Link>
+              )}
+            </>
+          )}
         </div>
       </div>
     </>
