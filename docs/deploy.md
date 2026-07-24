@@ -363,7 +363,33 @@ rodar os containers (`192.168.1.2` ou `192.168.1.4` pra acesso só na LAN;
 o IP Tailscale do próprio host — `tailscale ip -4`, diferente do IP
 Tailscale do ZimaOS — se quiser acessar de fora da LAN também).
 
-### D.3 — Modo normal (banco acessível na LAN)
+> **Essas quatro URLs precisam bater EXATAMENTE com o endereço que vai
+> aparecer na barra do navegador** (mesmo protocolo/host/porta), senão o
+> login quebra com erro de CORS (`No 'Access-Control-Allow-Origin' header`)
+> mesmo com tudo funcionando por baixo. Motivo: `NEXT_PUBLIC_APP_URL` e
+> `NEXT_PUBLIC_API_URL` são embutidas no bundle JS do `web` em **build
+> time** (via `build.args` no compose — `env_file:` sozinho não alcança
+> variáveis de build, só as de runtime), enquanto `NEXT_PUBLIC_APP_URL` e
+> `BETTER_AUTH_URL` também são lidas em **runtime** pela API
+> (`apps/api/src/index.ts` e `apps/api/src/lib/auth.ts`) pra montar a
+> allowlist de CORS/`trustedOrigins`. Se for acessar por mais de um endereço
+> (LAN e Tailscale, por exemplo), adicione os extras em `LAN_ORIGINS`
+> (separado por vírgula) em vez de tentar fazer as quatro URLs principais
+> servirem pra tudo.
+
+### D.3 — Portas: host x container
+
+`API_PORT`/`WEB_PORT` no `.env.selfhosted` só controlam a porta **do lado
+do host** (útil se 3000/3001 já estiverem ocupados por outra coisa na
+máquina) — o compose sempre mapeia como `"${WEB_PORT}:3000"` e
+`"${API_PORT}:3001"` (host:container). A porta **dentro** do container é
+fixa (3000 pro Next.js, 3001 pra API) porque é onde as apps realmente
+escutam — isolada por namespace de rede do Docker, nunca conflita com nada
+do host. **Não** mude o lado direito do mapeamento nem tente "casar" as
+duas portas — se o lado direito não for 3000/3001, o Docker encaminha pra
+uma porta onde nada está escutando e a conexão cai com `ERR_CONNECTION_REFUSED`.
+
+### D.4 — Modo normal (banco acessível na LAN)
 
 ```bash
 docker compose -f docker-compose.selfhosted.yml up -d --build
@@ -372,7 +398,7 @@ docker compose -f docker-compose.selfhosted.yml up -d --build
 Sobe só `api` e `web`, apontando pro Postgres/Redis do ZimaOS via
 `DATABASE_URL`/`REDIS_URL` do `.env.selfhosted` (Cenário A do template).
 
-### D.4 — Modo fallback (banco provisório, só para teste)
+### D.5 — Modo fallback (banco provisório, só para teste)
 
 Se o preflight (D.1) falhar, troque `DATABASE_URL`/`REDIS_URL` no
 `.env.selfhosted` pro Cenário B (apontando pro serviço `postgres`/`redis`
@@ -383,19 +409,43 @@ local — ver comentários no template) e suba com o profile `local-db`:
 docker compose -f docker-compose.selfhosted.yml --profile local-db up -d postgres redis
 docker compose -f docker-compose.selfhosted.yml ps   # confirmar "healthy"
 
-# 2. Aplica o schema no banco provisório
-DATABASE_URL="postgresql://finances:SENHA@localhost:5432/finances?schema=public" \
-  pnpm --filter @finances/db exec prisma db push
+# 2. Aplica o schema no banco provisório (rodando via um container
+#    descartável da própria imagem da api, já buildada — o host Linux "puro"
+#    não tem pnpm instalado, só Docker)
+docker compose -f docker-compose.selfhosted.yml --profile local-db run --rm --no-deps api \
+  sh -c 'pnpm --filter @finances/db exec prisma db push'
 
 # 3. Sobe api e web
 docker compose -f docker-compose.selfhosted.yml --profile local-db up -d --build api web
 ```
 
+**Sempre use `-f docker-compose.selfhosted.yml` em todo comando `docker
+compose`** neste fluxo — rodar `docker compose up -d` sem o `-f` sobe o
+`docker-compose.yml` de desenvolvimento (projeto Compose diferente, rede
+Docker isolada) e a API não vai conseguir resolver `postgres`/`redis` por
+nome (erro `getaddrinfo ENOTFOUND`), mesmo com os containers do banco
+rodando e saudáveis.
+
 Esse Postgres/Redis local são **provisórios e para testes** — servem pra
 validar que a stack builda e sobe corretamente, não substituem o banco de
 produção do ZimaOS a longo prazo.
 
-### D.5 — Requisitos no host
+### D.6 — Rebuild depois de mudar `.env.selfhosted`
+
+Nem toda mudança no `.env.selfhosted` exige rebuild — depende de qual
+variável mudou:
+
+| Mudou... | Comando |
+|---|---|
+| `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_API_URL` (embutidas no bundle do `web` em build time) | `docker compose -f docker-compose.selfhosted.yml --profile local-db build --no-cache web` seguido de `up -d --force-recreate web` |
+| Qualquer outra variável (lida em runtime — `DATABASE_URL`, `LAN_ORIGINS`, `BETTER_AUTH_URL`, etc.) | `docker compose -f docker-compose.selfhosted.yml --profile local-db up -d --force-recreate api web` (sem rebuild) |
+
+O `--no-cache` no primeiro caso é necessário porque mudar só um
+`build.args` nem sempre invalida o cache de camadas do Docker sozinho —
+sem ele, o build pode reusar a camada antiga e continuar embutindo o valor
+velho.
+
+### D.7 — Requisitos no host
 
 Confirme que o Docker Compose instalado suporta `profiles` (Compose V2,
 `docker compose version` ≥ 2.x) — tanto ZimaOS quanto uma instalação padrão

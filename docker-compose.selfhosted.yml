@@ -11,7 +11,14 @@
 #   docker compose -f docker-compose.selfhosted.yml --profile local-db up -d postgres redis
 #   docker compose -f docker-compose.selfhosted.yml --profile local-db up -d --build api web
 #
-# Ver docs/deploy.md para o passo de preflight de conectividade e detalhes.
+# Se mudar só NEXT_PUBLIC_APP_URL/NEXT_PUBLIC_API_URL no .env.selfhosted,
+# rebuild o web com --no-cache (essas vars são embutidas no bundle JS em
+# build time via build.args abaixo, e o cache de camadas do Docker não
+# invalida sozinho quando só um build.arg muda):
+#   docker compose -f docker-compose.selfhosted.yml --profile local-db build --no-cache web
+#   docker compose -f docker-compose.selfhosted.yml --profile local-db up -d --force-recreate web
+#
+# Ver docs/deploy.md (Parte D) para o passo de preflight de conectividade e detalhes.
 
 services:
   api:
