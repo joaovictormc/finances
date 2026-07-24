@@ -6,8 +6,6 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
 import { DeleteAccountSection } from "@/components/settings/delete-account-section";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-
 export function DataExportSection() {
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
@@ -15,7 +13,7 @@ export function DataExportSection() {
   const handleExportData = async () => {
     setIsExporting(true);
     try {
-      const res = await fetch(`${API_URL}/api/user/export`, { credentials: "include" });
+      const res = await fetch(`/api/user/export`, { credentials: "include" });
       if (!res.ok) throw new Error("Falha ao exportar dados");
 
       const blob = await res.blob();

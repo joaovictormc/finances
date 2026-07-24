@@ -12,7 +12,7 @@
     "preview": {
       "distribution": "internal",
       "android": { "buildType": "apk" },
-      "env": { "EXPO_PUBLIC_API_URL": "http://100.84.104.128:3011" }
+      "env": { "EXPO_PUBLIC_API_URL": "http://100.84.104.128:3001" }
     },
     "production": {
       "autoIncrement": true,

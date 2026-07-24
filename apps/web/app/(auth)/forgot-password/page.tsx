@@ -7,8 +7,6 @@ import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -22,7 +20,7 @@ export default function ForgotPasswordPage() {
 
     const { error } = await authClient.requestPasswordReset({
       email,
-      redirectTo: `${APP_URL}/reset-password`,
+      redirectTo: `${window.location.origin}/reset-password`,
     });
 
     setLoading(false);

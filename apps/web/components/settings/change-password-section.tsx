@@ -8,8 +8,6 @@ import { PasswordStrengthMeter } from "@/components/ui/password-strength-meter";
 import { useToast } from "@/components/ui/toast-provider";
 import { PasswordPolicySchema } from "@finances/validations";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-
 export function ChangePasswordSection() {
   const { data: session } = useSession();
   const { toast } = useToast();
@@ -53,7 +51,7 @@ export function ChangePasswordSection() {
     setSendingReset(true);
     await authClient.requestPasswordReset({
       email: session.user.email,
-      redirectTo: `${APP_URL}/reset-password`,
+      redirectTo: `${window.location.origin}/reset-password`,
     });
     setSendingReset(false);
     toast({ title: "E-mail enviado!", description: "Confira sua caixa de entrada.", variant: "success" });

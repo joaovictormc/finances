@@ -10,8 +10,6 @@ import { PasswordStrengthMeter } from "@/components/ui/password-strength-meter";
 import { api } from "@/lib/api-client";
 import { PasswordPolicySchema } from "@finances/validations";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -39,7 +37,7 @@ function RegisterForm() {
       name,
       email,
       password,
-      callbackURL: `${APP_URL}/overview`,
+      callbackURL: `${window.location.origin}/overview`,
     });
 
     if (error) {

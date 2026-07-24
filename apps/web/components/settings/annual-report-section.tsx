@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast-provider";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 const CURRENT_YEAR = new Date().getFullYear();
 const REPORT_YEARS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
 
@@ -18,7 +17,7 @@ export function AnnualReportSection() {
   const handleDownloadReport = async () => {
     setIsDownloading(true);
     try {
-      const res = await fetch(`${API_URL}/api/reports/annual?year=${reportYear}`, {
+      const res = await fetch(`/api/reports/annual?year=${reportYear}`, {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Falha ao gerar relatório");

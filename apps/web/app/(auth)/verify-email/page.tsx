@@ -7,8 +7,6 @@ import { MailCheck } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
@@ -20,7 +18,7 @@ function VerifyEmailContent() {
     setStatus("sending");
     const { error } = await authClient.sendVerificationEmail({
       email,
-      callbackURL: `${APP_URL}/overview`,
+      callbackURL: `${window.location.origin}/overview`,
     });
     setStatus(error ? "error" : "sent");
   }

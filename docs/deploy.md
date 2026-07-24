@@ -309,7 +309,15 @@ No painel do EasyPanel:
    `NEXT_PUBLIC_APP_URL=https://seudominio.com.br`,
    `NEXT_PUBLIC_API_URL=https://api.seudominio.com.br`,
    `BETTER_AUTH_URL=https://api.seudominio.com.br`.
-5. Atualizar `apps/mobile/eas.json` (perfil `preview`/`production`) com o
+5. **`API_INTERNAL_URL` no serviço `web`** — desde que o `web` passou a falar
+   com a API por proxy same-origin (rewrites em `apps/web/next.config.ts`, ver
+   D.2), essa variável precisa apontar pra um endereço que o serviço `web`
+   consiga alcançar **de dentro da rede do EasyPanel** — normalmente o nome
+   interno do serviço da API dentro do projeto EasyPanel (equivalente ao
+   `http://api:3001` usado no self-hosted), não o domínio público. Confirme
+   o nome/porta interna do serviço na aba do EasyPanel; sem isso configurado
+   corretamente, o `web` sobe mas as chamadas de API ficam sem destino.
+6. Atualizar `apps/mobile/eas.json` (perfil `preview`/`production`) com o
    mesmo domínio da API e gerar um novo build (Parte A).
 
 ---
@@ -363,19 +371,24 @@ rodar os containers (`192.168.1.2` ou `192.168.1.4` pra acesso só na LAN;
 o IP Tailscale do próprio host — `tailscale ip -4`, diferente do IP
 Tailscale do ZimaOS — se quiser acessar de fora da LAN também).
 
-> **Essas quatro URLs precisam bater EXATAMENTE com o endereço que vai
-> aparecer na barra do navegador** (mesmo protocolo/host/porta), senão o
-> login quebra com erro de CORS (`No 'Access-Control-Allow-Origin' header`)
-> mesmo com tudo funcionando por baixo. Motivo: `NEXT_PUBLIC_APP_URL` e
-> `NEXT_PUBLIC_API_URL` são embutidas no bundle JS do `web` em **build
-> time** (via `build.args` no compose — `env_file:` sozinho não alcança
-> variáveis de build, só as de runtime), enquanto `NEXT_PUBLIC_APP_URL` e
-> `BETTER_AUTH_URL` também são lidas em **runtime** pela API
-> (`apps/api/src/index.ts` e `apps/api/src/lib/auth.ts`) pra montar a
-> allowlist de CORS/`trustedOrigins`. Se for acessar por mais de um endereço
-> (LAN e Tailscale, por exemplo), adicione os extras em `LAN_ORIGINS`
-> (separado por vírgula) em vez de tentar fazer as quatro URLs principais
-> servirem pra tudo.
+> **O `web` fala com a API por um proxy same-origin** (rewrites em
+> `apps/web/next.config.ts`, que encaminham `/api/*` pro serviço `api` via
+> rede Docker interna, `API_INTERNAL_URL="http://api:3001"`) — o navegador
+> nunca vê a URL real da API, só chama o mesmo host:porta de onde carregou a
+> página. Isso significa que **o `web` funciona simultaneamente por LAN e
+> por Tailscale sem precisar rebuild** quando o endereço de acesso muda.
+>
+> Ainda assim, `NEXT_PUBLIC_APP_URL`, `BETTER_AUTH_URL` (e `LAN_ORIGINS`)
+> continuam importantes: a API (`apps/api/src/index.ts` e
+> `apps/api/src/lib/auth.ts`) as lê em **runtime** pra montar a allowlist de
+> CORS/`trustedOrigins`, e rejeita qualquer requisição cujo header `Origin`
+> não esteja nessa lista — mesmo vindo pelo proxy do `web`. **Adicione em
+> `LAN_ORIGINS` TODO endereço (protocolo+host+porta do `web`, não da API)
+> pelo qual o app for acessado além do principal** — por exemplo, se acessar
+> tanto pela LAN quanto pelo Tailscale, `LAN_ORIGINS` precisa ter a origem
+> Tailscale do `web` (porta 3000), senão o login falha só quando acessado
+> por lá, com uma mensagem de erro que pode nem citar CORS diretamente
+> (a rejeição acontece dentro do Better Auth, não no navegador).
 
 ### D.3 — Portas: host x container
 
@@ -432,18 +445,17 @@ produção do ZimaOS a longo prazo.
 
 ### D.6 — Rebuild depois de mudar `.env.selfhosted`
 
-Nem toda mudança no `.env.selfhosted` exige rebuild — depende de qual
-variável mudou:
+Desde que o `web` passou a falar com a API por proxy same-origin
+(`apps/web/next.config.ts`, ver callout no D.2), **nenhuma variável de URL
+no `.env.selfhosted` é mais embutida no bundle JS do `web`** — todas são
+lidas em runtime, então basta recriar o container, sem rebuild:
 
-| Mudou... | Comando |
-|---|---|
-| `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_API_URL` (embutidas no bundle do `web` em build time) | `docker compose -f docker-compose.selfhosted.yml --profile local-db build --no-cache web` seguido de `up -d --force-recreate web` |
-| Qualquer outra variável (lida em runtime — `DATABASE_URL`, `LAN_ORIGINS`, `BETTER_AUTH_URL`, etc.) | `docker compose -f docker-compose.selfhosted.yml --profile local-db up -d --force-recreate api web` (sem rebuild) |
+```bash
+docker compose -f docker-compose.selfhosted.yml --profile local-db up -d --force-recreate api web
+```
 
-O `--no-cache` no primeiro caso é necessário porque mudar só um
-`build.args` nem sempre invalida o cache de camadas do Docker sozinho —
-sem ele, o build pode reusar a camada antiga e continuar embutindo o valor
-velho.
+Rebuild (`--build`/`--no-cache`) só é necessário se o **código** mudou
+(novo commit), não quando só uma variável de `.env.selfhosted` muda.
 
 ### D.7 — Requisitos no host
 

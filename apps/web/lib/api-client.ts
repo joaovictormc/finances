@@ -1,4 +1,8 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+// Caminho relativo: o browser sempre chama /api/* no mesmo host:porta que
+// carregou a página, e o next.config.ts encaminha pra API internamente (ver
+// rewrites() lá) — funciona igual em LAN, Tailscale ou domínio, sem precisar
+// saber de antemão qual endereço o usuário vai usar.
+const API_URL = "";
 
 type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";

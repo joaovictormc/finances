@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+// Roda no servidor Node (Server Component), não no browser — fala direto com
+// o container da API via rede Docker (mesma var usada em next.config.ts).
+const API_URL = process.env.API_INTERNAL_URL ?? "http://localhost:3001";
 
 export async function serverApiGet<T>(
   path: string,
