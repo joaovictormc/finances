@@ -9,3 +9,7 @@
 
 ### Desempenho do backend/frontend
 - Algumas operações simples, como troca de tela, estão demorando para serem processadas, ficam em loading infinito ou levam um tempo considerável para abrir
+
+
+### Layout e design
+- Quando clico no collapse do menu lateral, podemos incluir o botão de abrir o menu novamente por cima da logomarca do app, quando o usuário passar o mouse por cima da logo o botão aparece aplicando um blur por cima da logo e mostrando o icone de abir menu
