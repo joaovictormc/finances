@@ -21,18 +21,44 @@ export function DashboardSidebar() {
         collapsed ? "w-16" : "w-60"
       }`}
     >
-      <div className="flex h-14 items-center justify-between px-4 border-b border-border/60">
-        {!collapsed && <Logo size={24} className="text-base" />}
+      <div
+        className={`flex h-14 items-center border-b border-border/60 ${
+          collapsed ? "justify-center px-1" : "justify-between px-4"
+        }`}
+      >
+        {collapsed ? (
+          <div className="group relative flex h-11 w-11 items-center justify-center">
+            <Logo
+              variant="icon"
+              size={28}
+              className="transition-[filter,opacity] duration-150 group-hover:opacity-40 group-hover:blur-[2px] group-focus-within:opacity-40 group-focus-within:blur-[2px] motion-reduce:transition-none"
+            />
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              title="Expandir menu"
+              aria-label="Expandir menu lateral"
+              className="absolute inset-0 flex items-center justify-center rounded-lg text-foreground opacity-0 transition-opacity duration-150 hover:bg-background/50 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
+            >
+              <PanelLeftOpen size={20} />
+            </button>
+          </div>
+        ) : (
+          <Logo size={24} className="text-base" />
+        )}
         <div className="flex items-center gap-1">
           {!collapsed && <ThemeToggle />}
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            title={collapsed ? "Expandir menu" : "Retrair menu"}
-            className="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-          >
-            {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-          </button>
+          {!collapsed && (
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              title="Retrair menu"
+              aria-label="Retrair menu lateral"
+              className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              <PanelLeftClose size={16} />
+            </button>
+          )}
         </div>
       </div>
 

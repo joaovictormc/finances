@@ -28,36 +28,23 @@ type MonthlyReport = {
 };
 
 async function fetchReport(year: number, month: number): Promise<MonthlyReport | null> {
-  try {
-    return await serverApiGet<MonthlyReport>("/api/transactions/reports/monthly", { year, month });
-  } catch {
-    return null;
-  }
+  return serverApiGet<MonthlyReport>("/api/transactions/reports/monthly", { year, month });
 }
 
 async function fetchGoals(): Promise<Goal[]> {
-  try {
-    return await serverApiGet<Goal[]>("/api/goals");
-  } catch {
-    return [];
-  }
+  return serverApiGet<Goal[]>("/api/goals");
 }
 
 async function fetchBills(): Promise<RecurringBill[]> {
-  try {
-    return await serverApiGet<RecurringBill[]>("/api/bills");
-  } catch {
-    return [];
-  }
+  return serverApiGet<RecurringBill[]>("/api/bills");
 }
 
 async function fetchRecentTransactions(): Promise<Transaction[]> {
-  try {
-    const res = await serverApiGet<PaginatedResponse<Transaction>>("/api/transactions", { page: 1, limit: 6 });
-    return res.data;
-  } catch {
-    return [];
-  }
+  const res = await serverApiGet<PaginatedResponse<Transaction>>("/api/transactions", {
+    page: 1,
+    limit: 6,
+  });
+  return res.data;
 }
 
 export default async function OverviewPage({

@@ -19,11 +19,23 @@
 # Ver docs/deploy.md (Parte D) para o passo de preflight de conectividade e detalhes.
 
 services:
+  db-init:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: .env.selfhosted
+    command: ["pnpm", "--filter", "@finances/db", "db:seed"]
+    restart: "no"
+    networks: [finances]
+
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
     env_file: .env.selfhosted
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
     ports:
       - "${API_PORT:-3001}:3001"
     restart: unless-stopped
@@ -34,6 +46,10 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
     env_file: .env.selfhosted
+    environment:
+      API_INTERNAL_URL: http://api:3001
+    depends_on:
+      - api
     ports:
       - "${WEB_PORT:-3000}:3000"
     restart: unless-stopped

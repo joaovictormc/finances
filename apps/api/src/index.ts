@@ -26,6 +26,7 @@ import adminRoute from "./routes/admin";
 import settingsRoute from "./routes/settings";
 import userRoute from "./routes/user";
 import { registerRepeatableJobs } from "./jobs/scheduler";
+import { db } from "@finances/db";
 
 // Start BullMQ workers
 import "./jobs/workers/bot-messages.worker";
@@ -46,6 +47,11 @@ const LAN_ORIGINS = (process.env.LAN_ORIGINS ?? "")
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use("*", logger());
+app.use("*", async (c, next) => {
+  const requestId = c.req.header("x-request-id") ?? crypto.randomUUID();
+  c.header("x-request-id", requestId);
+  await next();
+});
 app.use(
   "*",
   cors({
@@ -56,13 +62,25 @@ app.use(
       ...LAN_ORIGINS,
     ],
     credentials: true,
-    allowHeaders: ["Content-Type", "Authorization"],
+    allowHeaders: ["Content-Type", "Authorization", "X-Request-Id"],
+    exposeHeaders: ["X-Request-Id"],
     allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
   })
 );
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get("/health", (c) => c.json({ status: "ok", ts: new Date().toISOString() }));
+app.get("/health/ready", async (c) => {
+  try {
+    const systemCategories = await db.category.count({ where: { isSystem: true } });
+    if (systemCategories === 0) {
+      return c.json({ status: "not_ready", reason: "system_categories_missing" }, 503);
+    }
+    return c.json({ status: "ready", systemCategories });
+  } catch {
+    return c.json({ status: "not_ready", reason: "database_unavailable" }, 503);
+  }
+});
 
 // ── Better Auth handler (handles /api/auth/* requests) ────────────────────────
 app.use("/api/auth/*", enforcePasswordPolicy);
@@ -94,8 +112,9 @@ app.route("/api/settings", settingsRoute);
 app.route("/api/user", userRoute);
 
 app.onError((err, c) => {
-  console.error("[api] erro não tratado:", err);
-  return c.json({ error: err instanceof Error ? err.message : "Erro interno" }, 500);
+  const requestId = c.res.headers.get("x-request-id") ?? "unknown";
+  console.error(`[api] erro não tratado [${requestId}]:`, err);
+  return c.json({ error: "Erro interno", requestId }, 500);
 });
 
 // ── Start server (Node via @hono/node-server) ─────────────────────────────────

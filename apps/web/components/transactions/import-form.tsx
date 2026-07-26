@@ -13,29 +13,50 @@ interface ImportFormProps {
   fixedAccountId?: string;
 }
 
-async function importFile(accountId: string, paymentMethod: "debit" | "credit", file: File) {
+type ImportBatchResult = {
+  imported: number;
+  filesProcessed: number;
+  results: Array<{
+    fileName: string;
+    status: "success" | "error";
+    imported: number;
+    duplicates: number;
+    error?: string;
+  }>;
+};
+
+async function importFiles(
+  accountId: string,
+  files: Array<{ paymentMethod: "debit" | "credit"; file: File }>
+) {
   const formData = new FormData();
   formData.append("accountId", accountId);
-  formData.append("paymentMethod", paymentMethod);
-  formData.append("file", file);
-  return api.upload<{ imported: number; totalInFile: number }>("/api/transactions/import", formData);
+  for (const { paymentMethod, file } of files) {
+    formData.append("files", file);
+    formData.append("paymentMethods", paymentMethod);
+  }
+  return api.upload<ImportBatchResult>("/api/transactions/import/batch", formData);
 }
 
 export function ImportForm({ accounts, onSuccess, fixedAccountId }: ImportFormProps) {
   const { toast } = useToast();
   const [accountId, setAccountId] = useState(fixedAccountId ?? "");
-  const [debitFile, setDebitFile] = useState<File | null>(null);
-  const [creditFile, setCreditFile] = useState<File | null>(null);
+  const [debitFiles, setDebitFiles] = useState<File[]>([]);
+  const [creditFiles, setCreditFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const fixedAccount = fixedAccountId ? accounts.find((a) => a.id === fixedAccountId) : undefined;
+  const fixedAccount = fixedAccountId ? accounts.find((account) => account.id === fixedAccountId) : undefined;
   const effectiveAccountId = fixedAccountId ?? accountId;
-  const showCreditSlot = fixedAccount?.hasCreditCard;
+  const effectiveAccount = accounts.find((account) => account.id === effectiveAccountId);
+  const showCreditSlot = effectiveAccount?.hasCreditCard;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const files: { paymentMethod: "debit" | "credit"; file: File }[] = [];
-    if (debitFile) files.push({ paymentMethod: "debit", file: debitFile });
-    if (showCreditSlot && creditFile) files.push({ paymentMethod: "credit", file: creditFile });
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const files: Array<{ paymentMethod: "debit" | "credit"; file: File }> = [
+      ...debitFiles.map((file) => ({ paymentMethod: "debit" as const, file })),
+      ...(showCreditSlot
+        ? creditFiles.map((file) => ({ paymentMethod: "credit" as const, file }))
+        : []),
+    ];
 
     if (!effectiveAccountId || files.length === 0) {
       toast({ title: "Selecione a conta e ao menos um arquivo", variant: "error" });
@@ -44,24 +65,27 @@ export function ImportForm({ accounts, onSuccess, fixedAccountId }: ImportFormPr
 
     setIsSubmitting(true);
     try {
-      const results = await Promise.all(
-        files.map(({ paymentMethod, file }) => importFile(effectiveAccountId, paymentMethod, file))
-      );
-      const imported = results.reduce((sum, r) => sum + r.imported, 0);
-      const totalInFile = results.reduce((sum, r) => sum + r.totalInFile, 0);
+      const result = await importFiles(effectiveAccountId, files);
+      const failed = result.results.filter((fileResult) => fileResult.status === "error");
+      const duplicates = result.results.reduce((sum, fileResult) => sum + fileResult.duplicates, 0);
 
       toast({
-        title: `${imported} transações importadas`,
-        description: imported < totalInFile ? `${totalInFile - imported} já existiam e foram ignoradas` : undefined,
-        variant: "success",
+        title: `${result.imported} transações importadas de ${result.filesProcessed} arquivos`,
+        description:
+          failed.length > 0
+            ? `${failed.length} arquivo(s) falharam: ${failed.map((item) => item.fileName).join(", ")}`
+            : duplicates > 0
+              ? `${duplicates} transações duplicadas foram ignoradas`
+              : undefined,
+        variant: failed.length > 0 ? "warning" : "success",
       });
-      setDebitFile(null);
-      setCreditFile(null);
+      setDebitFiles([]);
+      setCreditFiles([]);
       onSuccess();
-    } catch (err) {
+    } catch (error) {
       toast({
-        title: "Erro ao importar arquivo",
-        description: err instanceof Error ? err.message : undefined,
+        title: "Erro ao importar arquivos",
+        description: error instanceof Error ? error.message : undefined,
         variant: "error",
       });
     } finally {
@@ -72,8 +96,8 @@ export function ImportForm({ accounts, onSuccess, fixedAccountId }: ImportFormPr
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
-        Envie um extrato em CSV (colunas Data, Descrição, Valor) ou OFX exportado do seu banco.
-        Transações já importadas anteriormente são ignoradas automaticamente.
+        Envie até 20 extratos CSV ou OFX de uma vez. Cada arquivo pode ter até 10 MB e o lote,
+        até 50 MB. Transações já importadas são ignoradas automaticamente.
       </p>
 
       {fixedAccount ? (
@@ -86,23 +110,30 @@ export function ImportForm({ accounts, onSuccess, fixedAccountId }: ImportFormPr
           label="Conta de destino"
           placeholder="Selecione a conta"
           value={accountId}
-          onChange={(e) => setAccountId(e.target.value)}
-          options={accounts.map((a) => ({ value: a.id, label: a.name }))}
+          onChange={(event) => {
+            setAccountId(event.target.value);
+            setCreditFiles([]);
+          }}
+          options={accounts.map((account) => ({ value: account.id, label: account.name }))}
         />
       )}
 
       <FileSlot
-        label={showCreditSlot ? "Extrato conta corrente" : "Arquivo (.csv ou .ofx)"}
-        file={debitFile}
-        onChange={setDebitFile}
+        label={showCreditSlot ? "Extratos da conta corrente" : "Extratos (.csv ou .ofx)"}
+        files={debitFiles}
+        onChange={setDebitFiles}
       />
 
       {showCreditSlot && (
-        <FileSlot label="Fatura cartão de crédito" file={creditFile} onChange={setCreditFile} />
+        <FileSlot
+          label="Faturas de cartão de crédito"
+          files={creditFiles}
+          onChange={setCreditFiles}
+        />
       )}
 
       <Button type="submit" loading={isSubmitting} className="mt-2">
-        Importar
+        Importar lote
       </Button>
     </form>
   );
@@ -110,12 +141,12 @@ export function ImportForm({ accounts, onSuccess, fixedAccountId }: ImportFormPr
 
 function FileSlot({
   label,
-  file,
+  files,
   onChange,
 }: {
   label: string;
-  file: File | null;
-  onChange: (file: File | null) => void;
+  files: File[];
+  onChange: (files: File[]) => void;
 }) {
   const inputId = useId();
 
@@ -127,11 +158,18 @@ function FileSlot({
       <input
         id={inputId}
         type="file"
+        multiple
         accept=".csv,.ofx,text/csv"
-        onChange={(e) => onChange(e.target.files?.[0] ?? null)}
+        onChange={(event) => onChange(Array.from(event.target.files ?? []))}
         className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary-foreground"
       />
-      {file && <p className="text-xs text-muted-foreground">{file.name}</p>}
+      {files.length > 0 && (
+        <ul className="space-y-0.5 text-xs text-muted-foreground">
+          {files.map((file) => (
+            <li key={`${file.name}-${file.size}-${file.lastModified}`}>{file.name}</li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

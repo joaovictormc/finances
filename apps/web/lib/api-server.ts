@@ -3,6 +3,14 @@ import { cookies } from "next/headers";
 // Roda no servidor Node (Server Component), não no browser — fala direto com
 // o container da API via rede Docker (mesma var usada em next.config.ts).
 const API_URL = process.env.API_INTERNAL_URL ?? "http://localhost:3001";
+const API_TIMEOUT_MS = 15_000;
+
+async function parseApiError(res: Response): Promise<Error> {
+  const payload = await res.json().catch(() => ({ error: "Falha na API" }));
+  const requestId = res.headers.get("x-request-id");
+  const message = (payload as { error?: string }).error ?? "Falha na API";
+  return new Error(requestId ? `${message} (requisição ${requestId})` : message);
+}
 
 export async function serverApiGet<T>(
   path: string,
@@ -22,11 +30,11 @@ export async function serverApiGet<T>(
   const res = await fetch(url, {
     headers: { Cookie: cookieStore.toString() },
     cache: "no-store",
+    signal: AbortSignal.timeout(API_TIMEOUT_MS),
   });
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ error: "Request failed" }));
-    throw new Error((error as { error: string }).error ?? "Request failed");
+    throw await parseApiError(res);
   }
 
   return res.json() as Promise<T>;
@@ -39,11 +47,11 @@ export async function serverApiPost<T>(path: string, body?: unknown): Promise<T>
     headers: { Cookie: cookieStore.toString(), "Content-Type": "application/json" },
     body: JSON.stringify(body ?? {}),
     cache: "no-store",
+    signal: AbortSignal.timeout(API_TIMEOUT_MS),
   });
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ error: "Request failed" }));
-    throw new Error((error as { error: string }).error ?? "Request failed");
+    throw await parseApiError(res);
   }
 
   return res.json() as Promise<T>;

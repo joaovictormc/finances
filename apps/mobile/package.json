@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
-    "@better-auth/expo": "^1.6.20",
+    "@better-auth/expo": "1.6.22",
     "@expo/vector-icons": "^15.1.1",
     "@finances/validations": "workspace:*",
-    "better-auth": "^1.6.20",
+    "better-auth": "1.6.22",
     "expo": "~57.0.4",
     "expo-build-properties": "~57.0.3",
     "expo-clipboard": "~57.0.0",

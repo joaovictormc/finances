@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { TransactionFilters } from "@/components/transactions/transaction-filters";
 import { TransactionList } from "@/components/transactions/transaction-list";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { Drawer } from "@/components/ui/drawer";
+import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
 import type { Category, FinancialAccount, Group, PaginatedResponse, Transaction } from "@/lib/types";
@@ -31,9 +33,14 @@ export default function TransactionsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [meta, setMeta] = useState({ page: 1, total: 0, totalPages: 1 });
   const [formKey, setFormKey] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkCategoryId, setBulkCategoryId] = useState("");
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
   const loadTransactions = useCallback(async (f: Filters, page = 1) => {
     setIsLoading(true);
+    setSelectedIds(new Set());
+    setBulkCategoryId("");
     try {
       const res = await api.get<PaginatedResponse<Transaction>>("/api/transactions", {
         ...(f.search && { search: f.search }),
@@ -54,7 +61,6 @@ export default function TransactionsPage() {
   }, [toast]);
 
   useEffect(() => {
-    loadTransactions(filters);
     Promise.all([
       api.get<Category[]>("/api/categories"),
       api.get<FinancialAccount[]>("/api/accounts"),
@@ -89,6 +95,64 @@ export default function TransactionsPage() {
     loadTransactions(filters);
   };
 
+  const selectedTransactions = useMemo(
+    () => transactions.filter((transaction) => selectedIds.has(transaction.id)),
+    [selectedIds, transactions]
+  );
+  const selectedTypes = new Set(selectedTransactions.map((transaction) => transaction.type));
+  const selectedType = selectedTypes.size === 1 ? selectedTransactions[0]?.type : undefined;
+  const categoryOptions = categories
+    .flatMap((category) => [category, ...(category.children ?? [])])
+    .filter((category) => category.type === selectedType)
+    .map((category) => ({ value: category.id, label: category.name }));
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else if (next.size < 100) next.add(id);
+      return next;
+    });
+    setBulkCategoryId("");
+  };
+
+  const toggleAll = () => {
+    const pageIds = transactions.map((transaction) => transaction.id);
+    const allSelected = pageIds.every((id) => selectedIds.has(id));
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allSelected) pageIds.forEach((id) => next.delete(id));
+      else pageIds.slice(0, Math.max(0, 100 - next.size)).forEach((id) => next.add(id));
+      return next;
+    });
+    setBulkCategoryId("");
+  };
+
+  const handleBulkCategorize = async () => {
+    if (!bulkCategoryId || selectedIds.size === 0) return;
+    if (!window.confirm(`Definir a categoria de ${selectedIds.size} transações?`)) return;
+
+    setIsBulkUpdating(true);
+    try {
+      const result = await api.patch<{ updated: number }>("/api/transactions/bulk-category", {
+        transactionIds: [...selectedIds],
+        categoryId: bulkCategoryId,
+      });
+      toast({ title: `${result.updated} transações categorizadas`, variant: "success" });
+      setSelectedIds(new Set());
+      setBulkCategoryId("");
+      await loadTransactions(filters, meta.page);
+    } catch (error) {
+      toast({
+        title: "Erro ao categorizar transações",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "error",
+      });
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
+
   return (
     <div>
       <div className="mb-6 flex items-start justify-between gap-4">
@@ -105,9 +169,40 @@ export default function TransactionsPage() {
         <TransactionFilters filters={filters} groups={groups} onChange={setFilters} onNew={openNew} />
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="mb-4 flex flex-wrap items-end gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4">
+          <p className="self-center text-sm font-medium">
+            {selectedIds.size} {selectedIds.size === 1 ? "transação selecionada" : "transações selecionadas"}
+          </p>
+          <Select
+            aria-label="Categoria para as transações selecionadas"
+            value={bulkCategoryId}
+            onChange={(event) => setBulkCategoryId(event.target.value)}
+            options={categoryOptions}
+            placeholder={selectedTypes.size > 1 ? "Selecione transações do mesmo tipo" : "Escolha a categoria"}
+            disabled={selectedTypes.size !== 1}
+            className="min-w-64"
+          />
+          <Button
+            type="button"
+            onClick={handleBulkCategorize}
+            loading={isBulkUpdating}
+            disabled={!bulkCategoryId}
+          >
+            Aplicar categoria
+          </Button>
+          <Button type="button" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+            Limpar seleção
+          </Button>
+        </div>
+      )}
+
       <TransactionList
         transactions={transactions}
         isLoading={isLoading}
+        selectedIds={selectedIds}
+        onToggleSelected={toggleSelected}
+        onToggleAll={toggleAll}
         onEdit={openEdit}
         onDelete={handleDelete}
       />

@@ -3,6 +3,7 @@
 // rewrites() lá) — funciona igual em LAN, Tailscale ou domínio, sem precisar
 // saber de antemão qual endereço o usuário vai usar.
 const API_URL = "";
+const API_TIMEOUT_MS = 15_000;
 
 type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
@@ -28,6 +29,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     cache: "no-store",
+    signal: AbortSignal.timeout(API_TIMEOUT_MS),
   };
   if (body !== undefined) fetchInit.body = JSON.stringify(body);
 
@@ -47,6 +49,7 @@ async function upload<T>(path: string, formData: FormData): Promise<T> {
     body: formData,
     credentials: "include",
     cache: "no-store",
+    signal: AbortSignal.timeout(API_TIMEOUT_MS),
   });
 
   if (!res.ok) {

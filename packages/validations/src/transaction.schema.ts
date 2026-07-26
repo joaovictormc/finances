@@ -45,6 +45,15 @@ export const CreateTransactionSchema = z.object({
 
 export const UpdateTransactionSchema = CreateTransactionSchema.partial();
 
+export const BulkCategorizeTransactionsSchema = z.object({
+  transactionIds: z
+    .array(z.string().min(1))
+    .min(1, "Selecione ao menos uma transação")
+    .max(100, "Selecione no máximo 100 transações")
+    .refine((ids) => new Set(ids).size === ids.length, "IDs de transações duplicados"),
+  categoryId: z.string().min(1, "Selecione uma categoria"),
+});
+
 export const TransactionFiltersSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
@@ -61,4 +70,5 @@ export const TransactionFiltersSchema = z.object({
 
 export type CreateTransaction = z.infer<typeof CreateTransactionSchema>;
 export type UpdateTransaction = z.infer<typeof UpdateTransactionSchema>;
+export type BulkCategorizeTransactions = z.infer<typeof BulkCategorizeTransactionsSchema>;
 export type TransactionFilters = z.infer<typeof TransactionFiltersSchema>;

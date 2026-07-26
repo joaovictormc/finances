@@ -7,6 +7,9 @@
 ### Importação de extratos
 - Importação está muito manual, quando uma pessoa precisar de importar o extrato de varios meses ela precisa selecionar um arquivo, importar e depois repetir o processo várias vezes. Podemos redefinir essa função deixando possível importar arquivos em massa tanto para área de cartão de crédito como extrato de conta corrente
 
+### Transações
+- Podemos realizar uma funcionalidade para fazer uma conciliação das categorias de transções em massa ao invés de realizar uma por uma, pois após ser importado elas não possuem categoria definida
+
 ### Desempenho do backend/frontend
 - Algumas operações simples, como troca de tela, estão demorando para serem processadas, ficam em loading infinito ou levam um tempo considerável para abrir
 
@@ -17,3 +20,7 @@
 
 ### Ajustes do backend
 - Como estou testando a aplicação em ambiente diferente do de desenvolvimento, as categorias de transações não estão aparecendo nesse ambiente
+
+
+### Segurança de dados, operações e LGPD
+- Valide se todas as operções e arquivos definidos estão de acordo com a LGPD e se estão bem protegidos 

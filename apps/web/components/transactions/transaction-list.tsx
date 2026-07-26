@@ -13,6 +13,9 @@ import { PAYMENT_METHOD_BADGE } from "@finances/validations";
 interface TransactionListProps {
   transactions: Transaction[];
   isLoading: boolean;
+  selectedIds: Set<string>;
+  onToggleSelected: (id: string) => void;
+  onToggleAll: () => void;
   onEdit: (t: Transaction) => void;
   onDelete: (id: string) => void;
 }
@@ -111,7 +114,7 @@ function ResizableTh({
 function SkeletonRow() {
   return (
     <tr>
-      {Array.from({ length: 5 }).map((_, i) => (
+      {Array.from({ length: 7 }).map((_, i) => (
         <td key={i} className="px-4 py-3">
           <div className="h-4 bg-muted animate-pulse rounded" />
         </td>
@@ -133,9 +136,19 @@ function SkeletonCard() {
   );
 }
 
-export function TransactionList({ transactions, isLoading, onEdit, onDelete }: TransactionListProps) {
+export function TransactionList({
+  transactions,
+  isLoading,
+  selectedIds,
+  onToggleSelected,
+  onToggleAll,
+  onEdit,
+  onDelete,
+}: TransactionListProps) {
   const { widths, startResize } = useColumnWidths();
   const td = (column: ColumnKey) => pinnedWidth(widths[column]);
+  const allSelected =
+    transactions.length > 0 && transactions.every((transaction) => selectedIds.has(transaction.id));
 
   const handleDelete = (id: string) => {
     if (window.confirm("Deletar esta transação?")) onDelete(id);
@@ -160,6 +173,16 @@ export function TransactionList({ transactions, isLoading, onEdit, onDelete }: T
         <table className="text-sm" style={{ tableLayout: "fixed", minWidth: "100%" }}>
           <thead>
             <tr className="border-b border-border bg-muted/50">
+              <th className="w-12 px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={onToggleAll}
+                  aria-label={allSelected ? "Desmarcar página" : "Selecionar página"}
+                  disabled={isLoading}
+                  className="h-4 w-4 accent-primary"
+                />
+              </th>
               <ResizableTh column="date" widths={widths} startResize={startResize}>Data</ResizableTh>
               <ResizableTh column="description" widths={widths} startResize={startResize}>Descrição</ResizableTh>
               <ResizableTh column="category" widths={widths} startResize={startResize}>Categoria</ResizableTh>
@@ -173,6 +196,15 @@ export function TransactionList({ transactions, isLoading, onEdit, onDelete }: T
               ? Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
               : transactions.map((t) => (
                   <tr key={t.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                    <td className="w-12 px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(t.id)}
+                        onChange={() => onToggleSelected(t.id)}
+                        aria-label={`Selecionar transação ${t.description}`}
+                        className="h-4 w-4 accent-primary"
+                      />
+                    </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap" style={td("date")}>
                       {formatShortDate(t.date)}
                     </td>
@@ -242,6 +274,13 @@ export function TransactionList({ transactions, isLoading, onEdit, onDelete }: T
           ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
           : transactions.map((t) => (
               <div key={t.id} className="flex items-center gap-3 px-4 py-3 border-b border-border last:border-0">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(t.id)}
+                  onChange={() => onToggleSelected(t.id)}
+                  aria-label={`Selecionar transação ${t.description}`}
+                  className="h-4 w-4 shrink-0 accent-primary"
+                />
                 <CategoryIcon
                   icon={t.category?.icon ?? (t.type === "income" ? "💚" : t.type === "expense" ? "💸" : "↔️")}
                   iconUrl={t.category?.iconUrl}
