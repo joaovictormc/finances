@@ -16,6 +16,11 @@
 # mais NEXT_PUBLIC_API_URL/NEXT_PUBLIC_APP_URL no bundle JS, então mudar essas
 # URLs no .env.selfhosted não exige mais rebuild do web, só --force-recreate.
 #
+# Exceção: API_INTERNAL_URL (destino do proxy) é resolvido em build time pelo
+# Next.js, não runtime — já vem com o default certo pra este compose via
+# apps/web/Dockerfile (ARG API_INTERNAL_URL=http://api:3001), só precisa
+# rebuild se esse valor tiver que ser outro. Ver docs/deploy.md D.6.
+#
 # Ver docs/deploy.md (Parte D) para o passo de preflight de conectividade e detalhes.
 
 services:

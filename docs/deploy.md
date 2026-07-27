@@ -446,16 +446,30 @@ produção do ZimaOS a longo prazo.
 ### D.6 — Rebuild depois de mudar `.env.selfhosted`
 
 Desde que o `web` passou a falar com a API por proxy same-origin
-(`apps/web/next.config.ts`, ver callout no D.2), **nenhuma variável de URL
-no `.env.selfhosted` é mais embutida no bundle JS do `web`** — todas são
-lidas em runtime, então basta recriar o container, sem rebuild:
+(`apps/web/next.config.ts`, ver callout no D.2), as variáveis de URL
+públicas (`NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_API_URL`, `BETTER_AUTH_URL`,
+`API_URL`, `LAN_ORIGINS`) não são mais embutidas no bundle JS do `web` —
+são lidas em runtime pela API, então basta recriar o container, sem
+rebuild:
 
 ```bash
 docker compose -f docker-compose.selfhosted.yml --profile local-db up -d --force-recreate api web
 ```
 
-Rebuild (`--build`/`--no-cache`) só é necessário se o **código** mudou
-(novo commit), não quando só uma variável de `.env.selfhosted` muda.
+**Exceção: `API_INTERNAL_URL`.** O Next.js resolve o destino de
+`rewrites()` **durante o `next build`**, não em runtime — mudar essa
+variável só no `.env.selfhosted`/`environment:` do container **não tem
+efeito**, o proxy continua usando o valor que estava presente no momento do
+build (`apps/web/Dockerfile`, `ARG API_INTERNAL_URL`, default já correto
+`http://api:3001` pro nome do serviço neste compose). Só precisa rebuild
+se for mudar esse valor pra algo diferente do default; no
+`docker-compose.selfhosted.yml`/`docker-compose.yml` normal não precisa
+mexer nele.
+
+Rebuild (`--build`/`--no-cache`) é necessário se o **código** mudou (novo
+commit) ou se `API_INTERNAL_URL` precisar de um valor diferente do
+default — não quando só uma das outras variáveis de `.env.selfhosted`
+muda.
 
 ### D.7 — Requisitos no host
 

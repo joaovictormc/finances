@@ -18,6 +18,13 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=installer /app .
 COPY --from=pruner /app/out/full/ .
+# Next.js resolve o destino de rewrites() (next.config.ts) durante o build,
+# não em runtime — precisa estar disponível aqui, não só no container final.
+# Default já correto pro docker-compose.selfhosted.yml/docker-compose.yml
+# (nome do serviço "api" na rede Docker interna); outros ambientes (ex:
+# EasyPanel, ver docs/deploy.md C.5) passam build.args com o valor certo.
+ARG API_INTERNAL_URL=http://api:3001
+ENV API_INTERNAL_URL=$API_INTERNAL_URL
 RUN pnpm --filter @finances/db exec prisma generate
 RUN pnpm turbo run build --filter=@finances/web
 
