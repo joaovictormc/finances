@@ -3,7 +3,12 @@ import type { CompletionUsage } from "groq-sdk/resources/completions";
 
 const SINGLETON_ID = "singleton";
 
-export type AiFeature = "expense_parsing" | "monthly_insight" | "nl_query" | "voice_transcription";
+export type AiFeature =
+  | "expense_parsing"
+  | "monthly_insight"
+  | "nl_query"
+  | "voice_transcription"
+  | "category_suggestion";
 
 export async function getAiSettings() {
   return db.aiSettings.upsert({
@@ -19,6 +24,7 @@ export async function updateAiSettings(data: {
   expenseParsingEnabled?: boolean;
   monthlyInsightsEnabled?: boolean;
   nlQueryEnabled?: boolean;
+  categorySuggestionEnabled?: boolean;
   monthlyTokenLimit?: number | null;
 }) {
   return db.aiSettings.upsert({

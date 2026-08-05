@@ -54,6 +54,24 @@ export const BulkCategorizeTransactionsSchema = z.object({
   categoryId: z.string().min(1, "Selecione uma categoria"),
 });
 
+// Sugestão de categoria por IA — não aplica nada, só devolve uma sugestão
+// por transação pra o usuário confirmar (ver docs/ajustes-pos-teste.md).
+export const SuggestCategoriesSchema = z.object({
+  transactionIds: z
+    .array(z.string().min(1))
+    .min(1, "Selecione ao menos uma transação")
+    .max(50, "Sugestão de categoria limitada a 50 transações por vez")
+    .refine((ids) => new Set(ids).size === ids.length, "IDs de transações duplicados"),
+});
+
+export type CategorySuggestion = {
+  transactionId: string;
+  categoryId: string | null;
+  categoryName: string | null;
+  confidence: number;
+  merchantName?: string;
+};
+
 export const TransactionFiltersSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),

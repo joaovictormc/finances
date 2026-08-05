@@ -233,6 +233,7 @@ const AiSettingsSchema = z.object({
   expenseParsingEnabled: z.boolean().optional(),
   monthlyInsightsEnabled: z.boolean().optional(),
   nlQueryEnabled: z.boolean().optional(),
+  categorySuggestionEnabled: z.boolean().optional(),
   monthlyTokenLimit: z.number().int().positive().nullable().optional(),
 });
 

@@ -173,7 +173,9 @@ const systemCategories = [
     icon: "↔️",
     color: "#94a3b8",
     type: "transfer",
-    children: [],
+    children: [
+      { name: "Pagamento de Fatura de Cartão", icon: "💳", color: "#94a3b8", type: "transfer" },
+    ],
   },
 ];
 

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { ParsedTransaction } from "./types";
+import { isCreditCardBillPayment } from "./credit-card-payment";
 
 const DATE_HEADERS = ["data", "date"];
 const DESCRIPTION_HEADERS = ["descricao", "descrição", "historico", "histórico", "description", "memo", "lancamento", "lançamento"];
@@ -80,7 +81,12 @@ export function parseCsvTransactions(text: string): ParsedTransaction[] {
       date,
       description,
       amount: Math.abs(amount),
-      type: amount < 0 ? "expense" : "income",
+      type:
+        amount < 0 && isCreditCardBillPayment(description)
+          ? "transfer"
+          : amount < 0
+            ? "expense"
+            : "income",
       externalId,
     });
   }

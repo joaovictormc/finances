@@ -559,9 +559,10 @@ model AiSettings {
   textModel  String @default("llama-3.3-70b-versatile")
   audioModel String @default("whisper-large-v3-turbo")
 
-  expenseParsingEnabled  Boolean @default(true) // parsing de mensagens do bot (texto/voz)
-  monthlyInsightsEnabled Boolean @default(true) // geração de insight mensal
-  nlQueryEnabled         Boolean @default(true) // POST /api/ai/query
+  expenseParsingEnabled     Boolean @default(true) // parsing de mensagens do bot (texto/voz)
+  monthlyInsightsEnabled    Boolean @default(true) // geração de insight mensal
+  nlQueryEnabled            Boolean @default(true) // POST /api/ai/query
+  categorySuggestionEnabled Boolean @default(true) // POST /api/transactions/suggest-categories
 
   monthlyTokenLimit Int? // null = ilimitado; soma de prompt+completion tokens do mês corrente
 

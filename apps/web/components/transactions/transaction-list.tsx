@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil, Trash2, Users } from "lucide-react";
+import { Check, Pencil, Trash2, Users, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CategoryIcon } from "@/components/ui/category-icon";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatBRL, formatShortDate } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
 import { ArrowLeftRight } from "lucide-react";
-import { PAYMENT_METHOD_BADGE } from "@finances/validations";
+import { PAYMENT_METHOD_BADGE, type CategorySuggestion } from "@finances/validations";
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -18,6 +18,33 @@ interface TransactionListProps {
   onToggleAll: () => void;
   onEdit: (t: Transaction) => void;
   onDelete: (id: string) => void;
+  /** Sugestões de categoria por IA pendentes de confirmação, por id de transação. */
+  suggestions?: Map<string, CategorySuggestion>;
+  onApplySuggestion?: (transactionId: string, categoryId: string) => void;
+  onDismissSuggestion?: (transactionId: string) => void;
+}
+
+function SuggestionChip({
+  suggestion,
+  onApply,
+  onDismiss,
+}: {
+  suggestion: CategorySuggestion;
+  onApply: () => void;
+  onDismiss: () => void;
+}) {
+  if (!suggestion.categoryId || suggestion.confidence <= 0) return null;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-[11px] text-primary">
+      Sugestão: {suggestion.categoryName} ({Math.round(suggestion.confidence * 100)}%)
+      <button type="button" onClick={onApply} title="Aplicar sugestão" className="hover:text-success">
+        <Check size={11} />
+      </button>
+      <button type="button" onClick={onDismiss} title="Descartar sugestão" className="hover:text-destructive">
+        <X size={11} />
+      </button>
+    </span>
+  );
 }
 
 type ColumnKey = "date" | "description" | "category" | "account" | "amount";
@@ -144,6 +171,9 @@ export function TransactionList({
   onToggleAll,
   onEdit,
   onDelete,
+  suggestions,
+  onApplySuggestion,
+  onDismissSuggestion,
 }: TransactionListProps) {
   const { widths, startResize } = useColumnWidths();
   const td = (column: ColumnKey) => pinnedWidth(widths[column]);
@@ -227,6 +257,12 @@ export function TransactionList({
                           <CategoryIcon icon={t.category.icon} iconUrl={t.category.iconUrl} color={t.category.color} size="sm" />
                           <span className="truncate">{t.category.name}</span>
                         </span>
+                      ) : suggestions?.get(t.id) ? (
+                        <SuggestionChip
+                          suggestion={suggestions.get(t.id)!}
+                          onApply={() => onApplySuggestion?.(t.id, suggestions.get(t.id)!.categoryId!)}
+                          onDismiss={() => onDismissSuggestion?.(t.id)}
+                        />
                       ) : (
                         <span className="text-xs text-muted-foreground/50">—</span>
                       )}
@@ -294,7 +330,7 @@ export function TransactionList({
                   <p className="text-xs text-muted-foreground truncate">
                     {t.category?.name ?? "Sem categoria"} · {formatShortDate(t.date)}
                   </p>
-                  <div className="flex gap-1 mt-1">
+                  <div className="flex gap-1 mt-1 flex-wrap">
                     {t.paymentMethod && PAYMENT_METHOD_BADGE[t.paymentMethod] && (
                       <Badge variant="default">{PAYMENT_METHOD_BADGE[t.paymentMethod]}</Badge>
                     )}
@@ -302,6 +338,13 @@ export function TransactionList({
                       <Badge variant="default">
                         <Users size={10} /> {t.group.name}
                       </Badge>
+                    )}
+                    {!t.category && suggestions?.get(t.id) && (
+                      <SuggestionChip
+                        suggestion={suggestions.get(t.id)!}
+                        onApply={() => onApplySuggestion?.(t.id, suggestions.get(t.id)!.categoryId!)}
+                        onDismiss={() => onDismissSuggestion?.(t.id)}
+                      />
                     )}
                   </div>
                 </div>

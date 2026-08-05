@@ -14,6 +14,7 @@ type AiSettings = {
   expenseParsingEnabled: boolean;
   monthlyInsightsEnabled: boolean;
   nlQueryEnabled: boolean;
+  categorySuggestionEnabled: boolean;
   monthlyTokenLimit: number | null;
 };
 
@@ -30,6 +31,7 @@ const FEATURE_LABELS: Record<string, string> = {
   monthly_insight: "Insight mensal",
   nl_query: "Consultas em linguagem natural",
   voice_transcription: "Transcrição de voz",
+  category_suggestion: "Sugestão de categoria",
 };
 
 export default function AdminAiPage() {
@@ -124,6 +126,12 @@ export default function AdminAiPage() {
               description="Endpoint /api/ai/query usado na Visão Geral"
               enabled={settings.nlQueryEnabled}
               onChange={(v) => setSettings({ ...settings, nlQueryEnabled: v })}
+            />
+            <ToggleRow
+              label="Sugestão de categoria"
+              description="Sugere categoria para transações sem categoria — não aplica automático"
+              enabled={settings.categorySuggestionEnabled}
+              onChange={(v) => setSettings({ ...settings, categorySuggestionEnabled: v })}
             />
           </div>
         </section>

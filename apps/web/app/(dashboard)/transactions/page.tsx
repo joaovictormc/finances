@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
 import type { Category, FinancialAccount, Group, PaginatedResponse, Transaction } from "@/lib/types";
+import type { CategorySuggestion } from "@finances/validations";
 
 type Filters = {
   search: string;
@@ -36,6 +37,8 @@ export default function TransactionsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkCategoryId, setBulkCategoryId] = useState("");
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [suggestions, setSuggestions] = useState<Map<string, CategorySuggestion>>(new Map());
+  const [isSuggesting, setIsSuggesting] = useState(false);
 
   const loadTransactions = useCallback(async (f: Filters, page = 1) => {
     setIsLoading(true);
@@ -153,6 +156,64 @@ export default function TransactionsPage() {
     }
   };
 
+  const handleSuggestCategories = async () => {
+    const targetIds = selectedTransactions
+      .filter((t) => !t.category)
+      .map((t) => t.id)
+      .slice(0, 50);
+    if (targetIds.length === 0) {
+      toast({ title: "Selecione transações sem categoria pra sugerir", variant: "error" });
+      return;
+    }
+    setIsSuggesting(true);
+    try {
+      const { suggestions: result } = await api.post<{ suggestions: CategorySuggestion[] }>(
+        "/api/transactions/suggest-categories",
+        { transactionIds: targetIds }
+      );
+      setSuggestions((current) => {
+        const next = new Map(current);
+        for (const s of result) next.set(s.transactionId, s);
+        return next;
+      });
+      const withSuggestion = result.filter((s) => s.categoryId).length;
+      toast({
+        title: withSuggestion > 0 ? `${withSuggestion} sugestões geradas` : "Nenhuma sugestão confiável encontrada",
+        variant: withSuggestion > 0 ? "success" : "error",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao sugerir categorias",
+        description: error instanceof Error ? error.message : undefined,
+        variant: "error",
+      });
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
+  const applySuggestion = async (transactionId: string, categoryId: string) => {
+    setSuggestions((current) => {
+      const next = new Map(current);
+      next.delete(transactionId);
+      return next;
+    });
+    try {
+      await api.patch(`/api/transactions/${transactionId}`, { categoryId });
+      await loadTransactions(filters, meta.page);
+    } catch {
+      toast({ title: "Erro ao aplicar categoria sugerida", variant: "error" });
+    }
+  };
+
+  const dismissSuggestion = (transactionId: string) => {
+    setSuggestions((current) => {
+      const next = new Map(current);
+      next.delete(transactionId);
+      return next;
+    });
+  };
+
   return (
     <div>
       <div className="mb-6 flex items-start justify-between gap-4">
@@ -191,6 +252,14 @@ export default function TransactionsPage() {
           >
             Aplicar categoria
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleSuggestCategories}
+            loading={isSuggesting}
+          >
+            Sugerir categoria (IA)
+          </Button>
           <Button type="button" variant="ghost" onClick={() => setSelectedIds(new Set())}>
             Limpar seleção
           </Button>
@@ -205,6 +274,9 @@ export default function TransactionsPage() {
         onToggleAll={toggleAll}
         onEdit={openEdit}
         onDelete={handleDelete}
+        suggestions={suggestions}
+        onApplySuggestion={applySuggestion}
+        onDismissSuggestion={dismissSuggestion}
       />
 
       {meta.totalPages > 1 && (

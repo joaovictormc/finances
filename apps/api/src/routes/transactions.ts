@@ -5,8 +5,10 @@ import {
   CreateTransactionSchema,
   UpdateTransactionSchema,
   BulkCategorizeTransactionsSchema,
+  SuggestCategoriesSchema,
   TransactionFiltersSchema,
 } from "@finances/validations";
+import { suggestCategories } from "../lib/ai/category-suggester";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { getUserGroupIds, hasGroupRole } from "../lib/groups";
 import { getHistoryCutoffDate } from "../lib/plan-limits";
@@ -19,6 +21,21 @@ import { redis } from "../lib/redis";
 const app = new Hono<{ Variables: AuthVariables }>();
 
 app.use("*", requireAuth);
+
+// Categoria de sistema aplicada quando o parser de import detecta que uma
+// linha é o pagamento da própria fatura de cartão (heurística em
+// lib/import/credit-card-payment.ts) — cacheada em memória do processo pois
+// é uma categoria fixa do seed, não muda em runtime.
+let creditCardPaymentCategoryIdCache: string | null | undefined;
+async function getCreditCardPaymentCategoryId(): Promise<string | null> {
+  if (creditCardPaymentCategoryIdCache !== undefined) return creditCardPaymentCategoryIdCache;
+  const category = await db.category.findFirst({
+    where: { isSystem: true, type: "transfer", name: "Pagamento de Fatura de Cartão" },
+    select: { id: true },
+  });
+  creditCardPaymentCategoryIdCache = category?.id ?? null;
+  return creditCardPaymentCategoryIdCache;
+}
 
 // List transactions with filters and pagination
 app.get("/", zValidator("query", TransactionFiltersSchema), async (c) => {
@@ -118,12 +135,17 @@ app.post("/import/batch", async (c) => {
       const rows = isOfx ? parseOfxTransactions(text) : parseCsvTransactions(text);
       if (rows.length === 0) throw new Error("Nenhuma transação válida encontrada");
 
+      const creditCardPaymentCategoryId = rows.some((r) => r.type === "transfer")
+        ? await getCreditCardPaymentCategoryId()
+        : null;
+
       const created = await db.transaction.createMany({
         data: rows.map((row) => ({
           userId,
           accountId: account.id,
           groupId: account.groupId,
           type: row.type,
+          categoryId: row.type === "transfer" ? creditCardPaymentCategoryId : undefined,
           paymentMethod,
           amount: row.amount,
           description: row.description,
@@ -276,6 +298,57 @@ app.patch("/bulk-category", zValidator("json", BulkCategorizeTransactionsSchema)
   });
 
   return c.json({ updated: result.count });
+});
+
+// Sugere categoria por IA para as transações informadas — não aplica nada,
+// devolve só a sugestão; o cliente decide se chama /bulk-category ou
+// PATCH /:id para confirmar (ver docs/ajustes-pos-teste.md).
+app.post("/suggest-categories", zValidator("json", SuggestCategoriesSchema), async (c) => {
+  const userId = c.get("userId");
+  const { transactionIds } = c.req.valid("json");
+  const groupIds = await getUserGroupIds(userId);
+
+  const transactions = await db.transaction.findMany({
+    where: {
+      id: { in: transactionIds },
+      OR: [{ userId, groupId: null }, { groupId: { in: groupIds } }],
+    },
+    select: { id: true, description: true, amount: true, type: true },
+  });
+  if (transactions.length === 0) {
+    return c.json({ error: "Nenhuma transação encontrada" }, 404);
+  }
+
+  const categories = await db.category.findMany({
+    where: { OR: [{ isSystem: true }, { userId }] },
+    select: { id: true, name: true, type: true },
+  });
+
+  const suggestions = await suggestCategories(
+    transactions.map((t) => ({
+      id: t.id,
+      description: t.description,
+      amount: Number(t.amount),
+      type: t.type,
+    })),
+    categories,
+    userId
+  );
+
+  // Cache leve de confidence/merchantName pra não custar outra chamada de IA
+  // se o usuário só recarregar a tela — não grava categoryId (é sugestão, não aplicação).
+  await Promise.all(
+    suggestions
+      .filter((s) => s.confidence > 0)
+      .map((s) =>
+        db.transaction.update({
+          where: { id: s.transactionId },
+          data: { aiCategoryConfidence: s.confidence, aiMerchantName: s.merchantName },
+        })
+      )
+  );
+
+  return c.json({ suggestions });
 });
 
 // Update transaction
@@ -435,12 +508,17 @@ app.post("/import", async (c) => {
     return c.json({ error: "Nenhuma transação válida encontrada no arquivo" }, 400);
   }
 
+  const creditCardPaymentCategoryId = rows.some((r) => r.type === "transfer")
+    ? await getCreditCardPaymentCategoryId()
+    : null;
+
   const result = await db.transaction.createMany({
     data: rows.map((row) => ({
       userId,
       accountId: account.id,
       groupId: account.groupId,
       type: row.type,
+      categoryId: row.type === "transfer" ? creditCardPaymentCategoryId : undefined,
       paymentMethod,
       amount: row.amount,
       description: row.description,

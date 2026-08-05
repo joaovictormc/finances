@@ -1,4 +1,5 @@
 import type { ParsedTransaction } from "./types";
+import { isCreditCardBillPayment } from "./credit-card-payment";
 
 function extractTag(block: string, tag: string): string | null {
   const match = block.match(new RegExp(`<${tag}>([^<\\r\\n]*)`, "i"));
@@ -45,7 +46,12 @@ export function parseOfxTransactions(text: string): ParsedTransaction[] {
       date,
       description: memo,
       amount: Math.abs(amount),
-      type: amount < 0 ? "expense" : "income",
+      type:
+        amount < 0 && isCreditCardBillPayment(memo)
+          ? "transfer"
+          : amount < 0
+            ? "expense"
+            : "income",
       externalId: fitId ?? undefined,
     });
   }
