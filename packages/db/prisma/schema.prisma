@@ -102,7 +102,10 @@ model UserProfile {
   userId          String    @unique
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  cpf             String?   // encrypted at application level
+  // Nenhuma rota grava esse campo hoje (não há UI/endpoint de coleta de
+  // CPF) — quando for implementado, gravar com encryptField/decryptField
+  // de @finances/db (packages/db/src/crypto.ts), não em texto puro.
+  cpf             String?
   phoneE164       String?   // e.g. +5511999999999
   telegramChatId  BigInt?   @unique
   whatsappPhone   String?   @unique
@@ -362,7 +365,11 @@ model OpenFinanceConsent {
   status      String // AWAITING_AUTHORISATION | AUTHORISED | REJECTED | REVOKED
   permissions String[]
 
-  // Encrypted OAuth tokens (application-level encryption)
+  // Fluxo Open Finance não está implementado hoje (nenhuma rota
+  // lê/escreve esses campos — a integração ativa é via Pluggy). Se for
+  // implementado, gravar com encryptField/decryptField de @finances/db
+  // (packages/db/src/crypto.ts), nunca em texto puro — o "Enc" no nome do
+  // campo é a intenção original, não uma garantia atual.
   accessTokenEnc  String?
   refreshTokenEnc String?
   tokenExpiresAt  DateTime?

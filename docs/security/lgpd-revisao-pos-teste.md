@@ -63,6 +63,24 @@ Recomendação: substituir ou atualizar o SDK Brevo em uma entrega dedicada e
 acompanhar releases compatíveis do Expo/mobile. Não promover para exposição
 pública sem reavaliar os achados que atinjam o artefato efetivamente implantado.
 
+## Criptografia de campo (CPF / tokens Open Finance)
+
+`UserProfile.cpf` e `OpenFinanceConsent.accessTokenEnc`/`refreshTokenEnc`
+tinham comentários no schema afirmando "criptografado em nível de
+aplicação" sem nenhuma implementação real — achado corrigido:
+
+- criado `packages/db/src/crypto.ts` (`encryptField`/`decryptField`,
+  AES-256-GCM via `node:crypto`, chave em `APP_ENCRYPTION_KEY`);
+- confirmado por busca no código (`apps/`, `packages/`) que **nenhuma
+  rota lê ou grava `cpf` hoje** (não existe endpoint de coleta) e o
+  fluxo Open Finance (`accessTokenEnc`/`refreshTokenEnc`) também não
+  está implementado — a integração ativa é via Pluggy. Não há dado em
+  texto puro pra migrar porque nunca houve escrita nesses campos;
+- comentários do schema corrigidos pra não afirmar proteção que não
+  existe; quando esses campos ganharem um endpoint de escrita real, usar
+  `encryptField`/`decryptField` obrigatoriamente, nunca gravar em texto
+  puro.
+
 ## Lacunas organizacionais para LGPD
 
 Ainda precisam de definição pelo controlador:
