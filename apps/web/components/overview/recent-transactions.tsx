@@ -10,7 +10,7 @@ export function RecentTransactions({ transactions }: { transactions: Transaction
     <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-5 h-full">
       <div className="flex items-center justify-between mb-2">
         <h2 className="font-semibold text-foreground">Movimentações Recentes</h2>
-        <Link href="/transactions" className="text-xs font-medium text-primary hover:underline">
+        <Link href="/transactions" className="text-xs font-medium text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground">
           Ver tudo
         </Link>
       </div>
@@ -24,7 +24,14 @@ export function RecentTransactions({ transactions }: { transactions: Transaction
               <CategoryIcon
                 icon={t.category?.icon ?? (t.type === "income" ? "💚" : t.type === "expense" ? "💸" : "↔️")}
                 iconUrl={t.category?.iconUrl}
-                color={t.category?.color ?? (t.type === "income" ? "#22c55e" : t.type === "expense" ? "#ef4444" : "#6366f1")}
+                color={
+                  t.category?.color ??
+                  (t.type === "income"
+                    ? "var(--color-success)"
+                    : t.type === "expense"
+                      ? "var(--color-destructive)"
+                      : "var(--color-muted-foreground)")
+                }
                 size="sm"
               />
               <div className="flex-1 min-w-0">
@@ -40,7 +47,7 @@ export function RecentTransactions({ transactions }: { transactions: Transaction
               </div>
               <p
                 className={`text-sm font-semibold shrink-0 ${
-                  t.type === "income" ? "text-success" : t.type === "expense" ? "text-destructive" : "text-primary"
+                  t.type === "income" ? "text-success" : t.type === "expense" ? "text-destructive" : "text-foreground"
                 }`}
               >
                 {t.type === "expense" ? "-" : t.type === "income" ? "+" : ""}

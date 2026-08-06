@@ -43,7 +43,7 @@ export default function ForgotPasswordPage() {
           enviamos um link pra redefinir a senha. Confira sua caixa de entrada.
         </p>
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          <Link href="/login" className="font-medium text-primary hover:underline">
+          <Link href="/login" className="font-medium text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground">
             Voltar para o login
           </Link>
         </p>
@@ -77,7 +77,7 @@ export default function ForgotPasswordPage() {
       </form>
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
-        <Link href="/login" className="font-medium text-primary hover:underline">
+        <Link href="/login" className="font-medium text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground">
           Voltar para o login
         </Link>
       </p>

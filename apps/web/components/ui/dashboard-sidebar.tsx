@@ -71,7 +71,7 @@ export function DashboardSidebar() {
             {plan !== "familia" && (
               <Link
                 href="/settings/billing"
-                className="mt-0.5 block text-xs font-medium text-primary hover:underline"
+                className="mt-0.5 block text-xs font-medium text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground"
               >
                 {plan === "free" ? "Upgrade de plano →" : "Ver planos →"}
               </Link>

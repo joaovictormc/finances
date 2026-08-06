@@ -275,7 +275,7 @@ export function TransactionList({
                             ? "text-success"
                             : t.type === "expense"
                               ? "text-destructive"
-                              : "text-primary"
+                              : "text-foreground"
                         }
                       >
                         {t.type === "expense" ? "-" : t.type === "income" ? "+" : ""}
@@ -322,7 +322,11 @@ export function TransactionList({
                   iconUrl={t.category?.iconUrl}
                   color={
                     t.category?.color ??
-                    (t.type === "income" ? "#22c55e" : t.type === "expense" ? "#ef4444" : "#6366f1")
+                    (t.type === "income"
+                      ? "var(--color-success)"
+                      : t.type === "expense"
+                        ? "var(--color-destructive)"
+                        : "var(--color-muted-foreground)")
                   }
                 />
                 <div className="flex-1 min-w-0">
@@ -351,7 +355,7 @@ export function TransactionList({
                 <div className="text-right shrink-0">
                   <p
                     className={`text-sm font-semibold ${
-                      t.type === "income" ? "text-success" : t.type === "expense" ? "text-destructive" : "text-primary"
+                      t.type === "income" ? "text-success" : t.type === "expense" ? "text-destructive" : "text-foreground"
                     }`}
                   >
                     {t.type === "expense" ? "-" : t.type === "income" ? "+" : ""}

@@ -60,7 +60,7 @@ function VerifyEmailContent() {
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
         Já confirmou?{" "}
-        <Link href="/login" className="font-medium text-primary hover:underline">
+        <Link href="/login" className="font-medium text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground">
           Entrar
         </Link>
       </p>

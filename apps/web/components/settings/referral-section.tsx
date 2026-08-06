@@ -38,7 +38,7 @@ export function ReferralSection() {
   return (
     <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
       <div className="flex items-center gap-2 mb-1">
-        <Gift size={16} className="text-primary" />
+        <Gift size={16} className="text-muted-foreground" />
         <h2 className="text-base font-semibold">Indique e ganhe</h2>
       </div>
       <p className="text-sm text-muted-foreground mb-4">

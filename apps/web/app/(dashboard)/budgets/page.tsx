@@ -76,8 +76,8 @@ export default function BudgetsPage() {
       </div>
 
       {/* Onboarding explanation */}
-      <div className="mb-6 flex gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
-        <Info size={18} className="text-primary shrink-0 mt-0.5" />
+      <div className="mb-6 flex gap-3 rounded-lg border border-border bg-muted/50 p-4">
+        <Info size={18} className="text-muted-foreground shrink-0 mt-0.5" />
         <div className="text-sm">
           <p className="font-medium text-foreground">O que são orçamentos?</p>
           <p className="text-muted-foreground mt-1">

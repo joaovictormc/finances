@@ -43,7 +43,7 @@ export default function AdminPage() {
             href={s.href}
             className="bg-card rounded-2xl border border-border/60 shadow-sm p-5 transition-shadow hover:shadow-md flex items-start gap-4"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
               <s.icon size={18} />
             </div>
             <div className="flex-1">

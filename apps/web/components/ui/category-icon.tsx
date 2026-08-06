@@ -20,7 +20,7 @@ export function CategoryIcon({ icon, iconUrl, color, size = "md", className }: C
   return (
     <div
       className={cn(
-        "flex items-center justify-center shrink-0 bg-white shadow-sm overflow-hidden",
+        "flex items-center justify-center shrink-0 bg-card border border-border overflow-hidden",
         box,
         text,
         className

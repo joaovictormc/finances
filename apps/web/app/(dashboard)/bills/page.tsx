@@ -116,11 +116,11 @@ export default function BillsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className={cn("font-medium", featured ? "text-primary-foreground" : "text-foreground")}>{b.name}</p>
+                        <p className={cn("font-medium", featured ? "text-background" : "text-foreground")}>{b.name}</p>
                         {!featured && getDueBadge(b)}
                         {!b.isActive && <Badge variant="default">Inativa</Badge>}
                       </div>
-                      <p className={cn("text-xs mt-0.5", featured ? "text-primary-foreground/75" : "text-muted-foreground")}>
+                      <p className={cn("text-xs mt-0.5", featured ? "text-background/75" : "text-muted-foreground")}>
                         {frequencyLabels[b.frequency] ?? b.frequency}
                         {b.dayOfMonth && ` · Todo dia ${b.dayOfMonth}`}
                         {b.nextDueDate && ` · Próximo: ${formatDate(b.nextDueDate)}`}
@@ -128,15 +128,15 @@ export default function BillsPage() {
                     </div>
                     <div className="text-right shrink-0">
                       {b.expectedAmount ? (
-                        <p className={cn("font-semibold", featured ? "text-primary-foreground" : "text-foreground")}>{formatBRL(Number(b.expectedAmount))}</p>
+                        <p className={cn("font-semibold", featured ? "text-background" : "text-foreground")}>{formatBRL(Number(b.expectedAmount))}</p>
                       ) : (
-                        <p className={cn("text-sm", featured ? "text-primary-foreground/75" : "text-muted-foreground")}>Valor variável</p>
+                        <p className={cn("text-sm", featured ? "text-background/75" : "text-muted-foreground")}>Valor variável</p>
                       )}
                       <div className="flex gap-1 justify-end mt-1">
-                        <button onClick={() => openEdit(b)} className={cn("text-xs px-2 py-1 rounded transition-colors", featured ? "text-primary-foreground/80 hover:bg-white/15" : "text-muted-foreground hover:bg-accent")}>
+                        <button onClick={() => openEdit(b)} className={cn("text-xs px-2 py-1 rounded transition-colors", featured ? "text-background/80 hover:bg-background/15" : "text-muted-foreground hover:bg-accent")}>
                           Editar
                         </button>
-                        <button onClick={() => handleDelete(b.id)} className={cn("text-xs px-2 py-1 rounded transition-colors", featured ? "text-primary-foreground/80 hover:bg-white/15" : "text-muted-foreground hover:text-destructive hover:bg-destructive/10")}>
+                        <button onClick={() => handleDelete(b.id)} className={cn("text-xs px-2 py-1 rounded transition-colors", featured ? "text-background/80 hover:bg-background/15" : "text-muted-foreground hover:text-destructive hover:bg-destructive/10")}>
                           Remover
                         </button>
                       </div>

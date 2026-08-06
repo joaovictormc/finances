@@ -20,7 +20,7 @@ export function BotIntegrationGate() {
   if (!hasIntegrations) {
     return (
       <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-8 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
           <Lock size={20} />
         </div>
         <h2 className="font-semibold mb-1">Disponível nos planos Pro e Família</h2>

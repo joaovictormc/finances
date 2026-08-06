@@ -38,7 +38,7 @@ export function InsightsPanel() {
   return (
     <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-5 mb-6">
       <div className="flex items-center gap-2 mb-3">
-        <Lightbulb size={18} className="text-primary" />
+        <Lightbulb size={18} className="text-muted-foreground" />
         <h2 className="font-semibold text-foreground">Insights</h2>
       </div>
       <div className="space-y-2">

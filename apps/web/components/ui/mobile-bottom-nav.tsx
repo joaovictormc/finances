@@ -42,14 +42,15 @@ export function MobileBottomNav() {
           ))}
 
           <div className="flex-1 h-full flex items-center justify-center">
+            {/* Botão "mais opções": neutro e flat de propósito — o amarelo-marcador já
+                está reservado para o item de nav ativo (ver DESIGN.md, The One Marker
+                Rule); um FAB permanente com a mesma cor competiria com ele. */}
             <button
               onClick={() => setMoreOpen(true)}
               aria-label="Mais opções"
-              className="relative -mt-6 w-12 h-12 rounded-full flex items-center justify-center text-white shrink-0"
-              style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-highlight))" }}
+              className="relative -mt-6 w-12 h-12 rounded-full flex items-center justify-center bg-foreground text-background shrink-0"
             >
-              <span className="absolute inset-0 -z-10 rounded-full bg-primary/40 blur-lg scale-125" />
-              <span className="text-lg relative z-10">◆</span>
+              <span className="text-lg">◆</span>
             </button>
           </div>
 

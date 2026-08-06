@@ -8,7 +8,7 @@ import { Spinner } from "@/components/ui/spinner";
 export function RouteLoading() {
   return (
     <div className="flex min-h-[50vh] items-center justify-center" role="status" aria-label="Carregando">
-      <Spinner size="lg" className="text-primary" />
+      <Spinner size="lg" className="text-muted-foreground" />
     </div>
   );
 }

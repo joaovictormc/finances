@@ -94,7 +94,7 @@ export default function GroupsPage() {
               className="bg-card rounded-2xl border border-border/60 shadow-sm p-5 transition-shadow hover:shadow-md"
             >
               <div className="flex items-center gap-3 mb-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
                   <Users size={18} />
                 </div>
                 <div className="min-w-0">

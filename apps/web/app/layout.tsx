@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Plus_Jakarta_Sans, Inter, IBM_Plex_Mono } from "next/font/google";
 import { ThemeProvider } from "./providers/theme-provider";
 import "./globals.css";
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
+// Trio tipográfico da direção "Fechamento de Caixa" (ver DESIGN.md):
+// display para títulos, body para texto de interface, mono para todo
+// número financeiro (tabular-nums, alinhado como planilha).
+const displayFont = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-display" });
+const bodyFont = Inter({ subsets: ["latin"], variable: "--font-body" });
+const ledgerMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   title: { default: "ControlAI", template: "%s | ControlAI" },
@@ -24,12 +29,18 @@ export const metadata: Metadata = {
 };
 
 export const viewport = {
-  themeColor: "#6366f1",
+  // Grafite quase-preto da direção "Fechamento de Caixa" (ver DESIGN.md) —
+  // substitui o indigo #6366f1 da identidade anterior.
+  themeColor: "#1C1C1E",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${geist.variable} h-full antialiased`} suppressHydrationWarning>
+    <html
+      lang="pt-BR"
+      className={`${displayFont.variable} ${bodyFont.variable} ${ledgerMono.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{

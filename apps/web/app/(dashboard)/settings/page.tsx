@@ -24,9 +24,9 @@ export default function SettingsPage() {
         {/* Billing section */}
         <Link
           href="/settings/billing"
-          className="flex items-center gap-4 bg-card rounded-2xl border border-border/60 shadow-sm p-6 hover:border-primary/40 transition-colors"
+          className="flex items-center gap-4 bg-card rounded-2xl border border-border/60 shadow-sm p-6 hover:border-foreground/30 transition-colors"
         >
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/15 text-primary shrink-0">
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-muted text-muted-foreground shrink-0">
             <CreditCard size={18} />
           </div>
           <div className="flex-1">

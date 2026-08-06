@@ -30,20 +30,20 @@ export function UpcomingBills({ bills }: { bills: RecurringBill[] }) {
                 key={b.id}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 py-2.5",
-                  featured ? "bg-primary text-primary-foreground" : "bg-muted/60"
+                  featured ? "bg-foreground text-background" : "bg-muted/60"
                 )}
               >
-                <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-sm shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center text-sm shrink-0">
                   {b.category?.icon ?? "📄"}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={cn("text-sm font-medium truncate", featured ? "text-primary-foreground" : "text-foreground")}>{b.name}</p>
-                  <p className={cn("text-xs", featured ? "text-primary-foreground/75" : "text-muted-foreground")}>
+                  <p className={cn("text-sm font-medium truncate", featured ? "text-background" : "text-foreground")}>{b.name}</p>
+                  <p className={cn("text-xs", featured ? "text-background/75" : "text-muted-foreground")}>
                     {days < 0 ? `Vencida há ${Math.abs(days)}d` : days === 0 ? "Vence hoje" : `${formatDate(b.nextDueDate!)} · ${days}d`}
                   </p>
                 </div>
                 {b.expectedAmount && (
-                  <p className={cn("text-sm font-semibold shrink-0", featured ? "text-primary-foreground" : "text-foreground")}>
+                  <p className={cn("text-sm font-semibold shrink-0", featured ? "text-background" : "text-foreground")}>
                     {formatBRL(Number(b.expectedAmount))}
                   </p>
                 )}

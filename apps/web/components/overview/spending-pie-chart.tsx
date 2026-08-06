@@ -20,8 +20,12 @@ interface SpendingPieChartProps {
   totalExpense: number;
 }
 
+// Paleta categórica do gráfico de gastos por categoria: precisa distinguir
+// N categorias simultâneas, então foge da paleta restrita de status/marca
+// (ver DESIGN.md) por natureza — mas troca a #6366f1 antiga (indigo da
+// identidade anterior, anti-referência) por um tom neutro-azulado.
 const SLICE_COLORS = [
-  "#6366f1", "#22c55e", "#f59e0b", "#ef4444",
+  "#64748b", "#22c55e", "#f59e0b", "#ef4444",
   "#8b5cf6", "#06b6d4", "#f97316", "#ec4899",
 ];
 

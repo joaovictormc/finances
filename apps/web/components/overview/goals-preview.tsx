@@ -11,7 +11,7 @@ export function GoalsPreview({ goals }: { goals: Goal[] }) {
     <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-5 h-full">
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-semibold text-foreground">Metas de Poupança</h2>
-        <Link href="/goals" className="text-xs font-medium text-primary hover:underline">
+        <Link href="/goals" className="text-xs font-medium text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground">
           Ver tudo
         </Link>
       </div>

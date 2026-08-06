@@ -55,7 +55,7 @@ function ResetPasswordForm() {
           Peça um novo link de redefinição de senha.
         </p>
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          <Link href="/forgot-password" className="font-medium text-primary hover:underline">
+          <Link href="/forgot-password" className="font-medium text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground">
             Esqueci minha senha
           </Link>
         </p>

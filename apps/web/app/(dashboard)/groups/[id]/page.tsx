@@ -138,7 +138,7 @@ export default function GroupDetailPage() {
     <div>
       <div className="mb-6 flex items-start justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
             <Users size={20} />
           </div>
           <div>

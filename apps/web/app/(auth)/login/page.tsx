@@ -153,7 +153,7 @@ function LoginForm() {
         />
 
         <p className="-mt-2 text-right text-sm">
-          <Link href="/forgot-password" className="font-medium text-primary hover:underline">
+          <Link href="/forgot-password" className="font-medium text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground">
             Esqueci minha senha
           </Link>
         </p>
@@ -183,7 +183,7 @@ function LoginForm() {
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
         Não tem conta?{" "}
-        <Link href="/register" className="font-medium text-primary hover:underline">
+        <Link href="/register" className="font-medium text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground">
           Criar conta
         </Link>
       </p>
