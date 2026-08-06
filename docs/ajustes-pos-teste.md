@@ -19,6 +19,8 @@
 
 - Usar Skill: https://github.com/pbakaus/impeccable para refatorar o frontend deixando um visual exclusivo e diferente na web e mobile
 
+- Ajuste nas telas de novas operações como: novas transações, novo orçamento, nova meta, nova conta a pagar, nova conta bancária, criar grupo. Ao invés de abrir uma aba lateral, podemos optar por uma tela flutuante sobrepondo a tela princiapl com o fundo desfocado
+
 
 ### Ajustes do backend
 - Como estou testando a aplicação em ambiente diferente do de desenvolvimento, as categorias de transações não estão aparecendo nesse ambiente
