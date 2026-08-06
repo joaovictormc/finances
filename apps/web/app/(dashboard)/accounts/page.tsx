@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Drawer } from "@/components/ui/drawer";
+import { Modal } from "@/components/ui/modal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { CategoryIcon } from "@/components/ui/category-icon";
@@ -228,14 +229,14 @@ export default function AccountsPage() {
         </div>
       )}
 
-      <Drawer open={drawerOpen} onClose={closeDrawer} title={editing ? "Editar Conta" : "Nova Conta"}>
+      <Modal open={drawerOpen} onClose={closeDrawer} title={editing ? "Editar Conta" : "Nova Conta"}>
         <AccountForm
           key={formKey}
           account={editing}
           groups={groups}
           onSuccess={() => { closeDrawer(); load(); }}
         />
-      </Drawer>
+      </Modal>
 
       <Drawer
         open={importingAccount !== null}

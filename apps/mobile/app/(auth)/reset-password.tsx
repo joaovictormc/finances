@@ -114,7 +114,7 @@ export default function ResetPasswordScreen() {
         className="mt-4 items-center rounded-md bg-primary py-3 dark:bg-primary-dark"
       >
         {loading ? (
-          <ActivityIndicator color="#14142B" />
+          <ActivityIndicator color="#1C1C1E" />
         ) : (
           <Text className="font-medium text-primary-foreground dark:text-primary-foreground-dark">
             Redefinir senha

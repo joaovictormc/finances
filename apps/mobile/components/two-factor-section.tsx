@@ -179,7 +179,7 @@ export function TwoFactorSection() {
             className="flex-1 items-center rounded-md bg-primary py-3 dark:bg-primary-dark"
           >
             {loading ? (
-              <ActivityIndicator color="#14142B" />
+              <ActivityIndicator color="#1C1C1E" />
             ) : (
               <Text className="text-sm font-medium text-primary-foreground dark:text-primary-foreground-dark">
                 Confirmar
@@ -214,7 +214,7 @@ export function TwoFactorSection() {
             className={`flex-1 items-center rounded-md py-3 ${isDisabling ? "bg-destructive" : "bg-primary dark:bg-primary-dark"}`}
           >
             {loading ? (
-              <ActivityIndicator color={isDisabling ? "#fff" : "#14142B"} />
+              <ActivityIndicator color={isDisabling ? "#fff" : "#1C1C1E"} />
             ) : (
               <Text
                 className={`text-sm font-medium ${isDisabling ? "text-white" : "text-primary-foreground dark:text-primary-foreground-dark"}`}

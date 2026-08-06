@@ -11,7 +11,7 @@ import { formatBRL } from "@/lib/format";
 import type { MonthlyReport, Transaction, PaginatedResponse } from "@/lib/types";
 
 // Paleta de fatias no espírito Finans: amarelo de marca primeiro, depois apoios.
-const SLICE_COLORS = ["#FEDC33", "#14142B", "#22c55e", "#95A4B7", "#8b5cf6", "#06b6d4", "#f97316", "#ec4899"];
+const SLICE_COLORS = ["#FFC300", "#1C1C1E", "#22c55e", "#A6A5A0", "#8b5cf6", "#06b6d4", "#f97316", "#ec4899"];
 
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -132,9 +132,9 @@ export default function OverviewScreen() {
       </View>
 
       {/* Hero card: saldo do mês */}
-      <View className="mb-4 rounded-2xl p-5" style={{ backgroundColor: "#14142B" }}>
+      <View className="mb-4 rounded-2xl p-5" style={{ backgroundColor: "#1C1C1E" }}>
         <View className="flex-row items-center justify-between">
-          <Text className="text-xs font-medium" style={{ color: "#95A4B7" }}>
+          <Text className="text-xs font-medium" style={{ color: "#A6A5A0" }}>
             Saldo do mês
           </Text>
           <View className="flex-row items-center gap-1">
@@ -144,10 +144,10 @@ export default function OverviewScreen() {
               className="h-6 w-6 items-center justify-center rounded-full"
               style={{ backgroundColor: "rgba(255,255,255,0.08)" }}
             >
-              <Ionicons name="chevron-back" size={14} color="#95A4B7" />
+              <Ionicons name="chevron-back" size={14} color="#A6A5A0" />
             </Pressable>
-            <View className="rounded-full px-3 py-1" style={{ backgroundColor: "rgba(254,220,51,0.16)" }}>
-              <Text className="text-[11px] font-semibold" style={{ color: "#FEDC33" }}>
+            <View className="rounded-full px-3 py-1" style={{ backgroundColor: "rgba(255,195,0,0.16)" }}>
+              <Text className="text-[11px] font-semibold" style={{ color: "#FFC300" }}>
                 {monthLabel}
               </Text>
             </View>
@@ -158,7 +158,7 @@ export default function OverviewScreen() {
               className="h-6 w-6 items-center justify-center rounded-full"
               style={{ backgroundColor: "rgba(255,255,255,0.08)", opacity: isCurrentMonth ? 0.3 : 1 }}
             >
-              <Ionicons name="chevron-forward" size={14} color="#95A4B7" />
+              <Ionicons name="chevron-forward" size={14} color="#A6A5A0" />
             </Pressable>
           </View>
         </View>
@@ -170,7 +170,7 @@ export default function OverviewScreen() {
               <Ionicons name="arrow-down" size={16} color={colors.success} />
             </View>
             <View>
-              <Text className="text-[11px]" style={{ color: "#95A4B7" }}>Receitas</Text>
+              <Text className="text-[11px]" style={{ color: "#A6A5A0" }}>Receitas</Text>
               <Text className="text-sm font-semibold text-white">{formatBRL(income)}</Text>
             </View>
           </View>
@@ -179,7 +179,7 @@ export default function OverviewScreen() {
               <Ionicons name="arrow-up" size={16} color={colors.destructive} />
             </View>
             <View>
-              <Text className="text-[11px]" style={{ color: "#95A4B7" }}>Gastos</Text>
+              <Text className="text-[11px]" style={{ color: "#A6A5A0" }}>Gastos</Text>
               <Text className="text-sm font-semibold text-white">{formatBRL(expense)}</Text>
             </View>
           </View>

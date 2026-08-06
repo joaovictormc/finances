@@ -137,7 +137,7 @@ export default function NewBudgetScreen() {
         className="items-center rounded-md bg-primary py-3"
       >
         {saving ? (
-          <ActivityIndicator color="#14142B" />
+          <ActivityIndicator color="#1C1C1E" />
         ) : (
           <Text className="font-semibold text-primary-foreground">Salvar</Text>
         )}

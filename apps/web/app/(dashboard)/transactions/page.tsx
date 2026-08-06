@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { TransactionFilters } from "@/components/transactions/transaction-filters";
 import { TransactionList } from "@/components/transactions/transaction-list";
 import { TransactionForm } from "@/components/transactions/transaction-form";
-import { Drawer } from "@/components/ui/drawer";
+import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast-provider";
@@ -303,7 +303,7 @@ export default function TransactionsPage() {
         </div>
       )}
 
-      <Drawer
+      <Modal
         open={drawerOpen}
         onClose={closeDrawer}
         title={editing ? "Editar Transação" : "Nova Transação"}
@@ -316,7 +316,7 @@ export default function TransactionsPage() {
           groups={groups}
           onSuccess={handleSuccess}
         />
-      </Drawer>
+      </Modal>
     </div>
   );
 }

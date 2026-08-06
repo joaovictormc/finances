@@ -89,14 +89,16 @@ export function FinansTabBar({ state, descriptors, navigation }: TabBarProps) {
             backgroundColor: colors.primary,
             alignItems: "center",
             justifyContent: "center",
-            shadowColor: colors.primary,
-            shadowOpacity: 0.45,
-            shadowRadius: 12,
-            shadowOffset: { width: 0, height: 6 },
+            // Sombra estrutural neutra (indica o FAB fixo/sobreposto), não um
+            // halo decorativo na cor do marcador — ver DESIGN.md, Flat Ledger Rule.
+            shadowColor: "#000000",
+            shadowOpacity: 0.2,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 4 },
             elevation: 8,
           }}
         >
-          <Ionicons name="add" size={32} color="#14142B" />
+          <Ionicons name="add" size={32} color="#1C1C1E" />
         </Pressable>
       </View>
 

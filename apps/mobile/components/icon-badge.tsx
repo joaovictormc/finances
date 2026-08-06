@@ -17,7 +17,7 @@ export function IconBadge({ icon, color, size = "md" }: IconBadgeProps) {
   return (
     <View
       style={{ width: box, height: box, borderRadius: box / 2 }}
-      className="items-center justify-center bg-white shrink-0"
+      className="items-center justify-center bg-card border border-border dark:bg-card-dark dark:border-border-dark shrink-0"
     >
       <Text style={{ fontSize: text, color: color ?? undefined }}>{icon ?? "•"}</Text>
     </View>

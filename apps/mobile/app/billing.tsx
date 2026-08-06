@@ -207,7 +207,7 @@ export default function BillingScreen() {
                     className="items-center rounded-md bg-primary py-3 dark:bg-primary-dark"
                   >
                     {actionPlan === plan.id ? (
-                      <ActivityIndicator color="#14142B" />
+                      <ActivityIndicator color="#1C1C1E" />
                     ) : (
                       <Text className="text-sm font-medium text-primary-foreground dark:text-primary-foreground-dark">
                         Assinar {plan.name}

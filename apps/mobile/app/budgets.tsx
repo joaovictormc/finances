@@ -12,7 +12,7 @@ import type { Budget } from "@/lib/types";
 function barColor(b: Budget): string {
   if (b.isOverBudget) return "#ef4444";
   if (b.isNearLimit) return "#f59e0b";
-  return "#FEDC33";
+  return "#FFC300";
 }
 
 export default function BudgetsScreen() {
@@ -36,7 +36,7 @@ export default function BudgetsScreen() {
           onPress={() => router.push("/new-budget")}
           className="flex-row items-center gap-1 rounded-full bg-primary px-3 py-2"
         >
-          <Ionicons name="add" size={16} color="#14142B" />
+          <Ionicons name="add" size={16} color="#1C1C1E" />
           <Text className="text-sm font-semibold text-primary-foreground">Novo Orçamento</Text>
         </Pressable>
       </View>

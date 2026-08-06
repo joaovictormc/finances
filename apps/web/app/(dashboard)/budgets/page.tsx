@@ -5,7 +5,7 @@ import { PiggyBank, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Drawer } from "@/components/ui/drawer";
+import { Modal } from "@/components/ui/modal";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { CategoryIcon } from "@/components/ui/category-icon";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -178,7 +178,7 @@ export default function BudgetsPage() {
         </div>
       )}
 
-      <Drawer open={drawerOpen} onClose={closeDrawer} title={editing ? "Editar Orçamento" : "Novo Orçamento"}>
+      <Modal open={drawerOpen} onClose={closeDrawer} title={editing ? "Editar Orçamento" : "Novo Orçamento"}>
         <BudgetForm
           key={formKey}
           budget={editing}
@@ -188,7 +188,7 @@ export default function BudgetsPage() {
           month={month}
           onSuccess={() => { closeDrawer(); load(); }}
         />
-      </Drawer>
+      </Modal>
     </div>
   );
 }

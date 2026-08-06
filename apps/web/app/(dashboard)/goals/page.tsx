@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Select } from "@/components/ui/select";
-import { Drawer } from "@/components/ui/drawer";
+import { Modal } from "@/components/ui/modal";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { CategoryIcon } from "@/components/ui/category-icon";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -169,14 +169,14 @@ export default function GoalsPage() {
         </div>
       )}
 
-      <Drawer open={drawerOpen} onClose={closeDrawer} title={editing ? "Editar Meta" : "Nova Meta"}>
+      <Modal open={drawerOpen} onClose={closeDrawer} title={editing ? "Editar Meta" : "Nova Meta"}>
         <GoalForm
           key={formKey}
           goal={editing}
           groups={groups}
           onSuccess={() => { closeDrawer(); load(); }}
         />
-      </Drawer>
+      </Modal>
     </div>
   );
 }

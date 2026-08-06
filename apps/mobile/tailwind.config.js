@@ -1,4 +1,5 @@
-// Paleta convertida de apps/web/app/globals.css (OKLCH → hex aproximado).
+// Paleta convertida de apps/web/app/globals.css (OKLCH → hex aproximado),
+// direção "Fechamento de Caixa" (ver apps/web/DESIGN.md).
 // NativeWind não lê variáveis CSS OKLCH nem `.dark` por classe — o tema
 // escuro é selecionado via `darkMode: "class"` + provider do NativeWind.
 /** @type {import('tailwindcss').Config} */
@@ -8,21 +9,24 @@ module.exports = {
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
-      // Paleta "Finans" (layouts/Finans - Finance Mobile App):
-      // primary = amarelo de marca, navy para texto/superfícies escuras.
+      // Base neutra grafite/papel; azul/vermelho reservados para status
+      // financeiro ("no azul"/"no vermelho"); amarelo-marcador como única
+      // cor de assinatura, usada com raridade (The One Marker Rule).
       colors: {
-        background: { DEFAULT: "#fafafa", dark: "#0f0f12" },
-        foreground: { DEFAULT: "#14142B", dark: "#ededed" },
-        card: { DEFAULT: "#ffffff", dark: "#1a1a1e" },
-        muted: { DEFAULT: "#f1f1f3", dark: "#262629" },
-        "muted-foreground": { DEFAULT: "#71717a", dark: "#a1a1aa" },
-        border: { DEFAULT: "#e4e4e7", dark: "#2e2e33" },
-        primary: { DEFAULT: "#FEDC33", dark: "#FEDC33" },
-        "primary-foreground": { DEFAULT: "#14142B", dark: "#14142B" },
-        navy: { DEFAULT: "#14142B", dark: "#ededed" },
-        "tab-inactive": { DEFAULT: "#95A4B7", dark: "#6b7787" },
-        destructive: { DEFAULT: "#ef4444", dark: "#f87171" },
-        success: { DEFAULT: "#22c55e", dark: "#4ade80" },
+        background: { DEFAULT: "#FAFAF9", dark: "#1C1C1E" },
+        foreground: { DEFAULT: "#1C1C1E", dark: "#F5F5F3" },
+        card: { DEFAULT: "#FDFDFC", dark: "#232326" },
+        muted: { DEFAULT: "#EDEDEA", dark: "#2A2A2E" },
+        "muted-foreground": { DEFAULT: "#6B6B70", dark: "#9E9EA3" },
+        border: { DEFAULT: "#D6D5D0", dark: "#38383D" },
+        primary: { DEFAULT: "#FFC300", dark: "#FFC300" },
+        "primary-foreground": { DEFAULT: "#1C1C1E", dark: "#1C1C1E" },
+        navy: { DEFAULT: "#1C1C1E", dark: "#F5F5F3" },
+        "tab-inactive": { DEFAULT: "#A6A5A0", dark: "#6E6E73" },
+        destructive: { DEFAULT: "#DC2626", dark: "#F87171" },
+        // "success" mapeia pro azul-no-azul (status positivo) — mesmo
+        // significado do idiomatismo usado no web, não é mais verde.
+        success: { DEFAULT: "#2563EB", dark: "#60A5FA" },
       },
     },
   },

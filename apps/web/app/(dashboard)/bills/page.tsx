@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
 import { Select } from "@/components/ui/select";
 import { CurrencyInput } from "@/components/ui/currency-input";
-import { Drawer } from "@/components/ui/drawer";
+import { Modal } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
@@ -149,13 +149,13 @@ export default function BillsPage() {
         })()
       )}
 
-      <Drawer open={drawerOpen} onClose={closeDrawer} title={editing ? "Editar Conta" : "Nova Conta Recorrente"}>
+      <Modal open={drawerOpen} onClose={closeDrawer} title={editing ? "Editar Conta" : "Nova Conta Recorrente"}>
         <BillForm
           key={formKey}
           bill={editing}
           onSuccess={() => { closeDrawer(); load(); }}
         />
-      </Drawer>
+      </Modal>
     </div>
   );
 }

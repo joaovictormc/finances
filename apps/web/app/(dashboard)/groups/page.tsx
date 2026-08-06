@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Users, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Drawer } from "@/components/ui/drawer";
+import { Modal } from "@/components/ui/modal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
@@ -113,13 +113,13 @@ export default function GroupsPage() {
         </div>
       )}
 
-      <Drawer open={createOpen} onClose={() => setCreateOpen(false)} title="Criar grupo">
+      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Criar grupo">
         <CreateGroupForm onSuccess={() => { setCreateOpen(false); load(); }} />
-      </Drawer>
+      </Modal>
 
-      <Drawer open={joinOpen} onClose={() => setJoinOpen(false)} title="Entrar em um grupo">
+      <Modal open={joinOpen} onClose={() => setJoinOpen(false)} title="Entrar em um grupo">
         <JoinGroupForm onSuccess={() => { setJoinOpen(false); load(); }} />
-      </Drawer>
+      </Modal>
     </div>
   );
 }

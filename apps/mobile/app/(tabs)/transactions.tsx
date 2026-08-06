@@ -134,12 +134,18 @@ export default function TransactionsScreen() {
               >
                 <View
                   className="h-10 w-10 items-center justify-center rounded-full"
-                  style={{ backgroundColor: isIncome ? "rgba(34,197,94,0.14)" : "rgba(20,20,43,0.06)" }}
+                  style={{
+                    backgroundColor: isIncome
+                      ? "rgba(37,99,235,0.14)"
+                      : isExpense
+                        ? "rgba(220,38,38,0.14)"
+                        : "rgba(28,28,30,0.06)",
+                  }}
                 >
                   <Ionicons
                     name={isIncome ? "arrow-down" : isExpense ? "arrow-up" : "swap-horizontal"}
                     size={18}
-                    color={isIncome ? "#22c55e" : colors.foreground}
+                    color={isIncome ? colors.success : isExpense ? colors.destructive : colors.mutedForeground}
                   />
                 </View>
                 <View className="flex-1">
@@ -151,7 +157,7 @@ export default function TransactionsScreen() {
                 </View>
                 <Text
                   className="text-sm font-bold"
-                  style={{ color: isIncome ? "#22c55e" : isExpense ? colors.foreground : "#95A4B7" }}
+                  style={{ color: isIncome ? colors.success : isExpense ? colors.destructive : colors.mutedForeground }}
                 >
                   {isExpense ? "-" : isIncome ? "+" : ""}
                   {formatBRL(Number(t.amount))}

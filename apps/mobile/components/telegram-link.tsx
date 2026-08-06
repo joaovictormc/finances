@@ -94,7 +94,7 @@ export function TelegramLink() {
           className="items-center justify-center rounded-md bg-primary px-4 dark:bg-primary-dark"
         >
           {submitting ? (
-            <ActivityIndicator color="#14142B" />
+            <ActivityIndicator color="#1C1C1E" />
           ) : (
             <Text className="text-sm font-medium text-primary-foreground dark:text-primary-foreground-dark">
               Vincular

@@ -195,7 +195,7 @@ export default function SettingsScreen() {
           className="items-center rounded-md bg-primary py-3 dark:bg-primary-dark"
         >
           {savingProfile ? (
-            <ActivityIndicator color="#14142B" />
+            <ActivityIndicator color="#1C1C1E" />
           ) : (
             <Text className="text-sm font-medium text-primary-foreground dark:text-primary-foreground-dark">
               Salvar perfil
@@ -278,10 +278,10 @@ export default function SettingsScreen() {
           className="flex-row items-center justify-center gap-2 rounded-md bg-primary py-3 dark:bg-primary-dark"
         >
           {downloading ? (
-            <ActivityIndicator color="#14142B" />
+            <ActivityIndicator color="#1C1C1E" />
           ) : (
             <>
-              <Ionicons name="download-outline" size={16} color="#14142B" />
+              <Ionicons name="download-outline" size={16} color="#1C1C1E" />
               <Text className="text-sm font-medium text-primary-foreground dark:text-primary-foreground-dark">
                 Baixar PDF
               </Text>
@@ -341,7 +341,7 @@ export default function SettingsScreen() {
                   >
                     <Text className="text-sm text-foreground dark:text-foreground-dark">{r.referredName}</Text>
                     <Text
-                      className={`text-xs ${r.rewardGranted ? "text-green-600" : "text-muted-foreground dark:text-muted-foreground-dark"}`}
+                      className={`text-xs ${r.rewardGranted ? "text-success dark:text-success-dark" : "text-muted-foreground dark:text-muted-foreground-dark"}`}
                     >
                       {r.rewardGranted ? "Recompensa concedida" : "Aguardando assinatura"}
                     </Text>

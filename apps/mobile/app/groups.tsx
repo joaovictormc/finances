@@ -42,7 +42,7 @@ export default function GroupsScreen() {
           onPress={() => router.push("/new-group")}
           className="flex-row items-center gap-1 rounded-full bg-primary px-3 py-2"
         >
-          <Ionicons name="add" size={16} color="#14142B" />
+          <Ionicons name="add" size={16} color="#1C1C1E" />
           <Text className="text-sm font-semibold text-primary-foreground">Novo Grupo</Text>
         </Pressable>
       </View>

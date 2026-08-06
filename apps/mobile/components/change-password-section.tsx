@@ -83,7 +83,7 @@ export function ChangePasswordSection() {
         className="items-center rounded-md bg-primary py-3 dark:bg-primary-dark"
       >
         {saving ? (
-          <ActivityIndicator color="#14142B" />
+          <ActivityIndicator color="#1C1C1E" />
         ) : (
           <Text className="text-sm font-medium text-primary-foreground dark:text-primary-foreground-dark">
             Trocar senha
@@ -101,7 +101,7 @@ export function ChangePasswordSection() {
           className="items-center rounded-md border border-border py-3 dark:border-border-dark"
         >
           {sendingReset ? (
-            <ActivityIndicator color="#14142B" />
+            <ActivityIndicator color="#1C1C1E" />
           ) : (
             <Text className="text-sm font-medium text-foreground dark:text-foreground-dark">
               Enviar e-mail para redefinir senha
