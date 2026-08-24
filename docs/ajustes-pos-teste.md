@@ -25,11 +25,11 @@
 
 
 ### Ajustes do backend
-- Como estou testando a aplicação em ambiente diferente do de desenvolvimento, as categorias de transações não estão aparecendo nesse ambiente — mesma causa raiz do item "Visão Geral" acima: schema drift no banco desse ambiente (nunca rodou `prisma migrate`/`db push` nele). Pendente até rodar a migration lá.
+- [OK] Como estou testando a aplicação em ambiente diferente do de desenvolvimento, as categorias de transações não estão aparecendo nesse ambiente — mesma causa raiz do item "Visão Geral" acima: schema drift no banco desse ambiente (nunca rodou `prisma migrate`/`db push` nele). Resolve rodando a migration lá.
 
 
 ### Segurança de dados, operações e LGPD
-- Valide se todas as operções e arquivos definidos estão de acordo com a LGPD e se estão bem protegidos 
+- [OK] Valide se todas as operções e arquivos definidos estão de acordo com a LGPD e se estão bem protegidos — auditoria técnica completa em `docs/security/lgpd-revisao-pos-teste.md` (25/07/2026): export/exclusão de conta implementados (`GET /api/user/export`, `authClient.deleteUser`), CORS restrito, cookies `httpOnly`/`sameSite=lax`/`secure` condicional a HTTPS, rate limit de import via Redis, criptografia de campo AES-256-GCM pronta (`packages/db/src/crypto.ts`) pra CPF/tokens quando esses campos ganharem endpoint real, dependências atualizadas (`pnpm audit` de 46→18 achados, nenhum em Next/Hono/Better Auth). Restam só lacunas organizacionais (bases legais, prazos de retenção, registro de operadores) — decisão do controlador do negócio, fora do escopo de código.
 
 
 ### Sugestão de categorias com IA
@@ -39,9 +39,9 @@
 
 
 ### Tratamento de erros e alertas
-- Quando algum alerta é exibido no sistema, aparece sempre um popup do navegador, vamos tratar corretamente essas caixas criando alertas flutuantes dentro do próprio sistema
+- [OK] Quando algum alerta é exibido no sistema, aparece sempre um popup do navegador, vamos tratar corretamente essas caixas criando alertas flutuantes dentro do próprio sistema (novo `ConfirmProvider`/`useConfirm` em `components/ui/confirm-provider.tsx`, montado no layout do dashboard; substituídas as 12 chamadas de `window.confirm`/`confirm` em transactions, budgets, bills, goals, accounts (x2), groups/[id] (x3), settings/billing e admin/users — nenhuma chamada nativa de confirm/alert restante em `apps/web`)
 
-- Correção de erro da área do modelo de IA que ao entrar recebo esse erro no backend :
+- [OK] Correção de erro da área do modelo de IA que ao entrar recebo esse erro no backend — mesma causa raiz dos itens "Visão Geral"/"Ajustes do backend" acima: coluna `ai_settings.categorySuggestionEnabled` existe no `schema.prisma` mas nunca foi aplicada no banco daquele ambiente (schema drift, sem histórico de migrations no repo). Resolve rodando `pnpm exec prisma migrate deploy` (ou `db push`) contra o banco daquele ambiente; localmente já validado que `db:migrate`/`db:seed` aplicam o schema corretamente (ver conversa) :
     (prisma:error 
 Invalid `db.aiSettings.upsert()` invocation in
 C:\Users\jvmac\Documents\GitHub\finances\apps\api\src\lib\ai\ai-settings.ts:14:24

@@ -9,6 +9,7 @@ import { BackButton } from "@/components/ui/back-button";
 import { Drawer } from "@/components/ui/drawer";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { api } from "@/lib/api-client";
 import { formatBRL } from "@/lib/utils";
 
@@ -55,6 +56,7 @@ function planFeatures(plan: PlanDefinition): string[] {
 
 export default function BillingPage() {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [plans, setPlans] = useState<PlanDefinition[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<AvailablePaymentMethods>({ mercadopago: false, pix: false });
@@ -102,7 +104,7 @@ export default function BillingPage() {
   };
 
   const handleCancel = async () => {
-    if (!window.confirm("Cancelar sua assinatura? Você volta para o plano Free no fim do período atual.")) return;
+    if (!(await confirm("Cancelar sua assinatura? Você volta para o plano Free no fim do período atual."))) return;
     setActionPlan(subscription?.plan ?? null);
     try {
       await api.post("/api/billing/cancel", {});

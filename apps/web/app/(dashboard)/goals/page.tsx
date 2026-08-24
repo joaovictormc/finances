@@ -13,12 +13,14 @@ import { CategoryIcon } from "@/components/ui/category-icon";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { api } from "@/lib/api-client";
 import { cn, formatBRL, formatDate } from "@/lib/utils";
 import type { Goal, Group } from "@/lib/types";
 
 export default function GoalsPage() {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,7 +51,7 @@ export default function GoalsPage() {
   const closeDrawer = () => { setDrawerOpen(false); setEditing(null); };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Deletar esta meta?")) return;
+    if (!(await confirm({ description: "Deletar esta meta?", variant: "destructive", confirmLabel: "Deletar" }))) return;
     try {
       await api.delete(`/api/goals/${id}`);
       toast({ title: "Meta removida", variant: "success" });

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { api } from "@/lib/api-client";
 import { cn, formatBRL, formatDate } from "@/lib/utils";
 import type { RecurringBill } from "@/lib/types";
@@ -25,6 +26,7 @@ const frequencyLabels: Record<string, string> = {
 
 export default function BillsPage() {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [bills, setBills] = useState<RecurringBill[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -50,7 +52,7 @@ export default function BillsPage() {
   const closeDrawer = () => { setDrawerOpen(false); setEditing(null); };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Remover esta conta recorrente?")) return;
+    if (!(await confirm({ description: "Remover esta conta recorrente?", variant: "destructive", confirmLabel: "Remover" }))) return;
     try {
       await api.delete(`/api/bills/${id}`);
       toast({ title: "Conta removida", variant: "success" });

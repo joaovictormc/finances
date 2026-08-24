@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { useSession } from "@/lib/auth-client";
 import { api } from "@/lib/api-client";
 import { formatBRL } from "@/lib/utils";
@@ -40,6 +41,7 @@ export default function GroupDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { toast } = useToast();
+  const confirm = useConfirm();
   const { data: session } = useSession();
   const currentUserId = session?.user?.id ?? null;
   const [group, setGroup] = useState<GroupDetail | null>(null);
@@ -78,7 +80,7 @@ export default function GroupDetailPage() {
   };
 
   const handleRemoveMember = async (userId: string) => {
-    if (!window.confirm("Remover este membro do grupo?")) return;
+    if (!(await confirm({ description: "Remover este membro do grupo?", variant: "destructive", confirmLabel: "Remover" }))) return;
     try {
       await api.delete(`/api/groups/${id}/members/${userId}`);
       toast({ title: "Membro removido", variant: "success" });
@@ -90,7 +92,7 @@ export default function GroupDetailPage() {
 
   const handleLeave = async () => {
     if (!currentUserId) return;
-    if (!window.confirm("Sair deste grupo?")) return;
+    if (!(await confirm({ description: "Sair deste grupo?", variant: "destructive", confirmLabel: "Sair" }))) return;
     try {
       await api.delete(`/api/groups/${id}/members/${currentUserId}`);
       toast({ title: "Você saiu do grupo", variant: "success" });
@@ -101,7 +103,7 @@ export default function GroupDetailPage() {
   };
 
   const handleDeleteGroup = async () => {
-    if (!window.confirm("Excluir este grupo? Os recursos compartilhados voltam a ser pessoais.")) return;
+    if (!(await confirm({ description: "Excluir este grupo? Os recursos compartilhados voltam a ser pessoais.", variant: "destructive", confirmLabel: "Excluir" }))) return;
     try {
       await api.delete(`/api/groups/${id}`);
       toast({ title: "Grupo excluído", variant: "success" });

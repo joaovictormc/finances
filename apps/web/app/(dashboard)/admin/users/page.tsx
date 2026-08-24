@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { api } from "@/lib/api-client";
 import { formatDate } from "@/lib/utils";
 
@@ -33,6 +34,7 @@ const STATUS_VARIANT: Record<string, "success" | "warning" | "destructive"> = {
 
 export default function AdminUsersPage() {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -63,7 +65,7 @@ export default function AdminUsersPage() {
   }
 
   async function handleCancelSubscription(user: AdminUser) {
-    if (!confirm(`Cancelar a assinatura de ${user.name}?`)) return;
+    if (!(await confirm(`Cancelar a assinatura de ${user.name}?`))) return;
     try {
       await api.post(`/api/admin/users/${user.id}/subscription/cancel`, {});
       toast({ title: "Assinatura cancelada", variant: "success" });

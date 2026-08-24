@@ -8,6 +8,7 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast-provider";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { api } from "@/lib/api-client";
 import type { Category, FinancialAccount, Group, PaginatedResponse, Transaction } from "@/lib/types";
 import type { CategorySuggestion } from "@finances/validations";
@@ -24,6 +25,7 @@ const defaultFilters: Filters = { search: "", type: "", startDate: "", endDate: 
 
 export default function TransactionsPage() {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
@@ -133,7 +135,7 @@ export default function TransactionsPage() {
 
   const handleBulkCategorize = async () => {
     if (!bulkCategoryId || selectedIds.size === 0) return;
-    if (!window.confirm(`Definir a categoria de ${selectedIds.size} transações?`)) return;
+    if (!(await confirm(`Definir a categoria de ${selectedIds.size} transações?`))) return;
 
     setIsBulkUpdating(true);
     try {

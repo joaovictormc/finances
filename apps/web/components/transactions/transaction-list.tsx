@@ -5,6 +5,7 @@ import { Check, Pencil, Trash2, Users, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CategoryIcon } from "@/components/ui/category-icon";
 import { EmptyState } from "@/components/ui/empty-state";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { formatBRL, formatShortDate } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
 import { ArrowLeftRight } from "lucide-react";
@@ -180,8 +181,11 @@ export function TransactionList({
   const allSelected =
     transactions.length > 0 && transactions.every((transaction) => selectedIds.has(transaction.id));
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("Deletar esta transação?")) onDelete(id);
+  const confirm = useConfirm();
+  const handleDelete = async (id: string) => {
+    if (await confirm({ description: "Deletar esta transação?", variant: "destructive", confirmLabel: "Deletar" })) {
+      onDelete(id);
+    }
   };
 
   if (!isLoading && transactions.length === 0) {

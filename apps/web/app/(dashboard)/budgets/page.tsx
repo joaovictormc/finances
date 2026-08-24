@@ -12,12 +12,14 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { api } from "@/lib/api-client";
 import { cn, formatBRL } from "@/lib/utils";
 import type { Budget, Category, Group } from "@/lib/types";
 
 export default function BudgetsPage() {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -55,7 +57,7 @@ export default function BudgetsPage() {
   const closeDrawer = () => { setDrawerOpen(false); setEditing(null); };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Deletar este orçamento?")) return;
+    if (!(await confirm({ description: "Deletar este orçamento?", variant: "destructive", confirmLabel: "Deletar" }))) return;
     try {
       await api.delete(`/api/budgets/${id}`);
       toast({ title: "Orçamento removido", variant: "success" });

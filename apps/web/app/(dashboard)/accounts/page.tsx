@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { CategoryIcon } from "@/components/ui/category-icon";
 import { useToast } from "@/components/ui/toast-provider";
+import { useConfirm } from "@/components/ui/confirm-provider";
 import { api } from "@/lib/api-client";
 import { ConnectBankButton } from "@/components/accounts/connect-bank-button";
 import { ImportForm } from "@/components/transactions/import-form";
@@ -60,6 +61,7 @@ const accountTypeIcons: Record<string, string> = {
 
 export default function AccountsPage() {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -92,7 +94,7 @@ export default function AccountsPage() {
   const closeDrawer = () => { setDrawerOpen(false); setEditing(null); };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Arquivar esta conta?")) return;
+    if (!(await confirm({ description: "Arquivar esta conta?", confirmLabel: "Arquivar" }))) return;
     try {
       await api.delete(`/api/accounts/${id}`);
       toast({ title: "Conta arquivada", variant: "success" });
@@ -108,7 +110,7 @@ export default function AccountsPage() {
       txCount > 0
         ? `Excluir definitivamente "${a.name}"? Isso vai apagar a conta e ${txCount} transação${txCount === 1 ? "" : "ões"} vinculada${txCount === 1 ? "" : "s"}. Essa ação não pode ser desfeita.`
         : `Excluir definitivamente "${a.name}"? Essa ação não pode ser desfeita.`;
-    if (!window.confirm(message)) return;
+    if (!(await confirm({ description: message, variant: "destructive", confirmLabel: "Excluir" }))) return;
     try {
       await api.delete(`/api/accounts/${a.id}/permanent`);
       toast({ title: "Conta excluída definitivamente", variant: "success" });
