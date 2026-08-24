@@ -8,20 +8,20 @@
 - Importação está muito manual, quando uma pessoa precisar de importar o extrato de varios meses ela precisa selecionar um arquivo, importar e depois repetir o processo várias vezes. Podemos redefinir essa função deixando possível importar arquivos em massa tanto para área de cartão de crédito como extrato de conta corrente
 
 ### Transações
-- Podemos realizar uma funcionalidade para fazer uma conciliação das categorias de transções em massa ao invés de realizar uma por uma, pois após ser importado elas não possuem categoria definida
+- [OK] Podemos realizar uma funcionalidade para fazer uma conciliação das categorias de transções em massa ao invés de realizar uma por uma, pois após ser importado elas não possuem categoria definida (seleção múltipla + `/api/transactions/bulk-category` em `transactions/page.tsx`)
 
 ### Desempenho do backend/frontend
 - Algumas operações simples, como troca de tela, estão demorando para serem processadas, ficam em loading infinito ou levam um tempo considerável para abrir
 
 
 ### Layout e design
-- Quando clico no collapse do menu lateral, podemos incluir o botão de abrir o menu novamente por cima da logomarca do app, quando o usuário passar o mouse por cima da logo o botão aparece aplicando um blur por cima da logo e mostrando o icone de abir menu
+- [OK] Quando clico no collapse do menu lateral, podemos incluir o botão de abrir o menu novamente por cima da logomarca do app, quando o usuário passar o mouse por cima da logo o botão aparece aplicando um blur por cima da logo e mostrando o icone de abir menu
 
-- Usar Skill: https://github.com/pbakaus/impeccable para refatorar o frontend deixando um visual exclusivo e diferente na web e mobile
+- [OK] Usar Skill: https://github.com/pbakaus/impeccable para refatorar o frontend deixando um visual exclusivo e diferente na web e mobile (direção "Fechamento de Caixa" aplicada na web inteira e nos tokens/componentes compartilhados do mobile; validação tela a tela do mobile ainda em andamento)
 
-- Ajuste nas telas de novas operações como: novas transações, novo orçamento, nova meta, nova conta a pagar, nova conta bancária, criar grupo. Ao invés de abrir uma aba lateral, podemos optar por uma tela flutuante sobrepondo a tela princiapl com o fundo desfocado
+- [OK] Ajuste nas telas de novas operações como: novas transações, novo orçamento, nova meta, nova conta a pagar, nova conta bancária, criar grupo. Ao invés de abrir uma aba lateral, podemos optar por uma tela flutuante sobrepondo a tela princiapl com o fundo desfocado (componente `Modal` substituindo `Drawer` nessas 6 telas)
 
-- Adicionar botão de voltar nas áreas em que temos telas internas dentro de cada função
+- Adicionar botão de voltar nas áreas em que temos telas internas dentro de cada função — pendente, nenhuma tela usa `ArrowLeft`/`router.back()` hoje
 
 
 ### Ajustes do backend
@@ -33,9 +33,9 @@
 
 
 ### Sugestão de categorias com IA
-- Verificar e sugerir a atribuição de categorias para as transações, não categorizar automático, somente sugestão
+- [OK] Verificar e sugerir a atribuição de categorias para as transações, não categorizar automático, somente sugestão (endpoint `POST /api/transactions/suggest-categories` + chip aplicar/descartar em `/transactions` — mas depende do `categorySuggestionEnabled` que hoje quebra, ver "Tratamento de erros e alertas" abaixo)
 
-- Diferenciar pagamentos de faturas de cartão para não ser inclusas como dinheiro recebido
+- [OK] Diferenciar pagamentos de faturas de cartão para não ser inclusas como dinheiro recebido (heurística em `apps/api/src/lib/import/credit-card-payment.ts`, marca como `type=transfer`)
 
 
 ### Tratamento de erros e alertas
