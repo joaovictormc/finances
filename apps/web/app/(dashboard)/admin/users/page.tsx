@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { BackButton } from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -74,6 +75,7 @@ export default function AdminUsersPage() {
 
   return (
     <div>
+      <BackButton href="/admin" label="Administração" />
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Usuários e Planos</h1>
         <p className="text-muted-foreground text-sm mt-1">Gerencie roles, planos e assinaturas dos usuários</p>

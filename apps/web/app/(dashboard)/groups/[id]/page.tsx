@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Crown, Link2, Trash2, LogOut, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { BackButton } from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
@@ -136,6 +137,7 @@ export default function GroupDetailPage() {
 
   return (
     <div>
+      <BackButton href="/groups" label="Família/Grupo" />
       <div className="mb-6 flex items-start justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">

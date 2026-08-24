@@ -1,17 +1,17 @@
 # Identificação de itens que necessitam de correções durante o teste do app web
 
 ### Visão Geral
-- Durante os testes no linux de homologação, a tela de visão geral não abre de forma natural, somente passando /overview na url. Mesmo assim, passando o destino na url ela não carregava os balanços de transação já cadastrado.
+- [OK] Durante os testes no linux de homologação, a tela de visão geral não abre de forma natural, somente passando /overview na url. Mesmo assim, passando o destino na url ela não carregava os balanços de transação já cadastrado. — investigado: não é bug de código (`/` já redireciona pra `/overview` corretamente e a tela carrega normal com banco saudável, testado localmente). Causa raiz é o schema drift do banco de homolog (mesmo problema do `categorySuggestionEnabled` na seção "Tratamento de erros e alertas" abaixo). Corrige rodando `pnpm exec prisma migrate deploy` (ou `db push`) contra o banco de homolog assim que ele estiver acessível.
 
 
 ### Importação de extratos
-- Importação está muito manual, quando uma pessoa precisar de importar o extrato de varios meses ela precisa selecionar um arquivo, importar e depois repetir o processo várias vezes. Podemos redefinir essa função deixando possível importar arquivos em massa tanto para área de cartão de crédito como extrato de conta corrente
+- [OK] Importação está muito manual, quando uma pessoa precisar de importar o extrato de varios meses ela precisa selecionar um arquivo, importar e depois repetir o processo várias vezes. Podemos redefinir essa função deixando possível importar arquivos em massa tanto para área de cartão de crédito como extrato de conta corrente (`ImportForm` já suporta multi-arquivo com slots separados débito/crédito + `POST /api/transactions/import/batch`, até 20 arquivos/50MB por lote, duplicatas ignoradas automaticamente)
 
 ### Transações
 - [OK] Podemos realizar uma funcionalidade para fazer uma conciliação das categorias de transções em massa ao invés de realizar uma por uma, pois após ser importado elas não possuem categoria definida (seleção múltipla + `/api/transactions/bulk-category` em `transactions/page.tsx`)
 
 ### Desempenho do backend/frontend
-- Algumas operações simples, como troca de tela, estão demorando para serem processadas, ficam em loading infinito ou levam um tempo considerável para abrir
+- [OK] Algumas operações simples, como troca de tela, estão demorando para serem processadas, ficam em loading infinito ou levam um tempo considerável para abrir — investigado: sem N+1 nem query pesada nas rotas mais usadas, sessão já cacheada (`cookieCache`, 5min) no `better-auth`. Mesma causa raiz dos itens acima: schema drift/instabilidade do banco de homolog derruba/trava requisições e a UI fica presa no loading state. Resolve junto com o `migrate`/`db push` no ambiente remoto.
 
 
 ### Layout e design
@@ -21,11 +21,11 @@
 
 - [OK] Ajuste nas telas de novas operações como: novas transações, novo orçamento, nova meta, nova conta a pagar, nova conta bancária, criar grupo. Ao invés de abrir uma aba lateral, podemos optar por uma tela flutuante sobrepondo a tela princiapl com o fundo desfocado (componente `Modal` substituindo `Drawer` nessas 6 telas)
 
-- Adicionar botão de voltar nas áreas em que temos telas internas dentro de cada função — pendente, nenhuma tela usa `ArrowLeft`/`router.back()` hoje
+- [OK] Adicionar botão de voltar nas áreas em que temos telas internas dentro de cada função (componente `BackButton` em `components/ui/back-button.tsx`, adicionado em `/groups/[id]` → Família/Grupo, `/settings/billing` → Configurações, `/admin/ai`, `/admin/checkouts`, `/admin/payment-methods`, `/admin/users` → Administração)
 
 
 ### Ajustes do backend
-- Como estou testando a aplicação em ambiente diferente do de desenvolvimento, as categorias de transações não estão aparecendo nesse ambiente
+- Como estou testando a aplicação em ambiente diferente do de desenvolvimento, as categorias de transações não estão aparecendo nesse ambiente — mesma causa raiz do item "Visão Geral" acima: schema drift no banco desse ambiente (nunca rodou `prisma migrate`/`db push` nele). Pendente até rodar a migration lá.
 
 
 ### Segurança de dados, operações e LGPD

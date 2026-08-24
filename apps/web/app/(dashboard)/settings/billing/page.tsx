@@ -5,6 +5,7 @@ import { Check } from "lucide-react";
 import QRCode from "react-qr-code";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BackButton } from "@/components/ui/back-button";
 import { Drawer } from "@/components/ui/drawer";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
@@ -125,6 +126,7 @@ export default function BillingPage() {
 
   return (
     <div>
+      <BackButton href="/settings" label="Configurações" />
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Planos e Assinatura</h1>
         <p className="text-muted-foreground text-sm mt-1">

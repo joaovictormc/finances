@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Receipt } from "lucide-react";
+import { BackButton } from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Select } from "@/components/ui/select";
@@ -79,6 +80,7 @@ export default function AdminCheckoutsPage() {
 
   return (
     <div>
+      <BackButton href="/admin" label="Administração" />
       <div className="mb-6 flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Checkouts</h1>

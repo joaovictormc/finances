@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { BackButton } from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -83,6 +84,7 @@ export default function AdminAiPage() {
 
   return (
     <div className="max-w-2xl">
+      <BackButton href="/admin" label="Administração" />
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Modelos de IA</h1>
         <p className="text-muted-foreground text-sm mt-1">Configure o modelo Groq ativo e features de IA</p>

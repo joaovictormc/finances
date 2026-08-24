@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { CreditCard, QrCode, Check } from "lucide-react";
+import { BackButton } from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -67,6 +68,7 @@ export default function AdminPaymentMethodsPage() {
 
   return (
     <div>
+      <BackButton href="/admin" label="Administração" />
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Métodos de Pagamento</h1>
         <p className="text-muted-foreground text-sm mt-1">
