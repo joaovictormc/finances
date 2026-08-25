@@ -77,3 +77,12 @@ The column `ai_settings.categorySuggestionEnabled` does not exist in the current
   },
   clientVersion: '6.19.3'
 })
+
+
+### Novas Funcionalidades
+- Gameficação: 
+  > Discutir e analisar propostas para gameficar a aplicação para tornar um diferencial do projeto, como cumprimento de metas semanais, mini jogos para atrair o usuário e deixar o registro diário financeiro mais atrativo e diversificado
+- Leitura de cupom fiscal/nf-e
+  > inserir no app mobile uma feature que pode ser inserida a partir do plano pro que é o envio de foto diretamente pelo app de cupom fiscal, notinhas de maquininhas de cartão, nf-e, etc, e abra um menu para edição dessa transação, realizar a pré classificação antes do usuário cadastrar via IA
+- Desenvolver a integração via whatsapp
+  > Como já existe o bot do telegram, podemos em paralelo configurar e inserir o bot para whatsapp selehante ao do telegram
