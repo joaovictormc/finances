@@ -5,6 +5,7 @@ import { serverApiGet } from "@/lib/api-server";
 import { MonthNav } from "@/components/overview/month-nav";
 import { SpendingPieChart } from "@/components/overview/spending-pie-chart";
 import { MonthlyBarChart } from "@/components/overview/monthly-bar-chart";
+import { BalanceTrendChart } from "@/components/overview/balance-trend-chart";
 import { HeroBalanceCard } from "@/components/overview/hero-balance-card";
 import { QuickActions } from "@/components/overview/quick-actions";
 import { GoalsPreview } from "@/components/overview/goals-preview";
@@ -30,6 +31,16 @@ type MonthlyReport = {
 
 async function fetchReport(year: number, month: number): Promise<MonthlyReport | null> {
   return serverApiGet<MonthlyReport>("/api/transactions/reports/monthly", { year, month });
+}
+
+type DailyReport = { day: number; balance: number }[];
+
+async function fetchDaily(year: number, month: number): Promise<DailyReport> {
+  const res = await serverApiGet<{ days: { day: number; balance: number }[] }>(
+    "/api/transactions/reports/daily",
+    { year, month }
+  );
+  return res.days;
 }
 
 async function fetchGoals(): Promise<Goal[]> {
@@ -64,11 +75,12 @@ export default async function OverviewPage({
     return { year: d.getFullYear(), month: d.getMonth() + 1 };
   });
 
-  const [currentReport, goals, bills, recentTransactions, ...historyReports] = await Promise.all([
+  const [currentReport, goals, bills, recentTransactions, dailyBalance, ...historyReports] = await Promise.all([
     fetchReport(year, month),
     fetchGoals(),
     fetchBills(),
     fetchRecentTransactions(),
+    fetchDaily(year, month),
     ...sixMonths.slice(0, 5).map((m) => fetchReport(m.year, m.month)),
   ]);
 
@@ -108,12 +120,7 @@ export default async function OverviewPage({
         <MonthNav year={year} month={month} />
       </div>
 
-      <QuickActions />
-
-      <InsightsPanel />
-      <AiQueryBox />
-
-      {/* Hero balance + goals */}
+      {/* Hero balance + metas */}
       <div className="mb-6 grid grid-cols-1 lg:grid-cols-5 gap-4">
         <div className="lg:col-span-2">
           <HeroBalanceCard
@@ -126,6 +133,11 @@ export default async function OverviewPage({
           <GoalsPreview goals={goals} />
         </div>
       </div>
+
+      <QuickActions />
+
+      <InsightsPanel />
+      <AiQueryBox />
 
       {!currentReport ? (
         <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-10 text-center text-muted-foreground mb-6">
@@ -145,6 +157,12 @@ export default async function OverviewPage({
           <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
             <h2 className="font-semibold mb-4 text-foreground">Receitas vs Gastos — 6 meses</h2>
             <MonthlyBarChart data={barData} />
+          </div>
+
+          {/* Trend chart */}
+          <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-6 lg:col-span-2">
+            <h2 className="font-semibold mb-4 text-foreground">Saldo Acumulado no Mês</h2>
+            <BalanceTrendChart data={dailyBalance} />
           </div>
         </div>
       )}

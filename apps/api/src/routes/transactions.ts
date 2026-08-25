@@ -475,6 +475,54 @@ app.get("/reports/monthly", async (c) => {
   });
 });
 
+// Saldo diário acumulado do mês (gráfico de tendência da Visão Geral) — 1
+// groupBy por dia em vez de paginar transação por transação no cliente
+// (limite da lista é 100/página, um mês movimentado estouraria isso).
+app.get("/reports/daily", async (c) => {
+  const userId = c.get("userId");
+  const { year, month } = c.req.query();
+
+  let period;
+  try {
+    period = parseMonthlyReportPeriod(year, month);
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : "Período inválido" }, 400);
+  }
+
+  const rows = await db.transaction.groupBy({
+    by: ["date", "type"],
+    where: {
+      userId,
+      date: { gte: period.start, lt: period.endExclusive },
+      isIgnored: false,
+      type: { in: ["income", "expense"] },
+    },
+    _sum: { amount: true },
+  });
+
+  const byDate = new Map<string, { income: number; expense: number }>();
+  for (const row of rows) {
+    const key = row.date.toISOString().slice(0, 10);
+    const entry = byDate.get(key) ?? { income: 0, expense: 0 };
+    const amount = Number(row._sum.amount ?? 0);
+    if (row.type === "income") entry.income += amount;
+    else entry.expense += amount;
+    byDate.set(key, entry);
+  }
+
+  const daysInMonth = new Date(period.year, period.month, 0).getDate();
+  let running = 0;
+  const days = Array.from({ length: daysInMonth }, (_, i) => {
+    const day = i + 1;
+    const key = `${period.year}-${String(period.month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const entry = byDate.get(key) ?? { income: 0, expense: 0 };
+    running += entry.income - entry.expense;
+    return { day, balance: running };
+  });
+
+  return c.json({ year: period.year, month: period.month, days });
+});
+
 // Import de extrato bancário (CSV ou OFX) — cria transações em lote, ignorando duplicatas
 // (mesma combinação externalId+accountId já existente, via @@unique do schema).
 app.post("/import", async (c) => {

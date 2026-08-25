@@ -13,22 +13,26 @@ const ACTIONS = [
 // Atalhos de criação rápida (elemento emprestado do kit
 // finance-application-for-sketch, ver docs/ajustes-pos-teste.md). Cada rota
 // de destino lê `?new=1` via useSearchParams e abre o Modal de criação
-// automaticamente ao montar (ver useEffect em cada page.tsx).
+// automaticamente ao montar (ver useEffect em cada page.tsx). Um único card
+// com 4 botões internos — mesmo padrão "um card por bloco" do resto da
+// Visão Geral, em vez de 4 cards soltos competindo entre si.
 export function QuickActions() {
   return (
-    <div className="mb-6 grid grid-cols-4 gap-3">
-      {ACTIONS.map(({ href, icon: Icon, label }) => (
-        <Link
-          key={href}
-          href={href}
-          className="flex flex-col items-center gap-2 rounded-2xl bg-card border border-border/60 shadow-sm p-4 text-center hover:shadow-md hover:border-border transition-all"
-        >
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Icon size={18} />
-          </span>
-          <span className="text-xs font-medium text-foreground leading-tight">{label}</span>
-        </Link>
-      ))}
+    <div className="mb-6 bg-card rounded-2xl border border-border/60 shadow-sm p-4">
+      <div className="grid grid-cols-4 gap-2">
+        {ACTIONS.map(({ href, icon: Icon, label }) => (
+          <Link
+            key={href}
+            href={href}
+            className="flex flex-col items-center gap-1.5 rounded-xl p-2.5 text-center hover:bg-accent transition-colors"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Icon size={16} />
+            </span>
+            <span className="text-[11px] font-medium text-foreground leading-tight">{label}</span>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
