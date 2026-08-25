@@ -116,6 +116,12 @@ export type MonthlyReport = {
   }>;
 };
 
+export type DailyReport = {
+  year: number;
+  month: number;
+  days: Array<{ day: number; balance: number }>;
+};
+
 export type PlanId = "free" | "pro" | "familia";
 
 export type PlanDefinition = {

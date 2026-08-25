@@ -2,13 +2,13 @@ import { useCallback, useState } from "react";
 import { View, Text, ScrollView, ActivityIndicator, Pressable } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { PieChart, BarChart } from "react-native-gifted-charts";
+import { PieChart, BarChart, LineChart } from "react-native-gifted-charts";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
 import { useTheme } from "@/lib/theme";
 import { formatBRL } from "@/lib/format";
-import type { MonthlyReport, Transaction, PaginatedResponse } from "@/lib/types";
+import type { MonthlyReport, DailyReport, Transaction, PaginatedResponse } from "@/lib/types";
 
 // Paleta de fatias no espírito Finans: amarelo de marca primeiro, depois apoios.
 const SLICE_COLORS = ["#FFC300", "#1C1C1E", "#22c55e", "#A6A5A0", "#8b5cf6", "#06b6d4", "#f97316", "#ec4899"];
@@ -28,6 +28,7 @@ export default function OverviewScreen() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [report, setReport] = useState<MonthlyReport | null>(null);
+  const [daily, setDaily] = useState<DailyReport["days"]>([]);
   const [history, setHistory] = useState<{ label: string; income: number; expense: number }[]>([]);
   const [recent, setRecent] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,12 +49,16 @@ export default function OverviewScreen() {
         return { year: d.getFullYear(), month: d.getMonth() + 1 };
       });
 
-      const [reportData, recentData, ...historyReports] = await Promise.all([
+      const [reportData, recentData, dailyData, ...historyReports] = await Promise.all([
         api.get<MonthlyReport>("/api/transactions/reports/monthly", {
           year: sixMonths[5].year,
           month: sixMonths[5].month,
         }),
         api.get<PaginatedResponse<Transaction>>("/api/transactions", { page: 1, limit: 5 }),
+        api.get<DailyReport>("/api/transactions/reports/daily", {
+          year: sixMonths[5].year,
+          month: sixMonths[5].month,
+        }),
         ...sixMonths.slice(0, 5).map((m) =>
           api.get<MonthlyReport>("/api/transactions/reports/monthly", { year: m.year, month: m.month })
         ),
@@ -61,6 +66,7 @@ export default function OverviewScreen() {
 
       setReport(reportData);
       setRecent(recentData.data);
+      setDaily(dailyData.days);
       setHistory(
         sixMonths.map((m, i) => ({
           label: MONTHS[m.month - 1],
@@ -98,6 +104,18 @@ export default function OverviewScreen() {
     .filter((row) => row.total > 0)
     .slice(0, 8)
     .map((row, i) => ({ value: row.total, color: SLICE_COLORS[i % SLICE_COLORS.length] }));
+
+  // Mesmos dados do donut acima, em ranking — leitura diferente (quem pesa
+  // mais) em vez de composição do todo.
+  const topCategoriesData = (report?.byCategory ?? [])
+    .filter((row) => row.total > 0)
+    .slice(0, 5)
+    .map((row, i) => ({
+      value: row.total,
+      label: row.category?.name ?? "Sem categoria",
+      frontColor: SLICE_COLORS[i % SLICE_COLORS.length],
+      labelTextStyle: { color: colors.mutedForeground, fontSize: 11 },
+    }));
 
   const maxHistoryValue = Math.max(1, ...history.flatMap((h) => [h.income, h.expense]));
   const barData = history.flatMap((h) => [
@@ -200,6 +218,29 @@ export default function OverviewScreen() {
         )}
       </View>
 
+      {/* Top categorias — mesmo dado do donut, em ranking */}
+      {topCategoriesData.length > 0 && (
+        <View className="mb-4 rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
+          <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
+            Top Categorias
+          </Text>
+          <BarChart
+            data={topCategoriesData}
+            horizontal
+            barWidth={16}
+            spacing={18}
+            height={Math.max(1, topCategoriesData.length) * 34}
+            hideRules
+            hideYAxisText
+            xAxisThickness={0}
+            yAxisThickness={0}
+            noOfSections={3}
+            roundedTop
+            roundedBottom
+          />
+        </View>
+      )}
+
       {/* Receitas x Gastos — 6 meses */}
       <View className="mb-4 rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
         <View className="mb-3 flex-row items-center justify-between">
@@ -233,6 +274,43 @@ export default function OverviewScreen() {
           yAxisLabelWidth={40}
           formatYLabel={(v) => `${(Number(v) / 1000).toFixed(0)}k`}
         />
+      </View>
+
+      {/* Saldo acumulado no mês — tipo de gráfico diferente do pizza/barra
+          acima, mesmo endpoint e conceito da versão web (ver
+          apps/web/components/overview/balance-trend-chart.tsx) */}
+      <View className="mb-4 rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
+        <Text className="mb-3 text-base font-semibold text-foreground dark:text-foreground-dark">
+          Saldo Acumulado no Mês
+        </Text>
+        {daily.length > 0 ? (
+          <LineChart
+            data={daily.map((d) => ({ value: d.balance, label: d.day % 5 === 0 ? String(d.day) : "" }))}
+            areaChart
+            curved
+            color={(daily.at(-1)?.balance ?? 0) < 0 ? colors.destructive : colors.success}
+            thickness={2}
+            startFillColor={(daily.at(-1)?.balance ?? 0) < 0 ? colors.destructive : colors.success}
+            endFillColor={(daily.at(-1)?.balance ?? 0) < 0 ? colors.destructive : colors.success}
+            startOpacity={0.25}
+            endOpacity={0}
+            hideDataPoints
+            hideRules
+            xAxisThickness={0}
+            yAxisThickness={0}
+            yAxisTextStyle={{ color: colors.mutedForeground, fontSize: 10 }}
+            xAxisLabelTextStyle={{ color: colors.mutedForeground, fontSize: 10 }}
+            noOfSections={3}
+            yAxisLabelWidth={40}
+            formatYLabel={(v) => `${(Number(v) / 1000).toFixed(0)}k`}
+            initialSpacing={8}
+            height={140}
+          />
+        ) : (
+          <Text className="py-6 text-sm text-muted-foreground dark:text-muted-foreground-dark">
+            Sem movimentação neste mês ainda
+          </Text>
+        )}
       </View>
 
       {/* Movimentações recentes */}
