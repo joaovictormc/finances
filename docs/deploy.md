@@ -141,28 +141,38 @@ por padrão) — não precisa instalar nada novo, só trocar a URL:
 
 ### B.2 — Rodar a migration no banco de homologação
 
+**Atualizado em 24/08/2026:** o projeto passou a versionar migrations em
+`packages/db/prisma/migrations/` (ver `docs/database.md`, "Padrão de
+migração usado neste projeto") depois de um schema drift real ter causado
+erros `P2022: column does not exist` em homolog (`docs/ajustes-pos-teste.md`).
+Use `prisma migrate deploy`, não `db push`, pra aplicar em qualquer ambiente
+com dado real — `deploy` só roda as migrations pendentes já versionadas,
+sem gerar SQL novo nem prompt interativo.
+
 O Prisma CLI **não** carrega o `.env` da raiz do monorepo automaticamente —
 só a API faz isso na mão (`process.loadEnvFile` em `apps/api/src/env.ts`).
-Rodando `prisma db push` direto, é preciso definir `DATABASE_URL` na sessão
-do shell antes do comando.
+É preciso definir `DATABASE_URL` na sessão do shell antes do comando.
 
 No PowerShell (Windows, shell padrão deste projeto):
 
 ```powershell
 $env:DATABASE_URL = "postgresql://finances:SENHA@100.104.200.37:5432/finances_staging?schema=public"
-pnpm --filter @finances/db exec prisma db push
+pnpm --filter @finances/db exec prisma migrate deploy
 ```
 
 No bash/zsh (ex.: rodando direto no ZimaOS via SSH):
 
 ```bash
 DATABASE_URL="postgresql://finances:SENHA@100.104.200.37:5432/finances_staging?schema=public" \
-  pnpm --filter @finances/db exec prisma db push
+  pnpm --filter @finances/db exec prisma migrate deploy
 ```
 
-(Este projeto não usa `prisma migrate` — ver nota em `docs/setup.md` sobre
-schema ser aplicado direto. `db push` sincroniza o schema atual sem gerar
-histórico de migration, o que é aceitável pra homologação.)
+Se `migrate deploy` acusar drift (banco com schema fora do histórico de
+migrations — ex.: um ambiente que nunca rodou `migrate deploy` antes),
+rodar primeiro `prisma migrate diff` pra ver exatamente o que mudaria
+(sem aplicar nada) e só então decidir entre `migrate resolve --applied`
+(se o banco já tem o shape esperado) ou `db push` como correção pontual —
+nunca `db push` como fluxo padrão, só pra destravar um drift já existente.
 
 ### B.3 — `.env.staging` (fica só no ZimaOS, nunca commitado)
 
@@ -426,7 +436,7 @@ docker compose -f docker-compose.selfhosted.yml ps   # confirmar "healthy"
 #    descartável da própria imagem da api, já buildada — o host Linux "puro"
 #    não tem pnpm instalado, só Docker)
 docker compose -f docker-compose.selfhosted.yml --profile local-db run --rm --no-deps api \
-  sh -c 'pnpm --filter @finances/db exec prisma db push'
+  sh -c 'pnpm --filter @finances/db exec prisma migrate deploy'
 
 # 3. Sobe api e web
 docker compose -f docker-compose.selfhosted.yml --profile local-db up -d --build api web
@@ -493,7 +503,7 @@ API+Web em serviços gratuitos antes de decidir sobre produção definitiva:
 | **Redis** | [Upstash](https://upstash.com) | Free tier serverless. Validar compatibilidade com os workers BullMQ (`apps/api/src/jobs/workers`) — comandos bloqueantes podem se comportar diferente num Redis serverless; testar a fila de verdade antes de confiar 100%. |
 
 Fluxo sugerido: suba Postgres (Neon/Supabase) e Redis (Upstash) primeiro,
-rode `prisma db push` contra eles, depois aponte a API (Railway/Render) e o
+rode `prisma migrate deploy` contra eles, depois aponte a API (Railway/Render) e o
 Web (Vercel) pras URLs desses serviços via variáveis de ambiente — mesmo
 `.env` do `.env.selfhosted.example`, só trocando os valores de
 `DATABASE_URL`/`REDIS_URL`/`NEXT_PUBLIC_API_URL` etc. Isso valida se a

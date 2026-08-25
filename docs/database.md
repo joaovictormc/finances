@@ -36,7 +36,7 @@ Schema em: `packages/db/prisma/schema.prisma` (26 models).
 ### Notificações e IA
 - `Notification` — channel (email/telegram/whatsapp/push), status, sentAt
 - `AiInsight` — type (monthly_summary/spending_anomaly/overdraft_risk/budget_forecast/recurring_detected), content JSON
-- `AiSettings` — singleton (`id: "singleton"`): `textModel`, `audioModel`, kill-switches por feature (`expenseParsingEnabled`, `monthlyInsightsEnabled`, `nlQueryEnabled`), `monthlyTokenLimit`
+- `AiSettings` — singleton (`id: "singleton"`): `textModel`, `audioModel`, kill-switches por feature (`expenseParsingEnabled`, `monthlyInsightsEnabled`, `nlQueryEnabled`, `categorySuggestionEnabled`), `monthlyTokenLimit`
 - `AiUsageLog` — userId opcional, feature, model, promptTokens/completionTokens, createdAt (indexado por feature/data)
 
 ### Monetização
@@ -87,7 +87,35 @@ Isso particiona a tabela por data, melhorando drasticamente queries com filtro d
 
 ## Padrão de migração usado neste projeto
 
-Por rodar contra um banco compartilhado (ZimaOS via Tailscale), alterações de schema neste projeto costumam ser aplicadas via **script `.ts` temporário** com `db.$executeRawUnsafe("ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...")`, seguido de `prisma generate` — em vez de `prisma migrate dev`. O script é deletado depois de aplicado; o `schema.prisma` é a fonte da verdade do shape final.
+**Atualizado em 24/08/2026.** Até essa data, o projeto nunca teve uma pasta
+`prisma/migrations` — alterações de schema eram aplicadas ad hoc (script
+`.ts` temporário com `db.$executeRawUnsafe`, ou `prisma db push` direto no
+terminal), sem nenhum registro versionado do que tinha sido aplicado em cada
+ambiente. Isso causou **schema drift**: colunas novas no `schema.prisma`
+(ex.: `AiSettings.categorySuggestionEnabled`) existiam no banco de um
+ambiente mas não em outro, gerando erros `P2022: column does not exist` só
+em homolog/produção — ver `docs/ajustes-pos-teste.md`.
+
+A partir de agora, `packages/db/prisma/migrations/` é versionada e é a
+fonte da verdade do histórico aplicado (começa com `20260824231702_init`,
+o "retrato" completo do schema no momento em que o histórico foi criado;
+os bancos existentes — local e ZimaOS — foram batizados como já tendo essa
+migration aplicada via `prisma migrate resolve --applied`, sem re-rodar
+SQL). Fluxo daqui pra frente:
+
+- **Mudança de schema:** editar `schema.prisma` e rodar `pnpm db:migrate`
+  (`prisma migrate dev`) — isso gera uma nova pasta em `migrations/` com o
+  SQL da mudança; commitar essa pasta junto com o `schema.prisma`.
+- **Aplicar em outro ambiente** (homolog, produção): `pnpm exec prisma
+  migrate deploy` de dentro de `packages/db` — aplica só as migrations
+  pendentes, sem prompt interativo, sem gerar SQL novo. Nunca usar
+  `db push` em ambiente com dado real fora de uma investigação pontual de
+  drift (é seguro pra sincronizar rápido, mas não fica registrado no
+  histórico de migrations).
+- **Prisma CLI não lê o `.env` da raiz** — só o `apps/api/src/env.ts` faz
+  isso via `process.loadEnvFile()`. Pra `db:migrate`/`db:seed`/`db:studio`
+  funcionarem localmente, precisa de um `packages/db/.env` próprio com
+  `DATABASE_URL` (gitignorado — nunca commitar).
 
 ## Seed de Categorias BR
 

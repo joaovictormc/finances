@@ -35,7 +35,7 @@ pnpm db:migrate
 pnpm db:seed
 ```
 
-> **Atenção:** por rodar contra um banco compartilhado, mudanças de schema feitas durante o desenvolvimento deste projeto costumam ser aplicadas via script `.ts` temporário com `db.$executeRawUnsafe("ALTER TABLE ...")` em vez de `prisma migrate dev` — ver `docs/database.md`.
+> **Atenção:** `pnpm db:migrate` precisa de um `packages/db/.env` próprio com `DATABASE_URL` (gitignorado) — o Prisma CLI não lê o `.env` da raiz do monorepo. Desde 24/08/2026 as migrations ficam versionadas em `packages/db/prisma/migrations/`; ver `docs/database.md`, "Padrão de migração usado neste projeto", pro fluxo completo (inclui como aplicar em homolog/produção com `prisma migrate deploy`).
 
 > **TimescaleDB**: depois da migration inicial, rodar no psql: `SELECT create_hypertable('transactions', 'date', if_not_exists => TRUE);`. Se TimescaleDB não estiver instalado, a tabela `transactions` funciona normalmente como PostgreSQL puro.
 
