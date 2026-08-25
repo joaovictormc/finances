@@ -6,6 +6,7 @@ import { MonthNav } from "@/components/overview/month-nav";
 import { SpendingPieChart } from "@/components/overview/spending-pie-chart";
 import { MonthlyBarChart } from "@/components/overview/monthly-bar-chart";
 import { HeroBalanceCard } from "@/components/overview/hero-balance-card";
+import { QuickActions } from "@/components/overview/quick-actions";
 import { GoalsPreview } from "@/components/overview/goals-preview";
 import { RecentTransactions } from "@/components/overview/recent-transactions";
 import { UpcomingBills } from "@/components/overview/upcoming-bills";
@@ -106,6 +107,8 @@ export default async function OverviewPage({
         </div>
         <MonthNav year={year} month={month} />
       </div>
+
+      <QuickActions />
 
       <InsightsPanel />
       <AiQueryBox />

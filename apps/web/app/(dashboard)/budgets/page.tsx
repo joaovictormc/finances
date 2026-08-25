@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { PiggyBank, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Modal } from "@/components/ui/modal";
 import { ProgressBar } from "@/components/ui/progress-bar";
+import { ProgressRing } from "@/components/ui/progress-ring";
 import { CategoryIcon } from "@/components/ui/category-icon";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -20,6 +22,9 @@ import type { Budget, Category, Group } from "@/lib/types";
 export default function BudgetsPage() {
   const { toast } = useToast();
   const confirm = useConfirm();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -55,6 +60,14 @@ export default function BudgetsPage() {
   const openNew = () => { setEditing(null); setFormKey((k) => k + 1); setDrawerOpen(true); };
   const openEdit = (b: Budget) => { setEditing(b); setFormKey((k) => k + 1); setDrawerOpen(true); };
   const closeDrawer = () => { setDrawerOpen(false); setEditing(null); };
+
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      openNew();
+      router.replace(pathname);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handleDelete = async (id: string) => {
     if (!(await confirm({ description: "Deletar este orçamento?", variant: "destructive", confirmLabel: "Deletar" }))) return;
@@ -127,7 +140,14 @@ export default function BudgetsPage() {
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       {b.category && (
-                        <CategoryIcon icon={b.category.icon} color={featured ? "#fff" : b.category.color} size="sm" />
+                        <ProgressRing
+                          value={b.percentage}
+                          size={40}
+                          strokeWidth={3}
+                          color={featured ? "#fff" : b.category.color}
+                        >
+                          <CategoryIcon icon={b.category.icon} color={featured ? "#fff" : b.category.color} size="sm" className="w-7 h-7" />
+                        </ProgressRing>
                       )}
                       <div>
                         <p className={cn("font-semibold", featured ? "text-white" : "text-foreground")}>{b.name}</p>

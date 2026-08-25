@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,9 @@ import type { Goal, Group } from "@/lib/types";
 export default function GoalsPage() {
   const { toast } = useToast();
   const confirm = useConfirm();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,6 +53,14 @@ export default function GoalsPage() {
   const openNew = () => { setEditing(null); setFormKey((k) => k + 1); setDrawerOpen(true); };
   const openEdit = (g: Goal) => { setEditing(g); setFormKey((k) => k + 1); setDrawerOpen(true); };
   const closeDrawer = () => { setDrawerOpen(false); setEditing(null); };
+
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      openNew();
+      router.replace(pathname);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handleDelete = async (id: string) => {
     if (!(await confirm({ description: "Deletar esta meta?", variant: "destructive", confirmLabel: "Deletar" }))) return;

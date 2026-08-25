@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { TransactionFilters } from "@/components/transactions/transaction-filters";
 import { TransactionList } from "@/components/transactions/transaction-list";
 import { TransactionForm } from "@/components/transactions/transaction-form";
@@ -26,6 +27,9 @@ const defaultFilters: Filters = { search: "", type: "", startDate: "", endDate: 
 export default function TransactionsPage() {
   const { toast } = useToast();
   const confirm = useConfirm();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
@@ -84,6 +88,16 @@ export default function TransactionsPage() {
   const openNew = () => { setEditing(null); setFormKey((k) => k + 1); setDrawerOpen(true); };
   const openEdit = (t: Transaction) => { setEditing(t); setFormKey((k) => k + 1); setDrawerOpen(true); };
   const closeDrawer = () => { setDrawerOpen(false); setEditing(null); };
+
+  // Atalho da grid de ações rápidas da Visão Geral (?new=1) — abre o modal de
+  // criação direto e limpa o parâmetro da URL pra não reabrir num refresh.
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      openNew();
+      router.replace(pathname);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handleDelete = async (id: string) => {
     try {

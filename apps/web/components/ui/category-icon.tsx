@@ -16,15 +16,23 @@ interface CategoryIconProps {
 
 export function CategoryIcon({ icon, iconUrl, color, size = "md", className }: CategoryIconProps) {
   const { box, text } = SIZES[size];
+  const isHexColor = !!color && /^#[0-9a-fA-F]{6}$/.test(color);
 
   return (
     <div
       className={cn(
-        "flex items-center justify-center shrink-0 bg-card border border-border overflow-hidden",
+        "flex items-center justify-center shrink-0 overflow-hidden",
+        !isHexColor && "bg-card border border-border",
         box,
         text,
         className
       )}
+      // Fundo suave na cor da categoria (elemento emprestado do kit
+      // finance-application-for-sketch, ver docs/ajustes-pos-teste.md) —
+      // "1A" é ~10% de opacidade em hex, mantém contraste em claro e escuro.
+      // Só aplica se `color` for um hex de 6 dígitos válido; formatos
+      // desconhecidos (nome CSS, rgb(), etc.) caem no fundo neutro de sempre.
+      style={isHexColor ? { backgroundColor: `${color}1A` } : undefined}
     >
       {iconUrl ? (
         // eslint-disable-next-line @next/next/no-img-element

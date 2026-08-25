@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api-client";
 import { IconBadge } from "@/components/icon-badge";
 import { ProgressBar } from "@/components/progress-bar";
+import { ProgressRing } from "@/components/progress-ring";
 import { useTheme } from "@/lib/theme";
 import { formatBRL } from "@/lib/format";
 import type { Budget } from "@/lib/types";
@@ -64,7 +65,9 @@ export default function BudgetsScreen() {
                 className="gap-3 rounded-2xl border border-border bg-card p-4 dark:border-border-dark dark:bg-card-dark"
               >
                 <View className="flex-row items-center gap-3">
-                  <IconBadge icon={b.category?.icon ?? "📊"} />
+                  <ProgressRing value={b.percentage} color={b.category?.color ?? barColor(b)} size={40} strokeWidth={3}>
+                    <IconBadge icon={b.category?.icon ?? "📊"} color={b.category?.color} size="sm" />
+                  </ProgressRing>
                   <View className="flex-1">
                     <Text className="font-semibold text-foreground dark:text-foreground-dark">{b.name}</Text>
                     <Text className="text-xs text-muted-foreground dark:text-muted-foreground-dark">

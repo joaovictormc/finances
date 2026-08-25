@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,9 @@ const frequencyLabels: Record<string, string> = {
 export default function BillsPage() {
   const { toast } = useToast();
   const confirm = useConfirm();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [bills, setBills] = useState<RecurringBill[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -50,6 +54,14 @@ export default function BillsPage() {
   const openNew = () => { setEditing(null); setFormKey((k) => k + 1); setDrawerOpen(true); };
   const openEdit = (b: RecurringBill) => { setEditing(b); setFormKey((k) => k + 1); setDrawerOpen(true); };
   const closeDrawer = () => { setDrawerOpen(false); setEditing(null); };
+
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      openNew();
+      router.replace(pathname);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handleDelete = async (id: string) => {
     if (!(await confirm({ description: "Remover esta conta recorrente?", variant: "destructive", confirmLabel: "Remover" }))) return;

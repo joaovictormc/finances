@@ -6,6 +6,7 @@ import { api } from "@/lib/api-client";
 import { IconBadge } from "@/components/icon-badge";
 import { useTheme } from "@/lib/theme";
 import { ProgressBar } from "@/components/progress-bar";
+import { ProgressRing } from "@/components/progress-ring";
 import { formatBRL, formatDate, daysUntil } from "@/lib/format";
 import type { Goal } from "@/lib/types";
 
@@ -64,7 +65,9 @@ export default function GoalsScreen() {
             return (
               <View className="rounded-xl border border-border bg-card p-4 dark:border-border-dark dark:bg-card-dark">
                 <View className="mb-3 flex-row items-start gap-3">
-                  <IconBadge icon={g.icon ?? "🎯"} color={g.color} />
+                  <ProgressRing value={pct} color={g.color} size={40} strokeWidth={3}>
+                    <IconBadge icon={g.icon ?? "🎯"} color={g.color} size="sm" />
+                  </ProgressRing>
                   <View className="flex-1">
                     <Text className="font-semibold text-foreground dark:text-foreground-dark">{g.name}</Text>
                     {g.description ? (

@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { CategoryIcon } from "@/components/ui/category-icon";
-import { ProgressBar } from "@/components/ui/progress-bar";
+import { ProgressRing } from "@/components/ui/progress-ring";
 import { formatBRL } from "@/lib/utils";
 import type { Goal } from "@/lib/types";
 
@@ -26,14 +25,13 @@ export function GoalsPreview({ goals }: { goals: Goal[] }) {
               <Link
                 key={g.id}
                 href="/goals"
-                className="rounded-xl bg-muted/60 hover:bg-muted p-3 transition-colors"
+                className="rounded-xl bg-muted/60 hover:bg-muted p-3 transition-colors flex items-center gap-3"
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <CategoryIcon icon={g.icon} iconUrl={g.iconUrl} color={g.color} size="sm" />
+                <ProgressRing value={pct} color={g.color} size={44} strokeWidth={4} showLabel />
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{g.name}</p>
+                  <p className="text-xs text-muted-foreground">{formatBRL(Number(g.currentAmount))}</p>
                 </div>
-                <p className="text-xs text-muted-foreground mb-1.5">{formatBRL(Number(g.currentAmount))}</p>
-                <ProgressBar value={pct} color={g.color} />
               </Link>
             );
           })}
