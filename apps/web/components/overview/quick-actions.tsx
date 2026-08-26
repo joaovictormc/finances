@@ -18,18 +18,19 @@ const ACTIONS = [
 // Visão Geral, em vez de 4 cards soltos competindo entre si.
 export function QuickActions() {
   return (
-    <div className="mb-6 bg-card rounded-2xl border border-border/60 shadow-sm p-4">
-      <div className="grid grid-cols-4 gap-2">
+    <div className="h-full flex flex-col justify-center bg-card rounded-2xl border border-border/60 shadow-sm p-4">
+      <h2 className="mb-3 font-semibold text-foreground">Atalhos rápidos</h2>
+      <div className="grid grid-cols-2 gap-2">
         {ACTIONS.map(({ href, icon: Icon, label }) => (
           <Link
             key={href}
             href={href}
-            className="flex flex-col items-center gap-1.5 rounded-xl p-2.5 text-center hover:bg-accent transition-colors"
+            className="flex items-center gap-2.5 rounded-xl p-2.5 hover:bg-accent transition-colors"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Icon size={16} />
             </span>
-            <span className="text-[11px] font-medium text-foreground leading-tight">{label}</span>
+            <span className="text-xs font-medium text-foreground leading-tight">{label}</span>
           </Link>
         ))}
       </div>

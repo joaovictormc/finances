@@ -17,6 +17,7 @@ import { parseOfxTransactions } from "../lib/import/ofx-parser";
 import { validateImportFileBatch } from "../lib/import/import-limits";
 import { parseMonthlyReportPeriod } from "../lib/report-period";
 import { redis } from "../lib/redis";
+import { awardDailyPoints } from "../lib/gamification";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -244,6 +245,8 @@ app.post("/", zValidator("json", CreateTransactionSchema), async (c) => {
       group: { select: { id: true, name: true } },
     },
   });
+
+  void awardDailyPoints(userId, transaction.date);
 
   return c.json(transaction, 201);
 });

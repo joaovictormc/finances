@@ -49,6 +49,7 @@ model User {
   referralsMade   Referral[]        @relation("Referrer")
   referredBy      Referral?         @relation("Referred")
   aiUsageLogs     AiUsageLog[]
+  gamificationProfile GamificationProfile?
 
   @@map("users")
 }
@@ -258,7 +259,7 @@ model Transaction {
   // AI enrichment
   aiCategoryConfidence Decimal? @db.Decimal(4, 3)
   aiMerchantName       String?
-  aiTags               String[] // ['supermercado', 'alimentação']
+  aiTags               String[] @default([]) // ['supermercado', 'alimentação']
 
   // Transfer link
   transferPairId String?
@@ -481,7 +482,7 @@ model AiInsight {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  type     String // monthly_summary | spending_anomaly | recurring_detected | overdraft_risk | savings_opportunity | budget_forecast
+  type     String // monthly_summary | spending_anomaly | recurring_detected | overdraft_risk | savings_opportunity | budget_forecast | weekly_recap | streak_milestone
   title    String
   body     String // markdown
   data     Json?
@@ -496,6 +497,27 @@ model AiInsight {
 
   @@index([userId, isRead])
   @@map("ai_insights")
+}
+
+// ─────────────────────────────────────────────
+// GAMIFICAÇÃO
+// ─────────────────────────────────────────────
+
+model GamificationProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  points          Int       @default(0)
+  level           Int       @default(1)
+  currentStreak   Int       @default(0)
+  longestStreak   Int       @default(0)
+  lastActivityDate DateTime? @db.Date
+  lastSpinAt      DateTime?
+
+  updatedAt DateTime @updatedAt
+
+  @@map("gamification_profiles")
 }
 
 // ─────────────────────────────────────────────

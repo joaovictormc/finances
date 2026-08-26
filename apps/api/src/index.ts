@@ -25,6 +25,7 @@ import referralsRoute from "./routes/referrals";
 import adminRoute from "./routes/admin";
 import settingsRoute from "./routes/settings";
 import userRoute from "./routes/user";
+import gamificationRoute from "./routes/gamification";
 import { registerRepeatableJobs } from "./jobs/scheduler";
 import { db } from "@finances/db";
 
@@ -35,6 +36,7 @@ import "./jobs/workers/voice-transcription.worker";
 import "./jobs/workers/open-finance-sync.worker";
 import "./jobs/workers/ai-analysis.worker";
 import "./jobs/workers/bill-detector.worker";
+import "./jobs/workers/gamification.worker";
 
 const app = new Hono();
 
@@ -110,6 +112,7 @@ app.route("/api/referrals", referralsRoute);
 app.route("/api/admin", adminRoute);
 app.route("/api/settings", settingsRoute);
 app.route("/api/user", userRoute);
+app.route("/api/gamification", gamificationRoute);
 
 app.onError((err, c) => {
   const requestId = c.res.headers.get("x-request-id") ?? "unknown";

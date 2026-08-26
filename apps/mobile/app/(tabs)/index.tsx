@@ -9,6 +9,7 @@ import { useSession } from "@/lib/auth-client";
 import { useTheme } from "@/lib/theme";
 import { formatBRL } from "@/lib/format";
 import type { MonthlyReport, DailyReport, Transaction, PaginatedResponse } from "@/lib/types";
+import { GamificationCard } from "@/components/gamification-card";
 
 // Paleta de fatias no espírito Finans: amarelo de marca primeiro, depois apoios.
 const SLICE_COLORS = ["#FFC300", "#1C1C1E", "#22c55e", "#A6A5A0", "#8b5cf6", "#06b6d4", "#f97316", "#ec4899"];
@@ -203,6 +204,8 @@ export default function OverviewScreen() {
           </View>
         </View>
       </View>
+
+      <GamificationCard />
 
       {/* Gastos por categoria */}
       <View className="mb-4 items-center rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">

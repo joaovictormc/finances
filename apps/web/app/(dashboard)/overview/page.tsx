@@ -9,6 +9,7 @@ import { BalanceTrendChart } from "@/components/overview/balance-trend-chart";
 import { HeroBalanceCard } from "@/components/overview/hero-balance-card";
 import { QuickActions } from "@/components/overview/quick-actions";
 import { GoalsPreview } from "@/components/overview/goals-preview";
+import { GamificationCard } from "@/components/overview/gamification-card";
 import { RecentTransactions } from "@/components/overview/recent-transactions";
 import { UpcomingBills } from "@/components/overview/upcoming-bills";
 import { InsightsPanel } from "@/components/insights/insights-panel";
@@ -134,7 +135,14 @@ export default async function OverviewPage({
         </div>
       </div>
 
-      <QuickActions />
+      <div className="mb-6 grid grid-cols-1 lg:grid-cols-5 gap-4 items-stretch">
+        <div className="lg:col-span-2">
+          <QuickActions />
+        </div>
+        <div className="lg:col-span-3">
+          <GamificationCard />
+        </div>
+      </div>
 
       <InsightsPanel />
       <AiQueryBox />

@@ -1,4 +1,4 @@
-import { aiAnalysisQueue, billDetectorQueue } from "./queues";
+import { aiAnalysisQueue, billDetectorQueue, gamificationQueue } from "./queues";
 
 // jobId fixo: BullMQ não duplica o repeat ao reexecutar isso em cada boot da API.
 export async function registerRepeatableJobs() {
@@ -16,5 +16,10 @@ export async function registerRepeatableJobs() {
     "fan-out-detect-recurring",
     {},
     { repeat: { pattern: "0 7 * * *" }, jobId: "fan-out-detect-recurring" }
+  );
+  await gamificationQueue.add(
+    "fan-out-weekly-recap",
+    {},
+    { repeat: { pattern: "0 6 * * 1" }, jobId: "fan-out-weekly-recap" }
   );
 }

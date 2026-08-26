@@ -13,6 +13,7 @@ export const openFinanceSyncQueue = new Queue("open-finance-sync", {
 });
 export const aiAnalysisQueue = new Queue("ai-analysis", { connection });
 export const billDetectorQueue = new Queue("bill-detector", { connection });
+export const gamificationQueue = new Queue("gamification", { connection });
 
 export const allQueues = [
   emailQueue,
@@ -21,4 +22,5 @@ export const allQueues = [
   openFinanceSyncQueue,
   aiAnalysisQueue,
   billDetectorQueue,
+  gamificationQueue,
 ];

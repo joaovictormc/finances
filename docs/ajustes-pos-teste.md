@@ -80,8 +80,10 @@ The column `ai_settings.categorySuggestionEnabled` does not exist in the current
 
 
 ### Novas Funcionalidades
-- Gameficação: 
+- [OK] Gameficação: 
   > Discutir e analisar propostas para gameficar a aplicação para tornar um diferencial do projeto, como cumprimento de metas semanais, mini jogos para atrair o usuário e deixar o registro diário financeiro mais atrativo e diversificado
+  >
+  > Implementado: novo model `GamificationProfile` (pontos, nível, streak diário de transações registradas), `awardDailyPoints` disparado a cada transação criada, job semanal (`gamification.worker.ts`, seg 06h) que gera um `AiInsight` tipo `weekly_recap` no `InsightsPanel`, e mini-jogo "Roleta Semanal" (`POST /api/gamification/spin`, sorteio server-side, idempotente por semana, desbloqueia com 7 dias de streak). Card `GamificationCard` na Visão Geral (web) e na Home (mobile), reaproveitando o `ProgressRing`. De quebra, corrigido um bug pré-existente (`Transaction.aiTags` sem `@default([])`, causava `P2011` em qualquer criação de transação).
 - Leitura de cupom fiscal/nf-e
   > inserir no app mobile uma feature que pode ser inserida a partir do plano pro que é o envio de foto diretamente pelo app de cupom fiscal, notinhas de maquininhas de cartão, nf-e, etc, e abra um menu para edição dessa transação, realizar a pré classificação antes do usuário cadastrar via IA
 - Desenvolver a integração via whatsapp
