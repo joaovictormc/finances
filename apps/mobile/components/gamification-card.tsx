@@ -29,7 +29,7 @@ export function GamificationCard() {
   const { colors } = useTheme();
   const [profile, setProfile] = useState<GamificationProfile | null>(null);
   const [spinning, setSpinning] = useState(false);
-  const [prize, setPrize] = useState<number | null>(null);
+  const [prize, setPrize] = useState<{ label: string; points: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,12 +45,12 @@ export function GamificationCard() {
     setError(null);
     setSpinning(true);
     try {
-      const result = await api.post<{ prize: number; points: number; level: number }>(
+      const result = await api.post<{ prizeLabel: string; prizePoints: number; points: number; level: number }>(
         "/api/gamification/spin",
         {}
       );
       setTimeout(() => {
-        setPrize(result.prize);
+        setPrize({ label: result.prizeLabel, points: result.prizePoints });
         setProfile((prev) => (prev ? { ...prev, points: result.points, level: result.level, canSpin: false } : prev));
         setSpinning(false);
       }, 1200);
@@ -116,10 +116,10 @@ export function GamificationCard() {
           <View className="w-full max-w-xs items-center rounded-2xl border border-border bg-card p-8 dark:border-border-dark dark:bg-card-dark">
             <Ionicons name="sparkles" size={32} color={colors.primary} />
             <Text className="mt-3 text-center text-lg font-bold text-foreground dark:text-foreground-dark">
-              Você ganhou +{prize} pontos!
+              {prize?.label}
             </Text>
             <Text className="mt-1 text-center text-sm text-muted-foreground dark:text-muted-foreground-dark">
-              Volta semana que vem pra girar de novo.
+              +{prize?.points} pontos! Volta semana que vem pra girar de novo.
             </Text>
             <Pressable
               onPress={() => setPrize(null)}

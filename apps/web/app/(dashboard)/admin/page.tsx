@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, Receipt, Bot, CreditCard, ArrowRight } from "lucide-react";
+import { Users, Receipt, Bot, CreditCard, ArrowRight, Sparkles } from "lucide-react";
 
 const sections = [
   {
@@ -25,6 +25,12 @@ const sections = [
     title: "Modelos de IA",
     description: "Configure o modelo ativo, kill-switches e veja uso/custo",
     icon: Bot,
+  },
+  {
+    href: "/admin/gamification",
+    title: "Roleta Semanal",
+    description: "Defina os prêmios sorteáveis na Roleta Semanal da gamificação",
+    icon: Sparkles,
   },
 ];
 

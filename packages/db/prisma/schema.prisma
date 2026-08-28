@@ -600,6 +600,19 @@ model AiSettings {
   @@map("ai_settings")
 }
 
+/** Configuração dos prêmios da Roleta Semanal (gamificação) — o admin define os valores da semana. */
+model GamificationSettings {
+  id String @id @default("singleton") // linha única de configuração global
+
+  /// Array de { label: string; points: number } — cada entrada é um prêmio sorteável
+  /// na Roleta Semanal, com rótulo livre (ex: "Cupom de desconto") e os pontos aplicados.
+  spinPrizes Json @default("[{\"label\":\"10 pontos\",\"points\":10},{\"label\":\"20 pontos\",\"points\":20},{\"label\":\"30 pontos\",\"points\":30},{\"label\":\"50 pontos\",\"points\":50},{\"label\":\"100 pontos\",\"points\":100}]")
+
+  updatedAt DateTime @updatedAt
+
+  @@map("gamification_settings")
+}
+
 /** Configuração de cada método de pagamento disponível (id = "mercadopago" | "pix"). */
 model PaymentMethodConfig {
   id      String  @id // "mercadopago" | "pix"

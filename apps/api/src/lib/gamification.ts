@@ -1,4 +1,5 @@
 import { db } from "@finances/db";
+import { getGamificationSettings, DEFAULT_SPIN_PRIZES } from "./gamification-settings";
 
 // Pontos ganhos por transação registrada; bônus na primeira do dia (incentiva
 // o registro diário sem exigir múltiplos lançamentos).
@@ -7,9 +8,6 @@ const FIRST_TRANSACTION_OF_DAY_BONUS = 10;
 
 // Streak só desbloqueia a Roleta Semanal a partir de 7 dias consecutivos.
 export const SPIN_UNLOCK_STREAK = 7;
-
-// Prêmios da Roleta Semanal — sorteio sempre no servidor, nunca confia em RNG do cliente.
-const SPIN_PRIZES = [10, 20, 30, 50, 100] as const;
 
 // Tabela de thresholds de nível: level N precisa de LEVEL_THRESHOLDS[N-1] pontos acumulados.
 const LEVEL_THRESHOLDS = [0, 50, 150, 300, 500, 800, 1200, 1700, 2300, 3000];
@@ -98,7 +96,7 @@ export async function awardDailyPoints(userId: string, transactionDate: Date): P
 }
 
 type SpinResult =
-  | { ok: true; prize: number; points: number; level: number }
+  | { ok: true; prizeLabel: string; prizePoints: number; points: number; level: number }
   | { ok: false; reason: "streak_insufficiente" | "ja_girou_essa_semana" | "perfil_nao_encontrado" };
 
 function startOfIsoWeekUTC(date: Date): Date {
@@ -124,15 +122,17 @@ export async function rollWeeklySpin(userId: string): Promise<SpinResult> {
     }
   }
 
-  const prize = SPIN_PRIZES[Math.floor(Math.random() * SPIN_PRIZES.length)]!;
-  const points = profile.points + prize;
+  const settings = await getGamificationSettings();
+  const spinPrizes = settings.spinPrizes.length > 0 ? settings.spinPrizes : DEFAULT_SPIN_PRIZES;
+  const prize = spinPrizes[Math.floor(Math.random() * spinPrizes.length)]!;
+  const points = profile.points + prize.points;
 
   const updated = await db.gamificationProfile.update({
     where: { userId },
     data: { points, level: getLevelForPoints(points), lastSpinAt: now },
   });
 
-  return { ok: true, prize, points: updated.points, level: updated.level };
+  return { ok: true, prizeLabel: prize.label, prizePoints: prize.points, points: updated.points, level: updated.level };
 }
 
 /** Gera o AiInsight `weekly_recap` de um usuário (chamado pelo job semanal fan-out). */

@@ -30,7 +30,7 @@ function progressToNextLevel(points: number, level: number): number {
 export function GamificationCard() {
   const [profile, setProfile] = useState<GamificationProfile | null>(null);
   const [spinning, setSpinning] = useState(false);
-  const [prizeResult, setPrizeResult] = useState<{ prize: number } | null>(null);
+  const [prizeResult, setPrizeResult] = useState<{ label: string; points: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -46,13 +46,13 @@ export function GamificationCard() {
     setError(null);
     setSpinning(true);
     try {
-      const result = await api.post<{ prize: number; points: number; level: number }>(
+      const result = await api.post<{ prizeLabel: string; prizePoints: number; points: number; level: number }>(
         "/api/gamification/spin",
         {}
       );
       // Deixa a animação girar um pouco antes de revelar o prêmio.
       setTimeout(() => {
-        setPrizeResult({ prize: result.prize });
+        setPrizeResult({ label: result.prizeLabel, points: result.prizePoints });
         setProfile((prev) => (prev ? { ...prev, points: result.points, level: result.level, canSpin: false } : prev));
         setSpinning(false);
       }, 1200);
@@ -112,8 +112,8 @@ export function GamificationCard() {
             onClick={(e) => e.stopPropagation()}
           >
             <Sparkles size={32} className="mx-auto text-primary mb-3" />
-            <p className="text-lg font-bold text-foreground">Você ganhou +{prizeResult.prize} pontos!</p>
-            <p className="text-sm text-muted-foreground mt-1">Volta semana que vem pra girar de novo.</p>
+            <p className="text-lg font-bold text-foreground">{prizeResult.label}</p>
+            <p className="text-sm text-muted-foreground mt-1">+{prizeResult.points} pontos! Volta semana que vem pra girar de novo.</p>
             <button
               onClick={() => setPrizeResult(null)}
               className="mt-5 w-full rounded-xl bg-primary text-primary-foreground text-sm font-medium py-2.5 hover:opacity-90 transition-opacity"

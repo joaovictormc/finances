@@ -5,6 +5,7 @@ import { db } from "@finances/db";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { requireAdmin } from "../middleware/admin";
 import { getAiSettings, updateAiSettings, getMonthlyTokenUsage } from "../lib/ai/ai-settings";
+import { getGamificationSettings, updateGamificationSettings } from "../lib/gamification-settings";
 import { cancelSubscriptionAtMercadoPago } from "../lib/mercadopago";
 import {
   PAYMENT_METHODS,
@@ -260,6 +261,26 @@ app.get("/ai/usage", async (c) => {
   const monthlyTokenUsage = await getMonthlyTokenUsage();
 
   return c.json({ byFeature, last1d, last7d, last30d, monthlyTokenUsage });
+});
+
+// ── Gamificação (prêmios da Roleta Semanal) ──────────────────────────────────
+
+app.get("/gamification/settings", async (c) => {
+  const settings = await getGamificationSettings();
+  return c.json(settings);
+});
+
+const GamificationSettingsSchema = z.object({
+  spinPrizes: z
+    .array(z.object({ label: z.string().trim().min(1).max(60), points: z.number().int().positive() }))
+    .min(1)
+    .max(10),
+});
+
+app.patch("/gamification/settings", zValidator("json", GamificationSettingsSchema), async (c) => {
+  const data = c.req.valid("json");
+  const settings = await updateGamificationSettings(data);
+  return c.json(settings);
 });
 
 export default app;
