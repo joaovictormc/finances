@@ -105,15 +105,16 @@ export default function NewTransactionScreen() {
   }
 
   async function uploadReceipt(asset: ImagePicker.ImagePickerAsset) {
-    const formData = new FormData();
-    formData.append(
-      "file",
-      { uri: asset.uri, name: asset.fileName ?? "cupom.jpg", type: asset.mimeType ?? "image/jpeg" } as unknown as Blob
-    );
-
     setScanning(true);
     setError(null);
     try {
+      // O fetch mais novo do Expo (WinterCG-compliant) não entende mais o
+      // objeto {uri, name, type} que o React Native tradicionalmente aceitava
+      // pra representar um arquivo local — precisa de um Blob de verdade.
+      const blob = await (await fetch(asset.uri)).blob();
+      const formData = new FormData();
+      formData.append("file", blob, asset.fileName ?? "cupom.jpg");
+
       const parsed = await api.upload<ParsedReceipt>("/api/transactions/receipt-scan", formData);
       if (parsed.amount) setAmount(String(parsed.amount).replace(".", ","));
       if (parsed.merchant) setDescription(parsed.merchant);
