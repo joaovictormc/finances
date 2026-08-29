@@ -606,13 +606,17 @@ model Referral {
 model AiSettings {
   id String @id @default("singleton") // linha única de configuração global
 
-  textModel  String @default("llama-3.3-70b-versatile")
-  audioModel String @default("whisper-large-v3-turbo")
+  textModel   String @default("llama-3.3-70b-versatile")
+  audioModel  String @default("whisper-large-v3-turbo")
+  // Modelo de visão (multimodal) da Groq — confirme/ajuste o id exato disponível
+  // na conta em uso; editável em /admin/ai sem precisar de deploy.
+  visionModel String @default("llama-3.2-90b-vision-preview")
 
   expenseParsingEnabled     Boolean @default(true) // parsing de mensagens do bot (texto/voz)
   monthlyInsightsEnabled    Boolean @default(true) // geração de insight mensal
   nlQueryEnabled            Boolean @default(true) // POST /api/ai/query
   categorySuggestionEnabled Boolean @default(true) // POST /api/transactions/suggest-categories
+  receiptScanEnabled        Boolean @default(true) // POST /api/transactions/receipt-scan (kill-switch)
 
   monthlyTokenLimit Int? // null = ilimitado; soma de prompt+completion tokens do mês corrente
 

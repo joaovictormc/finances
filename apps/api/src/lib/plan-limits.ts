@@ -33,6 +33,11 @@ export async function isAiInsightsAllowed(userId: string): Promise<boolean> {
   return plan.aiInsights;
 }
 
+export async function isReceiptScanAllowed(userId: string): Promise<boolean> {
+  const plan = await getEffectivePlan(userId);
+  return plan.receiptScan;
+}
+
 export async function isChannelAllowed(userId: string, channel: "telegram" | "whatsapp"): Promise<boolean> {
   const plan = await getEffectivePlan(userId);
   return plan.channels.includes(channel);

@@ -88,7 +88,9 @@ The column `ai_settings.categorySuggestionEnabled` does not exist in the current
   > Painel admin (`/admin/gamification`): gerenciamento dos prêmios da Roleta Semanal — cada prêmio tem rótulo livre (ex: "Cupom de desconto") e pontos aplicados (`GamificationSettings.spinPrizes`, `Json`), peso/probabilidade configurável, simulação estatística e prévia visual da roleta, e estatísticas reais de uso (`GET /admin/gamification/stats`).
   >
   > Roleta visual real (`SpinWheel`, web + mobile) substituindo o botão simples — usada tanto no card do usuário quanto na prévia do admin, com animação de duas fases (desaceleração + acomodação suave no prêmio mais próximo). Nova área "Recompensas" (`/rewards`, web + mobile): giro avulso comprável com pontos, loja de emblemas cosméticos, histórico pessoal de giros (`GamificationSpinLog`) e progresso (nível/streak). Ranking de pontos entre membros do grupo em `/groups/[id]`. Badge de pontos na navegação levando pra `/rewards`.
-- Leitura de cupom fiscal/nf-e
+- [OK] Leitura de cupom fiscal/nf-e
   > inserir no app mobile uma feature que pode ser inserida a partir do plano pro que é o envio de foto diretamente pelo app de cupom fiscal, notinhas de maquininhas de cartão, nf-e, etc, e abra um menu para edição dessa transação, realizar a pré classificação antes do usuário cadastrar via IA
+  >
+  > Implementado: `POST /api/transactions/receipt-scan` (mobile, planos Pro/Família — `isReceiptScanAllowed`) envia a foto pra um modelo de visão da Groq (`AiSettings.visionModel`, editável em `/admin/ai`, kill-switch `receiptScanEnabled`) que extrai `{merchant, amount, date, categoryHint, items[]}` (`ParsedReceiptSchema`). Nunca cria a transação sozinho — só pré-preenche o formulário de `new-transaction.tsx` (botão "Preencher com foto do cupom", câmera ou galeria via `expo-image-picker`), o usuário revisa e confirma. `categoryHint` tenta casar com uma categoria existente automaticamente.
 - Desenvolver a integração via whatsapp
   > Como já existe o bot do telegram, podemos em paralelo configurar e inserir o bot para whatsapp selehante ao do telegram

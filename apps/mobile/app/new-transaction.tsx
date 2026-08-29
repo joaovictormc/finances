@@ -1,10 +1,20 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Alert } from "react-native";
 import { router } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api-client";
 import { useTheme } from "@/lib/theme";
 import { BASE_PAYMENT_METHOD_TABS, type PaymentMethod } from "@/lib/payment-methods";
 import type { Category, FinancialAccount } from "@/lib/types";
+
+type ParsedReceipt = {
+  merchant?: string;
+  amount?: number;
+  date?: string;
+  categoryHint?: string;
+  confidence: number;
+};
 
 type TransactionType = "expense" | "income" | "transfer";
 
@@ -41,6 +51,7 @@ export default function NewTransactionScreen() {
   const [categoryId, setCategoryId] = useState("");
   const [loadingData, setLoadingData] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -93,6 +104,65 @@ export default function NewTransactionScreen() {
     }
   }
 
+  async function uploadReceipt(asset: ImagePicker.ImagePickerAsset) {
+    const formData = new FormData();
+    formData.append(
+      "file",
+      { uri: asset.uri, name: asset.fileName ?? "cupom.jpg", type: asset.mimeType ?? "image/jpeg" } as unknown as Blob
+    );
+
+    setScanning(true);
+    setError(null);
+    try {
+      const parsed = await api.upload<ParsedReceipt>("/api/transactions/receipt-scan", formData);
+      if (parsed.amount) setAmount(String(parsed.amount).replace(".", ","));
+      if (parsed.merchant) setDescription(parsed.merchant);
+      if (parsed.date) setDate(parsed.date);
+      if (parsed.categoryHint) {
+        const hint = parsed.categoryHint.toLowerCase();
+        const match = flattenCategories(categories).find((c) => c.name.toLowerCase().includes(hint) || hint.includes(c.name.toLowerCase()));
+        if (match) setCategoryId(match.id);
+      }
+      if (parsed.confidence < 0.4) {
+        Alert.alert("Confira os dados", "Não consegui ler o cupom com muita confiança — revise os campos antes de salvar.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao ler o cupom.");
+    } finally {
+      setScanning(false);
+    }
+  }
+
+  async function handleScanReceipt() {
+    Alert.alert("Escanear cupom", "Como você quer enviar a foto?", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Tirar foto",
+        onPress: async () => {
+          const permission = await ImagePicker.requestCameraPermissionsAsync();
+          if (!permission.granted) {
+            setError("Permissão de câmera negada.");
+            return;
+          }
+          const result = await ImagePicker.launchCameraAsync({ mediaTypes: "images", quality: 0.7 });
+          if (!result.canceled && result.assets[0]) uploadReceipt(result.assets[0]);
+        },
+      },
+      {
+        text: "Escolher da galeria",
+        onPress: async () => {
+          const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!permission.granted) {
+            setError("Permissão de galeria negada.");
+            return;
+          }
+          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: "images", quality: 0.7 });
+          if (!result.canceled && result.assets[0]) uploadReceipt(result.assets[0]);
+        },
+      },
+    ]);
+  }
+
   const flatCategories = flattenCategories(categories);
   const selectedAccount = accounts.find((a) => a.id === accountId);
 
@@ -106,6 +176,22 @@ export default function NewTransactionScreen() {
 
   return (
     <ScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16 }}>
+      <Pressable
+        onPress={handleScanReceipt}
+        disabled={scanning}
+        className="mb-4 flex-row items-center justify-center gap-2 rounded-md border border-dashed border-primary py-3"
+        style={{ opacity: scanning ? 0.6 : 1 }}
+      >
+        {scanning ? (
+          <ActivityIndicator size="small" color={colors.primary} />
+        ) : (
+          <Ionicons name="camera-outline" size={18} color={colors.primary} />
+        )}
+        <Text className="text-sm font-medium text-primary dark:text-primary-dark">
+          {scanning ? "Lendo cupom..." : "Preencher com foto do cupom (Pro)"}
+        </Text>
+      </Pressable>
+
       <View className="mb-4 flex-row gap-1.5 rounded-lg bg-muted p-1 dark:bg-muted-dark">
         {TYPE_TABS.map((tab) => (
           <Pressable

@@ -8,7 +8,8 @@ export type AiFeature =
   | "monthly_insight"
   | "nl_query"
   | "voice_transcription"
-  | "category_suggestion";
+  | "category_suggestion"
+  | "receipt_scan";
 
 export async function getAiSettings() {
   return db.aiSettings.upsert({
@@ -21,10 +22,12 @@ export async function getAiSettings() {
 export async function updateAiSettings(data: {
   textModel?: string;
   audioModel?: string;
+  visionModel?: string;
   expenseParsingEnabled?: boolean;
   monthlyInsightsEnabled?: boolean;
   nlQueryEnabled?: boolean;
   categorySuggestionEnabled?: boolean;
+  receiptScanEnabled?: boolean;
   monthlyTokenLimit?: number | null;
 }) {
   return db.aiSettings.upsert({

@@ -9,12 +9,14 @@ import {
   TransactionFiltersSchema,
 } from "@finances/validations";
 import { suggestCategories } from "../lib/ai/category-suggester";
+import { parseReceiptImage } from "../lib/ai/receipt-parser";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { getUserGroupIds, hasGroupRole } from "../lib/groups";
-import { getHistoryCutoffDate } from "../lib/plan-limits";
+import { getHistoryCutoffDate, isReceiptScanAllowed } from "../lib/plan-limits";
 import { parseCsvTransactions } from "../lib/import/csv-parser";
 import { parseOfxTransactions } from "../lib/import/ofx-parser";
 import { validateImportFileBatch } from "../lib/import/import-limits";
+import { validateReceiptImage } from "../lib/import/receipt-limits";
 import { parseMonthlyReportPeriod } from "../lib/report-period";
 import { redis } from "../lib/redis";
 import { awardDailyPoints } from "../lib/gamification";
@@ -191,6 +193,41 @@ app.post("/import/batch", async (c) => {
     },
     201
   );
+});
+
+// Leitura de cupom fiscal/NF-e por foto (plano Pro/Família) — nunca cria a
+// transação sozinho, só devolve os dados extraídos pro app pré-preencher o
+// formulário e o usuário revisar antes de confirmar.
+app.post("/receipt-scan", async (c) => {
+  const userId = c.get("userId");
+
+  if (!(await isReceiptScanAllowed(userId))) {
+    return c.json(
+      { error: "Leitura de cupom fiscal disponível nos planos Pro e Família. Faça upgrade para usar." },
+      403
+    );
+  }
+
+  const formData = await c.req.raw.formData();
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return c.json({ error: "Envie uma imagem (file)" }, 400);
+  }
+
+  try {
+    validateReceiptImage(file);
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : "Imagem inválida" }, 400);
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const parsed = await parseReceiptImage(buffer, file.type || "image/jpeg", userId);
+
+  if (!parsed) {
+    return c.json({ error: "Não foi possível ler o cupom. Tente outra foto." }, 422);
+  }
+
+  return c.json(parsed);
 });
 
 // Get single transaction

@@ -12,10 +12,12 @@ import { api } from "@/lib/api-client";
 type AiSettings = {
   textModel: string;
   audioModel: string;
+  visionModel: string;
   expenseParsingEnabled: boolean;
   monthlyInsightsEnabled: boolean;
   nlQueryEnabled: boolean;
   categorySuggestionEnabled: boolean;
+  receiptScanEnabled: boolean;
   monthlyTokenLimit: number | null;
 };
 
@@ -33,6 +35,7 @@ const FEATURE_LABELS: Record<string, string> = {
   nl_query: "Consultas em linguagem natural",
   voice_transcription: "Transcrição de voz",
   category_suggestion: "Sugestão de categoria",
+  receipt_scan: "Leitura de cupom fiscal",
 };
 
 export default function AdminAiPage() {
@@ -104,6 +107,11 @@ export default function AdminAiPage() {
               value={settings.audioModel}
               onChange={(e) => setSettings({ ...settings, audioModel: e.target.value })}
             />
+            <Input
+              label="Modelo de visão (Groq)"
+              value={settings.visionModel}
+              onChange={(e) => setSettings({ ...settings, visionModel: e.target.value })}
+            />
           </div>
         </section>
 
@@ -134,6 +142,12 @@ export default function AdminAiPage() {
               description="Sugere categoria para transações sem categoria — não aplica automático"
               enabled={settings.categorySuggestionEnabled}
               onChange={(v) => setSettings({ ...settings, categorySuggestionEnabled: v })}
+            />
+            <ToggleRow
+              label="Leitura de cupom fiscal"
+              description="Escaneamento de cupons/NF-e por foto no mobile (planos Pro e Família)"
+              enabled={settings.receiptScanEnabled}
+              onChange={(v) => setSettings({ ...settings, receiptScanEnabled: v })}
             />
           </div>
         </section>

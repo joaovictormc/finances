@@ -8,6 +8,7 @@ export interface PlanDefinition {
   historyMonths: number | null; // null = ilimitado
   channels: Array<"telegram" | "whatsapp">;
   aiInsights: boolean;
+  receiptScan: boolean; // leitura de cupom fiscal/NF-e por foto (mobile)
   maxGroupMembers: number; // 1 = sem grupo
 }
 
@@ -20,6 +21,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     historyMonths: 3,
     channels: [], // sem módulo de integrações: sem bot
     aiInsights: false,
+    receiptScan: false,
     maxGroupMembers: 1, // sem módulo família
   },
   pro: {
@@ -30,6 +32,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     historyMonths: null,
     channels: ["telegram", "whatsapp"],
     aiInsights: true,
+    receiptScan: true,
     maxGroupMembers: 1, // sem módulo família — só Família libera grupos
   },
   familia: {
@@ -40,6 +43,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     historyMonths: null,
     channels: ["telegram", "whatsapp"],
     aiInsights: true,
+    receiptScan: true,
     maxGroupMembers: 5,
   },
 };
@@ -57,5 +61,6 @@ export const ADMIN_PLAN: PlanDefinition = {
   historyMonths: null,
   channels: ["telegram", "whatsapp"],
   aiInsights: true,
+  receiptScan: true,
   maxGroupMembers: Number.MAX_SAFE_INTEGER,
 };
