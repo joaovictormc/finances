@@ -14,6 +14,7 @@ import {
   Users,
   ShieldCheck,
   Lock,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/auth-client";
@@ -27,6 +28,7 @@ const baseNavItems = [
   { href: "/goals", label: "Metas", icon: Target },
   { href: "/bills", label: "Contas a Pagar", icon: FileText },
   { href: "/accounts", label: "Contas Bancárias", icon: CreditCard },
+  { href: "/rewards", label: "Recompensas", icon: Sparkles },
 ];
 
 const groupsItem = { href: "/groups", label: "Família", icon: Users };
@@ -65,7 +67,7 @@ export function NavLinks({ collapsed = false }: { collapsed?: boolean }) {
   ];
 
   return (
-    <nav className="flex-1 space-y-1 p-3">
+    <nav className="flex-1 min-h-0 overflow-y-auto space-y-1 p-3">
       {items.map((item) => {
         const active = pathname.startsWith(item.href);
         return (

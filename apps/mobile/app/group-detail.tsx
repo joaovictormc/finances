@@ -7,6 +7,16 @@ import { useSession } from "@/lib/auth-client";
 import { useTheme } from "@/lib/theme";
 import type { GroupDetail, GroupRole } from "@/lib/types";
 
+type LeaderboardEntry = { userId: string; name: string; points: number; level: number; activeBadge: string | null };
+
+// Mesmos ícones do catálogo em apps/api/src/lib/gamification.ts (BADGE_CATALOG).
+const BADGE_ICONS: Record<string, string> = {
+  poupador: "🐷",
+  disciplinado: "🔥",
+  estrategista: "🧠",
+  lenda: "👑",
+};
+
 const ROLE_LABELS: Record<GroupRole, string> = {
   owner: "Dono",
   admin: "Admin",
@@ -21,6 +31,7 @@ export default function GroupDetailScreen() {
   const myUserId = session?.user?.id;
 
   const [group, setGroup] = useState<GroupDetail | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
   const [savingName, setSavingName] = useState(false);
@@ -35,6 +46,10 @@ export default function GroupDetailScreen() {
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Erro ao carregar grupo."))
       .finally(() => setLoading(false));
+    api
+      .get<LeaderboardEntry[]>(`/api/groups/${id}/leaderboard`)
+      .then(setLeaderboard)
+      .catch(() => setLeaderboard([]));
   }, [id]);
 
   useFocusEffect(load);
@@ -157,6 +172,30 @@ export default function GroupDetailScreen() {
           )}
 
           {error && <Text className="text-sm text-destructive dark:text-destructive-dark">{error}</Text>}
+
+          {leaderboard.length > 0 && (
+            <View className="gap-2 rounded-xl border border-border bg-card p-4 dark:border-border-dark dark:bg-card-dark">
+              <View className="flex-row items-center gap-1.5">
+                <Ionicons name="trophy-outline" size={16} color={colors.mutedForeground} />
+                <Text className="text-sm font-semibold text-foreground dark:text-foreground-dark">Ranking de pontos</Text>
+              </View>
+              {leaderboard.map((entry, i) => (
+                <View key={entry.userId} className="flex-row items-center gap-3 border-t border-border py-2 dark:border-border-dark">
+                  <Text className="w-5 text-center text-xs font-semibold text-muted-foreground dark:text-muted-foreground-dark">
+                    {i + 1}º
+                  </Text>
+                  <View className="flex-1">
+                    <Text className="flex-row text-sm font-medium text-foreground dark:text-foreground-dark">
+                      {entry.activeBadge ? `${BADGE_ICONS[entry.activeBadge] ?? ""} ` : ""}
+                      {entry.name}
+                    </Text>
+                    <Text className="text-xs text-muted-foreground dark:text-muted-foreground-dark">Nível {entry.level}</Text>
+                  </View>
+                  <Text className="text-sm font-semibold text-foreground dark:text-foreground-dark">{entry.points} pts</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           <Text className="text-sm font-medium text-muted-foreground dark:text-muted-foreground-dark">
             Membros ({group.members.length})

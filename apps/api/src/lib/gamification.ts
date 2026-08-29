@@ -1,5 +1,50 @@
 import { db } from "@finances/db";
-import { getGamificationSettings, DEFAULT_SPIN_PRIZES } from "./gamification-settings";
+import { getGamificationSettings, DEFAULT_SPIN_PRIZES, type SpinPrize } from "./gamification-settings";
+
+/**
+ * Sorteia um prêmio ponderado pelo `weight` de cada um (não confia em RNG do
+ * cliente — sempre chamado no servidor). Reaproveitado por `rollWeeklySpin`
+ * (sorteio real) e `simulateSpins` (simulação no admin, sem side effects).
+ */
+export function pickWeightedPrize(prizes: SpinPrize[]): SpinPrize {
+  const totalWeight = prizes.reduce((sum, p) => sum + p.weight, 0);
+  let roll = Math.random() * totalWeight;
+  for (const prize of prizes) {
+    roll -= prize.weight;
+    if (roll <= 0) return prize;
+  }
+  return prizes[prizes.length - 1]!; // fallback por arredondamento de ponto flutuante
+}
+
+export type SpinSimulationResult = {
+  label: string;
+  points: number;
+  weight: number;
+  configuredProbability: number;
+  count: number;
+  observedProbability: number;
+};
+
+/** Roda N sorteios em memória (sem tocar em GamificationProfile) pra validar as probabilidades configuradas. */
+export function simulateSpins(prizes: SpinPrize[], spins: number): SpinSimulationResult[] {
+  const totalWeight = prizes.reduce((sum, p) => sum + p.weight, 0);
+  const counts = new Map<string, number>();
+  for (let i = 0; i < spins; i++) {
+    const prize = pickWeightedPrize(prizes);
+    counts.set(prize.label, (counts.get(prize.label) ?? 0) + 1);
+  }
+  return prizes.map((p) => {
+    const count = counts.get(p.label) ?? 0;
+    return {
+      label: p.label,
+      points: p.points,
+      weight: p.weight,
+      configuredProbability: totalWeight > 0 ? p.weight / totalWeight : 0,
+      count,
+      observedProbability: spins > 0 ? count / spins : 0,
+    };
+  });
+}
 
 // Pontos ganhos por transação registrada; bônus na primeira do dia (incentiva
 // o registro diário sem exigir múltiplos lançamentos).
@@ -124,7 +169,7 @@ export async function rollWeeklySpin(userId: string): Promise<SpinResult> {
 
   const settings = await getGamificationSettings();
   const spinPrizes = settings.spinPrizes.length > 0 ? settings.spinPrizes : DEFAULT_SPIN_PRIZES;
-  const prize = spinPrizes[Math.floor(Math.random() * spinPrizes.length)]!;
+  const prize = pickWeightedPrize(spinPrizes);
   const points = profile.points + prize.points;
 
   const updated = await db.gamificationProfile.update({
@@ -132,7 +177,155 @@ export async function rollWeeklySpin(userId: string): Promise<SpinResult> {
     data: { points, level: getLevelForPoints(points), lastSpinAt: now },
   });
 
+  await logSpin(userId, prize, "weekly");
+
   return { ok: true, prizeLabel: prize.label, prizePoints: prize.points, points: updated.points, level: updated.level };
+}
+
+/** Registra o resultado de um giro real (grátis ou comprado) — nunca deixa o giro falhar por causa do log. */
+async function logSpin(userId: string, prize: SpinPrize, source: "weekly" | "purchased"): Promise<void> {
+  try {
+    await db.gamificationSpinLog.create({
+      data: { userId, prizeLabel: prize.label, prizePoints: prize.points, source },
+    });
+  } catch (err) {
+    console.error("[gamification] falha ao registrar log de giro:", err);
+  }
+}
+
+// Custo em pontos pra comprar um giro avulso, sem depender da streak de 7 dias
+// nem do limite semanal do giro grátis — mecânica independente (gasta pontos,
+// ganha um prêmio sorteado igual ao giro normal).
+export const EXTRA_SPIN_COST = 50;
+
+type BuySpinResult =
+  | { ok: true; prizeLabel: string; prizePoints: number; points: number; level: number }
+  | { ok: false; reason: "pontos_insuficientes" | "perfil_nao_encontrado" };
+
+/** Compra um giro avulso com pontos — não mexe em streak/lastSpinAt (giro grátis semanal continua intacto). */
+export async function buyExtraSpin(userId: string): Promise<BuySpinResult> {
+  const profile = await db.gamificationProfile.findUnique({ where: { userId } });
+  if (!profile) return { ok: false, reason: "perfil_nao_encontrado" };
+  if (profile.points < EXTRA_SPIN_COST) return { ok: false, reason: "pontos_insuficientes" };
+
+  const settings = await getGamificationSettings();
+  const spinPrizes = settings.spinPrizes.length > 0 ? settings.spinPrizes : DEFAULT_SPIN_PRIZES;
+  const prize = pickWeightedPrize(spinPrizes);
+  const points = profile.points - EXTRA_SPIN_COST + prize.points;
+
+  const updated = await db.gamificationProfile.update({
+    where: { userId },
+    data: { points, level: getLevelForPoints(points) },
+  });
+
+  await logSpin(userId, prize, "purchased");
+
+  return { ok: true, prizeLabel: prize.label, prizePoints: prize.points, points: updated.points, level: updated.level };
+}
+
+/** Últimos N giros reais do usuário (para exibir em /rewards). */
+export async function getSpinHistory(userId: string, limit = 10) {
+  return db.gamificationSpinLog.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: { prizeLabel: true, prizePoints: true, source: true, createdAt: true },
+  });
+}
+
+// ── Estatísticas reais de uso (admin) ─────────────────────────────────────────
+
+export type GamificationStats = {
+  activeUsers: number;
+  spinsThisWeek: number;
+  totalSpins: number;
+  levelDistribution: { level: number; count: number }[];
+  badgeRedemptions: { slug: string; label: string; icon: string; count: number }[];
+  topPrizes: { label: string; count: number }[];
+};
+
+export async function getGamificationStats(): Promise<GamificationStats> {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  const [activeUsers, spinsThisWeek, totalSpins, levelGroups, badgeCounts, prizeGroups] = await Promise.all([
+    db.gamificationProfile.count(),
+    db.gamificationSpinLog.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+    db.gamificationSpinLog.count(),
+    db.gamificationProfile.groupBy({ by: ["level"], _count: { level: true }, orderBy: { level: "asc" } }),
+    Promise.all(
+      BADGE_CATALOG.map(async (b) => ({
+        slug: b.slug,
+        label: b.label,
+        icon: b.icon,
+        count: await db.gamificationProfile.count({ where: { unlockedBadges: { has: b.slug } } }),
+      }))
+    ),
+    db.gamificationSpinLog.groupBy({
+      by: ["prizeLabel"],
+      _count: { prizeLabel: true },
+      orderBy: { _count: { prizeLabel: "desc" } },
+      take: 5,
+    }),
+  ]);
+
+  return {
+    activeUsers,
+    spinsThisWeek,
+    totalSpins,
+    levelDistribution: levelGroups.map((g) => ({ level: g.level, count: g._count.level })),
+    badgeRedemptions: badgeCounts.sort((a, b) => b.count - a.count),
+    topPrizes: prizeGroups.map((g) => ({ label: g.prizeLabel, count: g._count.prizeLabel })),
+  };
+}
+
+// ── Loja de emblemas ──────────────────────────────────────────────────────────
+// Catálogo estático (não precisa de gerência no admin, ao contrário dos prêmios
+// da roleta) — resgatável com pontos acumulados, puramente cosmético (exibido
+// perto do nome do usuário), sem efeito em regras de negócio.
+export type Badge = { slug: string; label: string; icon: string; cost: number };
+
+export const BADGE_CATALOG: Badge[] = [
+  { slug: "poupador", label: "Poupador Nato", icon: "🐷", cost: 50 },
+  { slug: "disciplinado", label: "Disciplinado", icon: "🔥", cost: 150 },
+  { slug: "estrategista", label: "Estrategista", icon: "🧠", cost: 300 },
+  { slug: "lenda", label: "Lenda das Finanças", icon: "👑", cost: 600 },
+];
+
+type RedeemBadgeResult =
+  | { ok: true; unlockedBadges: string[]; points: number }
+  | { ok: false; reason: "emblema_invalido" | "ja_desbloqueado" | "pontos_insuficientes" | "perfil_nao_encontrado" };
+
+export async function redeemBadge(userId: string, slug: string): Promise<RedeemBadgeResult> {
+  const badge = BADGE_CATALOG.find((b) => b.slug === slug);
+  if (!badge) return { ok: false, reason: "emblema_invalido" };
+
+  const profile = await db.gamificationProfile.findUnique({ where: { userId } });
+  if (!profile) return { ok: false, reason: "perfil_nao_encontrado" };
+  if (profile.unlockedBadges.includes(slug)) return { ok: false, reason: "ja_desbloqueado" };
+  if (profile.points < badge.cost) return { ok: false, reason: "pontos_insuficientes" };
+
+  const updated = await db.gamificationProfile.update({
+    where: { userId },
+    data: { points: profile.points - badge.cost, unlockedBadges: { push: slug } },
+  });
+
+  return { ok: true, unlockedBadges: updated.unlockedBadges, points: updated.points };
+}
+
+type SetActiveBadgeResult =
+  | { ok: true; activeBadge: string | null }
+  | { ok: false; reason: "emblema_nao_desbloqueado" | "perfil_nao_encontrado" };
+
+/** `slug: null` remove o emblema em exibição. Não custa pontos — só equipa algo já resgatado. */
+export async function setActiveBadge(userId: string, slug: string | null): Promise<SetActiveBadgeResult> {
+  const profile = await db.gamificationProfile.findUnique({ where: { userId } });
+  if (!profile) return { ok: false, reason: "perfil_nao_encontrado" };
+  if (slug !== null && !profile.unlockedBadges.includes(slug)) {
+    return { ok: false, reason: "emblema_nao_desbloqueado" };
+  }
+
+  const updated = await db.gamificationProfile.update({ where: { userId }, data: { activeBadge: slug } });
+  return { ok: true, activeBadge: updated.activeBadge };
 }
 
 /** Gera o AiInsight `weekly_recap` de um usuário (chamado pelo job semanal fan-out). */

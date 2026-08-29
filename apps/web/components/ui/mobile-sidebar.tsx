@@ -6,11 +6,13 @@ import { usePathname } from "next/navigation";
 import {
   Menu, X,
   LayoutDashboard, ArrowLeftRight, PiggyBank,
-  Target, FileText, CreditCard, Settings, Bot, Users,
+  Target, FileText, CreditCard, Settings, Bot, Users, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 import { Logo } from "./logo";
+import { PointsBadge } from "./points-badge";
+import { UserMenu } from "./user-menu";
 import { usePlanAccess } from "@/lib/use-plan-access";
 
 const PLAN_LABELS: Record<string, string> = { free: "Plano Gratuito", pro: "Plano Pro", familia: "Plano Família" };
@@ -22,6 +24,7 @@ const navItems = [
   { href: "/goals", label: "Metas", icon: Target },
   { href: "/bills", label: "Contas a Pagar", icon: FileText },
   { href: "/accounts", label: "Contas Bancárias", icon: CreditCard },
+  { href: "/rewards", label: "Recompensas", icon: Sparkles },
   { href: "/groups", label: "Família", icon: Users },
   { href: "/bot", label: "Integração Bot", icon: Bot },
   { href: "/settings", label: "Configurações", icon: Settings },
@@ -45,11 +48,14 @@ export function MobileSidebar() {
           <Menu size={20} />
         </button>
         {currentPage ? (
-          <span className="text-sm font-semibold text-primary">{currentPage.label}</span>
+          <span className="text-sm font-semibold text-primary truncate px-2">{currentPage.label}</span>
         ) : (
           <Logo size={20} className="text-sm" />
         )}
-        <ThemeToggle />
+        <div className="flex items-center gap-1.5 shrink-0">
+          <PointsBadge />
+          <ThemeToggle />
+        </div>
       </header>
 
       {/* Backdrop */}
@@ -100,9 +106,10 @@ export function MobileSidebar() {
           })}
         </nav>
 
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border space-y-3">
+          <UserMenu />
           {!loading && (
-            <>
+            <div>
               <p className="text-xs text-muted-foreground">{PLAN_LABELS[plan]}</p>
               {plan !== "familia" && (
                 <Link
@@ -113,7 +120,7 @@ export function MobileSidebar() {
                   {plan === "free" ? "Upgrade de plano →" : "Ver planos →"}
                 </Link>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>

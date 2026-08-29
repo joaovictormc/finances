@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NavLinks } from "@/components/ui/nav-links";
 import { UserMenu } from "@/components/ui/user-menu";
 import { Logo } from "@/components/ui/logo";
+import { PointsBadge } from "@/components/ui/points-badge";
 import { useSidebar } from "@/app/providers/sidebar-provider";
 import { usePlanAccess } from "@/lib/use-plan-access";
 
@@ -17,12 +18,12 @@ export function DashboardSidebar() {
 
   return (
     <aside
-      className={`hidden lg:flex flex-col border-r border-border/60 bg-card transition-all ${
+      className={`hidden lg:flex flex-col overflow-hidden border-r border-border/60 bg-card transition-all ${
         collapsed ? "w-16" : "w-60"
       }`}
     >
       <div
-        className={`flex h-14 items-center border-b border-border/60 ${
+        className={`flex h-14 shrink-0 items-center border-b border-border/60 ${
           collapsed ? "justify-center px-1" : "justify-between px-4"
         }`}
       >
@@ -64,7 +65,12 @@ export function DashboardSidebar() {
 
       <NavLinks collapsed={collapsed} />
 
-      <div className="mt-auto border-t border-border p-4 space-y-3">
+      <div className="mt-auto shrink-0 border-t border-border p-4 space-y-3">
+        {!collapsed && (
+          <div>
+            <PointsBadge />
+          </div>
+        )}
         {!collapsed && !loading && (
           <div>
             <p className="text-xs text-muted-foreground">{PLAN_LABELS[plan]}</p>

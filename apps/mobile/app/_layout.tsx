@@ -79,6 +79,7 @@ function RootNavigator() {
           name="add-savings"
           options={{ ...modalHeaderOptions, title: "Adicionar ao poupado" }}
         />
+        <Stack.Screen name="rewards" options={{ ...stackHeaderOptions, title: "Recompensas" }} />
         <Stack.Screen name="groups" options={{ ...stackHeaderOptions, title: "Grupos" }} />
         <Stack.Screen name="group-detail" options={{ ...stackHeaderOptions, title: "Grupo" }} />
         <Stack.Screen name="new-group" options={{ ...modalHeaderOptions, title: "Novo Grupo" }} />

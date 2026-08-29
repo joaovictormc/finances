@@ -270,4 +270,40 @@ app.get("/:id/dashboard", async (c) => {
   });
 });
 
+// ── Ranking de gamificação entre membros do grupo ─────────────────────────────
+
+app.get("/:id/leaderboard", async (c) => {
+  const userId = c.get("userId");
+  const id = c.req.param("id");
+
+  const role = await getGroupRole(userId, id);
+  if (!role) return c.json({ error: "Grupo não encontrado" }, 403);
+
+  const members = await db.groupMember.findMany({
+    where: { groupId: id },
+    include: { user: { select: { id: true, name: true } } },
+  });
+
+  const profiles = await db.gamificationProfile.findMany({
+    where: { userId: { in: members.map((m) => m.userId) } },
+    select: { userId: true, points: true, level: true, activeBadge: true },
+  });
+  const profileByUserId = Object.fromEntries(profiles.map((p) => [p.userId, p]));
+
+  const ranking = members
+    .map((m) => {
+      const profile = profileByUserId[m.userId];
+      return {
+        userId: m.userId,
+        name: m.user.name,
+        points: profile?.points ?? 0,
+        level: profile?.level ?? 1,
+        activeBadge: profile?.activeBadge ?? null,
+      };
+    })
+    .sort((a, b) => b.points - a.points);
+
+  return c.json(ranking);
+});
+
 export default app;

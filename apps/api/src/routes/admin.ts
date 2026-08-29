@@ -6,6 +6,7 @@ import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { requireAdmin } from "../middleware/admin";
 import { getAiSettings, updateAiSettings, getMonthlyTokenUsage } from "../lib/ai/ai-settings";
 import { getGamificationSettings, updateGamificationSettings } from "../lib/gamification-settings";
+import { simulateSpins, getGamificationStats } from "../lib/gamification";
 import { cancelSubscriptionAtMercadoPago } from "../lib/mercadopago";
 import {
   PAYMENT_METHODS,
@@ -272,7 +273,13 @@ app.get("/gamification/settings", async (c) => {
 
 const GamificationSettingsSchema = z.object({
   spinPrizes: z
-    .array(z.object({ label: z.string().trim().min(1).max(60), points: z.number().int().positive() }))
+    .array(
+      z.object({
+        label: z.string().trim().min(1).max(60),
+        points: z.number().int().positive(),
+        weight: z.number().int().positive(),
+      })
+    )
     .min(1)
     .max(10),
 });
@@ -281,6 +288,26 @@ app.patch("/gamification/settings", zValidator("json", GamificationSettingsSchem
   const data = c.req.valid("json");
   const settings = await updateGamificationSettings(data);
   return c.json(settings);
+});
+
+const GamificationSimulateSchema = z.object({
+  spins: z.number().int().min(1).max(50000),
+});
+
+/** Simula N giros da Roleta Semanal em memória (nunca toca em GamificationProfile). */
+app.post("/gamification/simulate", zValidator("json", GamificationSimulateSchema), async (c) => {
+  const { spins } = c.req.valid("json");
+  const settings = await getGamificationSettings();
+  if (settings.spinPrizes.length === 0) {
+    return c.json({ error: "Nenhum prêmio configurado" }, 400);
+  }
+  const results = simulateSpins(settings.spinPrizes, spins);
+  return c.json({ spins, results });
+});
+
+app.get("/gamification/stats", async (c) => {
+  const stats = await getGamificationStats();
+  return c.json(stats);
 });
 
 export default app;

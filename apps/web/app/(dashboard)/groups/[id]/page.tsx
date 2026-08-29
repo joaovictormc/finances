@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Crown, Link2, Trash2, LogOut, Users } from "lucide-react";
+import { Crown, Link2, Trash2, LogOut, Users, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BackButton } from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,17 @@ type GroupDashboard = {
   byCategory: Array<{ category: { id: string; name: string; icon: string | null } | null; total: number }>;
 };
 
+type LeaderboardEntry = { userId: string; name: string; points: number; level: number; activeBadge: string | null };
+
+// Mesmos ícones do catálogo em apps/api/src/lib/gamification.ts (BADGE_CATALOG) —
+// só pra exibir o emblema ativo de cada membro sem precisar de outra chamada.
+const BADGE_ICONS: Record<string, string> = {
+  poupador: "🐷",
+  disciplinado: "🔥",
+  estrategista: "🧠",
+  lenda: "👑",
+};
+
 export default function GroupDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -46,17 +57,20 @@ export default function GroupDetailPage() {
   const currentUserId = session?.user?.id ?? null;
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [dashboard, setDashboard] = useState<GroupDashboard | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [g, d] = await Promise.all([
+      const [g, d, l] = await Promise.all([
         api.get<GroupDetail>(`/api/groups/${id}`),
         api.get<GroupDashboard>(`/api/groups/${id}/dashboard`),
+        api.get<LeaderboardEntry[]>(`/api/groups/${id}/leaderboard`).catch(() => []),
       ]);
       setGroup(g);
       setDashboard(d);
+      setLeaderboard(l);
     } catch {
       toast({ title: "Erro ao carregar grupo", variant: "error" });
     } finally {
@@ -232,6 +246,30 @@ export default function GroupDetailPage() {
           ))}
         </div>
       </div>
+
+      {leaderboard.length > 0 && (
+        <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-6 mt-6">
+          <h2 className="font-semibold mb-4 text-foreground flex items-center gap-2">
+            <Trophy size={16} className="text-highlight" />
+            Ranking de pontos
+          </h2>
+          <div className="space-y-2">
+            {leaderboard.map((entry, i) => (
+              <div key={entry.userId} className="flex items-center gap-3 py-2 border-b border-border/40 last:border-0">
+                <span className="w-5 shrink-0 text-center text-xs font-semibold text-muted-foreground">{i + 1}º</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                    {entry.activeBadge && <span>{BADGE_ICONS[entry.activeBadge]}</span>}
+                    {entry.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Nível {entry.level}</p>
+                </div>
+                <span className="shrink-0 text-sm font-semibold text-foreground">{entry.points} pts</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { useTheme } from "@/lib/theme";
 import { formatBRL } from "@/lib/format";
 import type { MonthlyReport, DailyReport, Transaction, PaginatedResponse } from "@/lib/types";
 import { GamificationCard } from "@/components/gamification-card";
+import { PointsBadge } from "@/components/points-badge";
 
 // Paleta de fatias no espírito Finans: amarelo de marca primeiro, depois apoios.
 const SLICE_COLORS = ["#FFC300", "#1C1C1E", "#22c55e", "#A6A5A0", "#8b5cf6", "#06b6d4", "#f97316", "#ec4899"];
@@ -145,9 +146,12 @@ export default function OverviewScreen() {
             </Text>
           </View>
         </View>
-        <Pressable className="h-10 w-10 items-center justify-center rounded-full bg-card dark:bg-card-dark">
-          <Ionicons name="notifications-outline" size={20} color={colors.foreground} />
-        </Pressable>
+        <View className="flex-row items-center gap-2">
+          <PointsBadge />
+          <Pressable className="h-10 w-10 items-center justify-center rounded-full bg-card dark:bg-card-dark">
+            <Ionicons name="notifications-outline" size={20} color={colors.foreground} />
+          </Pressable>
+        </View>
       </View>
 
       {/* Hero card: saldo do mês */}
