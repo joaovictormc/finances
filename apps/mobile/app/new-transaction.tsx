@@ -110,8 +110,12 @@ export default function NewTransactionScreen() {
     try {
       // O fetch mais novo do Expo (WinterCG-compliant) não entende mais o
       // objeto {uri, name, type} que o React Native tradicionalmente aceitava
-      // pra representar um arquivo local — precisa de um Blob de verdade.
-      const blob = await (await fetch(asset.uri)).blob();
+      // pra representar um arquivo local — precisa de um Blob de verdade. E o
+      // Blob de um fetch local geralmente vem com `type` vazio, então força o
+      // MIME certo de novo (senão o backend rejeita como formato não suportado).
+      const rawBlob = await (await fetch(asset.uri)).blob();
+      const mimeType = asset.mimeType ?? "image/jpeg";
+      const blob = rawBlob.type ? rawBlob : new Blob([rawBlob], { type: mimeType });
       const formData = new FormData();
       formData.append("file", blob, asset.fileName ?? "cupom.jpg");
 

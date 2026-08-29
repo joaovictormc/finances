@@ -1,4 +1,13 @@
 import "../global.css";
+// O `fetch` global do Expo (SDK 56+) usa o Blob nativo do React Native em
+// Response.blob(), que copia a resposta pro blob store nativo e lê de volta
+// via base64 — lento, e o próprio Expo avisa pra usar o expo-blob. Substitui
+// o Blob global aqui, uma vez, na inicialização — daí todo `fetch(...).blob()`
+// existente no app (import de extrato, leitura de cupom fiscal) já se beneficia
+// sem precisar mudar cada chamada.
+import { Blob as ExpoBlob } from "expo-blob";
+// @ts-expect-error -- expo-blob substitui o Blob nativo do RN globalmente.
+globalThis.Blob = ExpoBlob;
 import { useEffect } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { View, ActivityIndicator } from "react-native";

@@ -24,8 +24,11 @@ async function importStatement(
   } else {
     // O fetch mais novo do Expo (WinterCG-compliant) não entende mais o
     // objeto {uri, name, type} que o React Native tradicionalmente aceitava
-    // pra representar um arquivo local — precisa de um Blob de verdade.
-    const blob = await (await fetch(asset.uri)).blob();
+    // pra representar um arquivo local — precisa de um Blob de verdade. E o
+    // Blob de um fetch local geralmente vem com `type` vazio, então força de novo.
+    const rawBlob = await (await fetch(asset.uri)).blob();
+    const mimeType = asset.mimeType ?? "application/octet-stream";
+    const blob = rawBlob.type ? rawBlob : new Blob([rawBlob], { type: mimeType });
     formData.append("file", blob, asset.name);
   }
   return api.upload<{ imported: number; totalInFile: number }>("/api/transactions/import", formData);

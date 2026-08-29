@@ -8,6 +8,7 @@
     "@finances/validations": "workspace:*",
     "better-auth": "1.6.22",
     "expo": "~57.0.16",
+    "expo-blob": "^57.0.1",
     "expo-build-properties": "~57.0.14",
     "expo-clipboard": "~57.0.1",
     "expo-constants": "^57.0.14",
