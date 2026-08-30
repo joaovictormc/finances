@@ -593,13 +593,54 @@ app.get("/reports/daily", async (c) => {
 // (mesma combinação externalId+accountId já existente, via @@unique do schema).
 app.post("/import", async (c) => {
   const userId = c.get("userId");
-  const body = await c.req.parseBody();
-  const file = body.file;
-  const accountId = body.accountId;
-  const paymentMethod = body.paymentMethod === "credit" ? "credit" : "debit";
 
-  if (!(file instanceof File) || typeof accountId !== "string" || !accountId) {
-    return c.json({ error: "Envie um arquivo (file) e o accountId da conta" }, 400);
+  // Dois formatos de entrada, pela mesma razão do /receipt-scan: o multipart não
+  // sobrevive ao fetch do Expo no nativo — o Blob vira texto no corpo e o arquivo
+  // chega corrompido. O app manda o conteúdo em base64 via JSON; a web e chamadas
+  // via curl/Postman continuam no multipart.
+  let text: string;
+  let filename: string;
+  let accountId: string;
+  let paymentMethod: "debit" | "credit";
+
+  if (c.req.header("content-type")?.includes("application/json")) {
+    const body = (await c.req.json().catch(() => null)) as {
+      accountId?: unknown;
+      paymentMethod?: unknown;
+      filename?: unknown;
+      content?: unknown;
+    } | null;
+
+    if (typeof body?.accountId !== "string" || !body.accountId) {
+      return c.json({ error: "Informe o accountId da conta" }, 400);
+    }
+    if (typeof body.content !== "string" || !body.content) {
+      return c.json({ error: "Envie o conteúdo do arquivo em base64 (content)" }, 400);
+    }
+
+    accountId = body.accountId;
+    paymentMethod = body.paymentMethod === "credit" ? "credit" : "debit";
+    filename = typeof body.filename === "string" && body.filename ? body.filename : "extrato.csv";
+
+    const buffer = Buffer.from(body.content, "base64");
+    try {
+      validateImportFileBatch([{ name: filename, size: buffer.length }]);
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : "Arquivo inválido" }, 400);
+    }
+    text = buffer.toString("utf8");
+  } else {
+    const body = await c.req.parseBody();
+    const file = body.file;
+
+    if (!(file instanceof File) || typeof body.accountId !== "string" || !body.accountId) {
+      return c.json({ error: "Envie um arquivo (file) e o accountId da conta" }, 400);
+    }
+
+    accountId = body.accountId;
+    paymentMethod = body.paymentMethod === "credit" ? "credit" : "debit";
+    filename = file.name;
+    text = await file.text();
   }
 
   const groupIds = await getUserGroupIds(userId);
@@ -608,8 +649,7 @@ app.post("/import", async (c) => {
   });
   if (!account) return c.json({ error: "Conta não encontrada" }, 404);
 
-  const text = await file.text();
-  const isOfx = file.name.toLowerCase().endsWith(".ofx") || text.includes("<OFX>");
+  const isOfx = filename.toLowerCase().endsWith(".ofx") || text.includes("<OFX>");
 
   let rows;
   try {

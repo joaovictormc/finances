@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { View, Text, Pressable, ActivityIndicator, Platform } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
+// Alias pra não colidir com o `File` global do JS, que é outra coisa.
+import { File as FsFile } from "expo-file-system";
 import { api } from "@/lib/api-client";
 import { useTheme } from "@/lib/theme";
 import type { FinancialAccount } from "@/lib/types";
@@ -11,27 +13,32 @@ async function pickDocument(): Promise<DocumentPicker.DocumentPickerAsset | null
   return result.assets[0];
 }
 
+type ImportResult = { imported: number; totalInFile: number };
+
 async function importStatement(
   accountId: string,
   paymentMethod: "debit" | "credit",
   asset: DocumentPicker.DocumentPickerAsset
 ) {
-  const formData = new FormData();
-  formData.append("accountId", accountId);
-  formData.append("paymentMethod", paymentMethod);
+  // Na web o File do navegador vai direto no multipart, que funciona.
   if (Platform.OS === "web" && asset.file) {
+    const formData = new FormData();
+    formData.append("accountId", accountId);
+    formData.append("paymentMethod", paymentMethod);
     formData.append("file", asset.file);
-  } else {
-    // O fetch mais novo do Expo (WinterCG-compliant) não entende mais o
-    // objeto {uri, name, type} que o React Native tradicionalmente aceitava
-    // pra representar um arquivo local — precisa de um Blob de verdade. E o
-    // Blob de um fetch local geralmente vem com `type` vazio, então força de novo.
-    const rawBlob = await (await fetch(asset.uri)).blob();
-    const mimeType = asset.mimeType ?? "application/octet-stream";
-    const blob = rawBlob.type ? rawBlob : new Blob([rawBlob], { type: mimeType });
-    formData.append("file", blob, asset.name);
+    return api.upload<ImportResult>("/api/transactions/import", formData);
   }
-  return api.upload<{ imported: number; totalInFile: number }>("/api/transactions/import", formData);
+
+  // No nativo, não: o fetch do Expo (SDK 56+) não serializa Blob em multipart
+  // corretamente — o arquivo chega corrompido no servidor. Lê o conteúdo em
+  // base64 e manda por JSON, mesmo caminho usado na leitura de cupom.
+  const content = await new FsFile(asset.uri).base64();
+  return api.post<ImportResult>("/api/transactions/import", {
+    accountId,
+    paymentMethod,
+    filename: asset.name,
+    content,
+  });
 }
 
 function FileSlot({
