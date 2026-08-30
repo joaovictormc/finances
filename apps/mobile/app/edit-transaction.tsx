@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Alert, View, Text, TextInput, Pressable, ScrollView, ActivityIndicator } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { api } from "@/lib/api-client";
+import { DateField } from "@/components/date-field";
 import { useTheme } from "@/lib/theme";
 import { BASE_PAYMENT_METHOD_TABS, type PaymentMethod } from "@/lib/payment-methods";
 import type { Category, FinancialAccount, Transaction } from "@/lib/types";
@@ -81,6 +82,7 @@ export default function EditTransactionScreen() {
     if (!numericAmount || numericAmount <= 0) { setError("Valor inválido."); return; }
     if (!description.trim()) { setError("Informe a descrição."); return; }
     if (!accountId) { setError("Selecione uma conta."); return; }
+    if (!date) { setError("Informe a data completa (DD/MM/AAAA)."); return; }
     setSaving(true);
     try {
       await api.patch(`/api/transactions/${id}`, {
@@ -220,12 +222,7 @@ export default function EditTransactionScreen() {
         ))}
       </View>
 
-      <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Data (AAAA-MM-DD)</Text>
-      <TextInput
-        className="mb-4 rounded-md border border-border bg-card px-3 py-3 text-foreground dark:border-border-dark dark:bg-card-dark dark:text-foreground-dark"
-        value={date}
-        onChangeText={setDate}
-      />
+      <DateField label="Data" value={date} onChange={setDate} />
 
       <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Observações (opcional)</Text>
       <TextInput

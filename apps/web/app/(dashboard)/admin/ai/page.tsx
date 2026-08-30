@@ -19,15 +19,38 @@ type AiSettings = {
   categorySuggestionEnabled: boolean;
   receiptScanEnabled: boolean;
   monthlyTokenLimit: number | null;
+  monthlyBudgetUsd: number | null;
 };
 
-type AiUsage = {
-  byFeature: { feature: string; _count: number; _sum: { promptTokens: number | null; completionTokens: number | null } }[];
-  last1d: number;
-  last7d: number;
-  last30d: number;
-  monthlyTokenUsage: number;
+type UsageTotals = {
+  calls: number;
+  tokens: number;
+  costUsd: number;
+  hasUnpricedUsage: boolean;
 };
+
+type UsageBreakdown = UsageTotals & { id: string; costNote?: string | null };
+
+type AiUsage = {
+  month: UsageTotals & {
+    elapsedRatio: number;
+    projectedCostUsd: number;
+    projectedTokens: number;
+    byFeature: UsageBreakdown[];
+    byModel: UsageBreakdown[];
+  };
+  windows: { last1d: UsageTotals; last7d: UsageTotals; last30d: UsageTotals };
+  allTime: UsageTotals;
+  monthlyTokenLimit: number | null;
+  monthlyBudgetUsd: number | null;
+};
+
+const numberFormat = new Intl.NumberFormat("pt-BR");
+
+/** Gasto de IA é centavo de dólar: com 2 casas quase tudo viraria "US$ 0,00". */
+function formatUsd(value: number) {
+  return `US$ ${value >= 0.01 ? value.toFixed(2) : value.toFixed(4)}`;
+}
 
 const FEATURE_LABELS: Record<string, string> = {
   expense_parsing: "Parsing de despesas (bot)",
@@ -86,7 +109,7 @@ export default function AdminAiPage() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-3xl">
       <BackButton href="/admin" label="Administração" />
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Modelos de IA</h1>
@@ -157,51 +180,114 @@ export default function AdminAiPage() {
           <p className="text-sm text-muted-foreground mb-4">
             Tokens (prompt + resposta) permitidos por mês, somando todas as features. Deixe em branco para ilimitado.
           </p>
-          <Input
-            type="number"
-            min={1}
-            label="Limite mensal de tokens"
-            placeholder="Ilimitado"
-            value={settings.monthlyTokenLimit ?? ""}
-            onChange={(e) =>
-              setSettings({
-                ...settings,
-                monthlyTokenLimit: e.target.value === "" ? null : Number(e.target.value),
-              })
-            }
-          />
+          <div className="space-y-4">
+            <Input
+              type="number"
+              min={1}
+              label="Limite mensal de tokens"
+              placeholder="Ilimitado"
+              value={settings.monthlyTokenLimit ?? ""}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  monthlyTokenLimit: e.target.value === "" ? null : Number(e.target.value),
+                })
+              }
+            />
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              label="Orçamento mensal (US$)"
+              placeholder="Sem orçamento"
+              value={settings.monthlyBudgetUsd ?? ""}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  monthlyBudgetUsd: e.target.value === "" ? null : Number(e.target.value),
+                })
+              }
+            />
+            <p className="text-xs text-muted-foreground">
+              O orçamento é só referência do medidor abaixo — quem interrompe as chamadas ao atingir
+              o teto é o limite de tokens.
+            </p>
+          </div>
         </section>
 
         <Button onClick={handleSave} loading={saving}>Salvar configurações</Button>
 
         {usage && (
           <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
-            <h2 className="text-base font-semibold mb-4">Uso de IA</h2>
-            <div className="grid grid-cols-3 gap-3 mb-5">
-              <UsageCard label="Últimas 24h" value={usage.last1d} />
-              <UsageCard label="Últimos 7 dias" value={usage.last7d} />
-              <UsageCard label="Últimos 30 dias" value={usage.last30d} />
+            <h2 className="text-base font-semibold mb-1">Consumo de IA</h2>
+            <p className="text-sm text-muted-foreground mb-5">
+              Todas as features, todos os usuários. Custo estimado em dólar a partir da tabela de
+              preços da Groq.
+            </p>
+
+            <div className="rounded-xl border border-border/60 p-5 mb-5">
+              <p className="text-3xl font-bold text-foreground">{formatUsd(usage.month.costUsd)}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                neste mês ({Math.round(usage.month.elapsedRatio * 100)}% decorrido) · no ritmo atual,
+                fecha em {formatUsd(usage.month.projectedCostUsd)}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {numberFormat.format(usage.month.tokens)} tokens em {usage.month.calls} chamadas
+              </p>
+              {usage.month.hasUnpricedUsage && (
+                <p className="text-xs text-warning mt-2">
+                  Há chamadas de modelos sem preço estimável — o valor acima é um piso.
+                </p>
+              )}
             </div>
 
-            {settings.monthlyTokenLimit != null && (
-              <div className="mb-5">
-                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                  <span>Uso de tokens neste mês</span>
-                  <span>{usage.monthlyTokenUsage} / {settings.monthlyTokenLimit}</span>
-                </div>
-                <ProgressBar value={usage.monthlyTokenUsage / settings.monthlyTokenLimit} />
+            {usage.monthlyTokenLimit == null && usage.monthlyBudgetUsd == null ? (
+              <p className="text-xs text-muted-foreground mb-5">
+                Defina um limite de tokens ou um orçamento acima para acompanhar o consumo em barra.
+              </p>
+            ) : (
+              <div className="space-y-4 mb-5">
+                {usage.monthlyTokenLimit != null && (
+                  <Meter
+                    label="Tokens no mês"
+                    current={numberFormat.format(usage.month.tokens)}
+                    total={numberFormat.format(usage.monthlyTokenLimit)}
+                    value={usage.month.tokens / usage.monthlyTokenLimit}
+                  />
+                )}
+                {usage.monthlyBudgetUsd != null && (
+                  <Meter
+                    label="Orçamento do mês"
+                    current={formatUsd(usage.month.costUsd)}
+                    total={formatUsd(usage.monthlyBudgetUsd)}
+                    value={usage.month.costUsd / usage.monthlyBudgetUsd}
+                  />
+                )}
               </div>
             )}
-            <div className="space-y-2">
-              {usage.byFeature.map((f) => (
-                <div key={f.feature} className="flex items-center justify-between text-sm border-b border-border/40 py-2 last:border-0">
-                  <span className="text-foreground">{FEATURE_LABELS[f.feature] ?? f.feature}</span>
-                  <span className="text-muted-foreground text-xs">
-                    {f._count} chamadas · {(f._sum.promptTokens ?? 0) + (f._sum.completionTokens ?? 0)} tokens
-                  </span>
-                </div>
-              ))}
+
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              <UsageCard label="Últimas 24h" totals={usage.windows.last1d} />
+              <UsageCard label="Últimos 7 dias" totals={usage.windows.last7d} />
+              <UsageCard label="Últimos 30 dias" totals={usage.windows.last30d} />
             </div>
+
+            <UsageBreakdownList
+              title="Por modelo (mês)"
+              rows={usage.month.byModel}
+              labelFor={(id) => id}
+            />
+            <UsageBreakdownList
+              title="Por feature (mês)"
+              rows={usage.month.byFeature}
+              labelFor={(id) => FEATURE_LABELS[id] ?? id}
+            />
+
+            <p className="text-xs text-muted-foreground mt-6 pt-4 border-t border-border/40">
+              Desde o início: {usage.allTime.calls} chamadas ·{" "}
+              {numberFormat.format(usage.allTime.tokens)} tokens ·{" "}
+              {formatUsd(usage.allTime.costUsd)}
+            </p>
           </section>
         )}
       </div>
@@ -209,11 +295,70 @@ export default function AdminAiPage() {
   );
 }
 
-function UsageCard({ label, value }: { label: string; value: number }) {
+function Meter({
+  label,
+  current,
+  total,
+  value,
+}: {
+  label: string;
+  current: string;
+  total: string;
+  value: number;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+        <span>{label}</span>
+        <span>
+          {current} / {total}
+        </span>
+      </div>
+      <ProgressBar value={value} />
+    </div>
+  );
+}
+
+function UsageCard({ label, totals }: { label: string; totals: UsageTotals }) {
   return (
     <div className="rounded-xl border border-border/60 p-4 text-center">
-      <p className="text-2xl font-bold text-foreground">{value}</p>
+      <p className="text-2xl font-bold text-foreground">{formatUsd(totals.costUsd)}</p>
       <p className="text-xs text-muted-foreground mt-1">{label}</p>
+      <p className="text-xs text-muted-foreground mt-2">
+        {totals.calls} chamadas · {numberFormat.format(totals.tokens)} tokens
+      </p>
+    </div>
+  );
+}
+
+function UsageBreakdownList({
+  title,
+  rows,
+  labelFor,
+}: {
+  title: string;
+  rows: UsageBreakdown[];
+  labelFor: (id: string) => string;
+}) {
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="mb-6 last:mb-0">
+      <h3 className="text-sm font-medium text-foreground mb-2">{title}</h3>
+      <div className="space-y-2">
+        {rows.map((row) => (
+          <div
+            key={row.id}
+            className="flex items-center justify-between gap-3 text-sm border-b border-border/40 py-2 last:border-0"
+          >
+            <span className="text-foreground truncate">{labelFor(row.id)}</span>
+            <span className="text-muted-foreground text-xs shrink-0 text-right">
+              {row.calls} chamadas · {numberFormat.format(row.tokens)} tokens ·{" "}
+              {row.costNote ? row.costNote : formatUsd(row.costUsd)}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -9,14 +9,14 @@ import {
   TransactionFiltersSchema,
 } from "@finances/validations";
 import { suggestCategories } from "../lib/ai/category-suggester";
-import { parseReceiptImage } from "../lib/ai/receipt-parser";
+import { parseReceiptImage, describeReceiptScanFailure } from "../lib/ai/receipt-parser";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { getUserGroupIds, hasGroupRole } from "../lib/groups";
 import { getHistoryCutoffDate, isReceiptScanAllowed } from "../lib/plan-limits";
 import { parseCsvTransactions } from "../lib/import/csv-parser";
 import { parseOfxTransactions } from "../lib/import/ofx-parser";
 import { validateImportFileBatch } from "../lib/import/import-limits";
-import { validateReceiptImage } from "../lib/import/receipt-limits";
+import { validateReceiptImage, describeBytes } from "../lib/import/receipt-limits";
 import { parseMonthlyReportPeriod } from "../lib/report-period";
 import { redis } from "../lib/redis";
 import { awardDailyPoints } from "../lib/gamification";
@@ -208,20 +208,46 @@ app.post("/receipt-scan", async (c) => {
     );
   }
 
-  const formData = await c.req.raw.formData();
-  const file = formData.get("file");
-  if (!(file instanceof File)) {
-    return c.json({ error: "Envie uma imagem (file)" }, 400);
+  // Dois formatos de entrada. O app nativo manda JSON com o base64 que o
+  // expo-image-picker já devolve: o caminho multipart não sobrevive ao fetch
+  // do Expo no React Native (o Blob vira texto e a imagem chega corrompida).
+  // O multipart continua aceito pra web e pra chamadas via curl/Postman.
+  let buffer: Buffer;
+  if (c.req.header("content-type")?.includes("application/json")) {
+    const body = await c.req.json().catch(() => null);
+    const image = (body as { image?: unknown } | null)?.image;
+    if (typeof image !== "string" || image.length === 0) {
+      return c.json({ error: "Envie a imagem em base64 no campo `image`" }, 400);
+    }
+    buffer = Buffer.from(image, "base64");
+  } else {
+    const formData = await c.req.raw.formData();
+    const file = formData.get("file");
+    if (!(file instanceof File)) {
+      return c.json({ error: "Envie uma imagem (file)" }, 400);
+    }
+    buffer = Buffer.from(await file.arrayBuffer());
   }
 
+  // O MIME real vem dos magic bytes, nunca do que o cliente declarou: já
+  // chegou aqui "image/jpeg" com conteúdo que não era imagem nenhuma.
+  let mimeType: string;
   try {
-    validateReceiptImage(file);
+    mimeType = validateReceiptImage(buffer);
   } catch (error) {
+    console.warn("[receipt-scan] imagem rejeitada:", describeBytes(buffer));
     return c.json({ error: error instanceof Error ? error.message : "Imagem inválida" }, 400);
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const parsed = await parseReceiptImage(buffer, file.type || "image/jpeg", userId);
+  let parsed;
+  try {
+    parsed = await parseReceiptImage(buffer, mimeType, userId);
+  } catch (error) {
+    // Uma foto ruim ou o limite de uso da Groq não são erro do servidor —
+    // sem isso, qualquer falha da IA virava 500 sem explicação pro usuário.
+    console.warn("[receipt-scan] falha na Groq:", describeBytes(buffer));
+    return c.json({ error: describeReceiptScanFailure(error) }, 502);
+  }
 
   if (!parsed) {
     return c.json({ error: "Não foi possível ler o cupom. Tente outra foto." }, 422);

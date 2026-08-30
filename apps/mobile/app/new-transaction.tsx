@@ -4,6 +4,8 @@ import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api-client";
+import { DateField } from "@/components/date-field";
+import { formatBRL } from "@/lib/format";
 import { useTheme } from "@/lib/theme";
 import { BASE_PAYMENT_METHOD_TABS, type PaymentMethod } from "@/lib/payment-methods";
 import type { Category, FinancialAccount } from "@/lib/types";
@@ -37,6 +39,26 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** `formatDate` do lib parseia como UTC e volta um dia no fuso do Brasil. */
+function formatIsoDate(iso: string) {
+  const [year, month, day] = iso.split("-");
+  return `${day}/${month}/${year}`;
+}
+
+function ReceiptRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View className="flex-row items-center justify-between py-1">
+      <Text className="text-xs text-muted-foreground dark:text-muted-foreground-dark">{label}</Text>
+      <Text
+        className="ml-3 flex-1 text-right text-sm text-foreground dark:text-foreground-dark"
+        numberOfLines={1}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 export default function NewTransactionScreen() {
   const { colors } = useTheme();
   const [type, setType] = useState<TransactionType>("expense");
@@ -52,6 +74,7 @@ export default function NewTransactionScreen() {
   const [loadingData, setLoadingData] = useState(true);
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [receipt, setReceipt] = useState<ParsedReceipt | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -83,6 +106,10 @@ export default function NewTransactionScreen() {
       setError("Selecione uma conta.");
       return;
     }
+    if (!date) {
+      setError("Informe a data completa (DD/MM/AAAA).");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -96,6 +123,17 @@ export default function NewTransactionScreen() {
         date,
         notes: notes.trim() || undefined,
       });
+
+      if (receipt) {
+        // A lista de transações ordena por data, não por criação: um gasto salvo
+        // com a data errada não aparece no topo e parece que nem foi lançado.
+        // Confirmar a data gravada expõe o erro na hora.
+        Alert.alert("Gasto lançado", `${formatBRL(numericAmount)} em ${formatIsoDate(date)}`, [
+          { text: "OK", onPress: () => router.back() },
+        ]);
+        return;
+      }
+
       router.back();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao salvar transação.");
@@ -105,21 +143,20 @@ export default function NewTransactionScreen() {
   }
 
   async function uploadReceipt(asset: ImagePicker.ImagePickerAsset) {
+    if (!asset.base64) {
+      setError("Não consegui ler a imagem escolhida. Tente outra foto.");
+      return;
+    }
     setScanning(true);
     setError(null);
     try {
-      // O fetch mais novo do Expo (WinterCG-compliant) não entende mais o
-      // objeto {uri, name, type} que o React Native tradicionalmente aceitava
-      // pra representar um arquivo local — precisa de um Blob de verdade. E o
-      // Blob de um fetch local geralmente vem com `type` vazio, então força o
-      // MIME certo de novo (senão o backend rejeita como formato não suportado).
-      const rawBlob = await (await fetch(asset.uri)).blob();
-      const mimeType = asset.mimeType ?? "image/jpeg";
-      const blob = rawBlob.type ? rawBlob : new Blob([rawBlob], { type: mimeType });
-      const formData = new FormData();
-      formData.append("file", blob, asset.fileName ?? "cupom.jpg");
-
-      const parsed = await api.upload<ParsedReceipt>("/api/transactions/receipt-scan", formData);
+      // Manda o base64 que o próprio image-picker já devolve (`base64: true`),
+      // em JSON. O caminho multipart não sobrevive ao fetch do Expo no nativo:
+      // o Blob acabava virando texto no corpo da requisição e a imagem chegava
+      // corrompida no servidor — a Groq recusava com "invalid image data".
+      const parsed = await api.post<ParsedReceipt>("/api/transactions/receipt-scan", {
+        image: asset.base64,
+      });
       if (parsed.amount) setAmount(String(parsed.amount).replace(".", ","));
       if (parsed.merchant) setDescription(parsed.merchant);
       if (parsed.date) setDate(parsed.date);
@@ -128,9 +165,9 @@ export default function NewTransactionScreen() {
         const match = flattenCategories(categories).find((c) => c.name.toLowerCase().includes(hint) || hint.includes(c.name.toLowerCase()));
         if (match) setCategoryId(match.id);
       }
-      if (parsed.confidence < 0.4) {
-        Alert.alert("Confira os dados", "Não consegui ler o cupom com muita confiança — revise os campos antes de salvar.");
-      }
+      // Mostra o resumo em vez de preencher em silêncio: sem isso o usuário não
+      // vê o que foi lido — principalmente a data, que o modelo às vezes erra.
+      setReceipt(parsed);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao ler o cupom.");
     } finally {
@@ -149,7 +186,7 @@ export default function NewTransactionScreen() {
             setError("Permissão de câmera negada.");
             return;
           }
-          const result = await ImagePicker.launchCameraAsync({ mediaTypes: "images", quality: 0.7 });
+          const result = await ImagePicker.launchCameraAsync({ mediaTypes: "images", quality: 0.9, base64: true });
           if (!result.canceled && result.assets[0]) uploadReceipt(result.assets[0]);
         },
       },
@@ -161,7 +198,7 @@ export default function NewTransactionScreen() {
             setError("Permissão de galeria negada.");
             return;
           }
-          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: "images", quality: 0.7 });
+          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: "images", quality: 0.9, base64: true });
           if (!result.canceled && result.assets[0]) uploadReceipt(result.assets[0]);
         },
       },
@@ -196,6 +233,48 @@ export default function NewTransactionScreen() {
           {scanning ? "Lendo cupom..." : "Preencher com foto do cupom (Pro)"}
         </Text>
       </Pressable>
+
+      {receipt && (
+        <View className="mb-4 rounded-lg border border-primary bg-card p-4 dark:bg-card-dark">
+          <Text className="mb-3 text-sm font-semibold text-foreground dark:text-foreground-dark">
+            Lido do cupom
+          </Text>
+
+          <ReceiptRow label="Estabelecimento" value={description || "—"} />
+          <ReceiptRow label="Valor" value={amount ? formatBRL(amount.replace(",", ".")) : "—"} />
+          <ReceiptRow label="Data" value={formatIsoDate(date)} />
+          <ReceiptRow
+            label="Categoria"
+            value={flatCategories.find((c) => c.id === categoryId)?.name ?? "—"}
+          />
+
+          {receipt.confidence < 0.5 && (
+            <Text className="mt-2 text-xs text-destructive dark:text-destructive-dark">
+              Leitura pouco confiável — confira os campos antes de lançar.
+            </Text>
+          )}
+
+          <Pressable
+            onPress={handleSubmit}
+            disabled={saving}
+            className="mt-4 items-center rounded-md bg-primary py-3 dark:bg-primary-dark"
+            style={{ opacity: saving ? 0.6 : 1 }}
+          >
+            {saving ? (
+              <ActivityIndicator color="#1C1C1E" />
+            ) : (
+              <Text className="font-medium text-primary-foreground dark:text-primary-foreground-dark">
+                Lançar gasto
+              </Text>
+            )}
+          </Pressable>
+          <Pressable onPress={() => setReceipt(null)} className="mt-2 items-center py-2">
+            <Text className="text-sm text-muted-foreground dark:text-muted-foreground-dark">
+              Revisar antes de lançar
+            </Text>
+          </Pressable>
+        </View>
+      )}
 
       <View className="mb-4 flex-row gap-1.5 rounded-lg bg-muted p-1 dark:bg-muted-dark">
         {TYPE_TABS.map((tab) => (
@@ -282,12 +361,7 @@ export default function NewTransactionScreen() {
         </>
       )}
 
-      <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Data (AAAA-MM-DD)</Text>
-      <TextInput
-        className="mb-4 rounded-md border border-border bg-card px-3 py-3 text-foreground dark:border-border-dark dark:bg-card-dark dark:text-foreground-dark"
-        value={date}
-        onChangeText={setDate}
-      />
+      <DateField label="Data" value={date} onChange={setDate} />
 
       <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Observações (opcional)</Text>
       <TextInput

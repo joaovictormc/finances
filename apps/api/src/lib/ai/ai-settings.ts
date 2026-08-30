@@ -29,6 +29,7 @@ export async function updateAiSettings(data: {
   categorySuggestionEnabled?: boolean;
   receiptScanEnabled?: boolean;
   monthlyTokenLimit?: number | null;
+  monthlyBudgetUsd?: number | null;
 }) {
   return db.aiSettings.upsert({
     where: { id: SINGLETON_ID },

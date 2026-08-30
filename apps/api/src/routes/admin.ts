@@ -4,7 +4,8 @@ import { z } from "zod";
 import { db } from "@finances/db";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { requireAdmin } from "../middleware/admin";
-import { getAiSettings, updateAiSettings, getMonthlyTokenUsage } from "../lib/ai/ai-settings";
+import { getAiSettings, updateAiSettings } from "../lib/ai/ai-settings";
+import { estimateCostUsd, costUnavailableReason } from "../lib/ai/pricing";
 import { getGamificationSettings, updateGamificationSettings } from "../lib/gamification-settings";
 import { simulateSpins, getGamificationStats } from "../lib/gamification";
 import { cancelSubscriptionAtMercadoPago } from "../lib/mercadopago";
@@ -229,14 +230,20 @@ app.get("/ai/settings", async (c) => {
   return c.json(settings);
 });
 
+// Todo campo editável em /admin/ai precisa estar aqui: o zValidator descarta
+// chave desconhecida em silêncio, então o que faltar nesta lista simplesmente
+// não salva — sem erro visível na tela.
 const AiSettingsSchema = z.object({
   textModel: z.string().min(1).optional(),
   audioModel: z.string().min(1).optional(),
+  visionModel: z.string().min(1).optional(),
   expenseParsingEnabled: z.boolean().optional(),
   monthlyInsightsEnabled: z.boolean().optional(),
   nlQueryEnabled: z.boolean().optional(),
   categorySuggestionEnabled: z.boolean().optional(),
+  receiptScanEnabled: z.boolean().optional(),
   monthlyTokenLimit: z.number().int().positive().nullable().optional(),
+  monthlyBudgetUsd: z.number().positive().nullable().optional(),
 });
 
 app.patch("/ai/settings", zValidator("json", AiSettingsSchema), async (c) => {
@@ -245,23 +252,105 @@ app.patch("/ai/settings", zValidator("json", AiSettingsSchema), async (c) => {
   return c.json(settings);
 });
 
+type UsageRow = {
+  model: string;
+  _count: number;
+  _sum: { promptTokens: number | null; completionTokens: number | null };
+};
+
+/** Soma chamadas, tokens e custo de um conjunto de linhas agrupadas por modelo. */
+function summarizeUsage(rows: UsageRow[]) {
+  let calls = 0;
+  let tokens = 0;
+  let costUsd = 0;
+  let hasUnpricedUsage = false;
+
+  for (const row of rows) {
+    const promptTokens = row._sum.promptTokens ?? 0;
+    const completionTokens = row._sum.completionTokens ?? 0;
+    calls += row._count;
+    tokens += promptTokens + completionTokens;
+
+    const cost = estimateCostUsd(row.model, promptTokens, completionTokens);
+    // `null` = modelo sem preço conhecido. Some zero, mas sinaliza — assim a
+    // tela deixa claro que o total é um piso, não o valor fechado.
+    if (cost === null) hasUnpricedUsage = true;
+    else costUsd += cost;
+  }
+
+  return { calls, tokens, costUsd, hasUnpricedUsage };
+}
+
 app.get("/ai/usage", async (c) => {
   const now = new Date();
   const since = (days: number) => new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-  const [byFeature, last1d, last7d, last30d] = await Promise.all([
+  const byModel = (gte?: Date) =>
     db.aiUsageLog.groupBy({
-      by: ["feature"],
+      by: ["model"],
+      where: gte ? { createdAt: { gte } } : undefined,
+      _count: true,
+      _sum: { promptTokens: true, completionTokens: true },
+    });
+
+  const [settings, monthDetail, day, week, month30, allTime] = await Promise.all([
+    getAiSettings(),
+    // Agrupado por feature E modelo: dá pra montar os dois recortes da tela a
+    // partir da mesma consulta, e o custo depende do modelo, não da feature.
+    db.aiUsageLog.groupBy({
+      by: ["feature", "model"],
+      where: { createdAt: { gte: startOfMonth } },
       _count: true,
       _sum: { promptTokens: true, completionTokens: true },
     }),
-    db.aiUsageLog.count({ where: { createdAt: { gte: since(1) } } }),
-    db.aiUsageLog.count({ where: { createdAt: { gte: since(7) } } }),
-    db.aiUsageLog.count({ where: { createdAt: { gte: since(30) } } }),
+    byModel(since(1)),
+    byModel(since(7)),
+    byModel(since(30)),
+    byModel(),
   ]);
-  const monthlyTokenUsage = await getMonthlyTokenUsage();
 
-  return c.json({ byFeature, last1d, last7d, last30d, monthlyTokenUsage });
+  const foldBy = <K extends "feature" | "model">(key: K) => {
+    const groups = new Map<string, UsageRow[]>();
+    for (const row of monthDetail) {
+      const id = row[key];
+      const bucket = groups.get(id) ?? [];
+      bucket.push(row);
+      groups.set(id, bucket);
+    }
+    return [...groups.entries()]
+      .map(([id, rows]) => ({ id, ...summarizeUsage(rows) }))
+      .sort((a, b) => b.tokens - a.tokens);
+  };
+
+  // Fração do mês já decorrida — base da projeção e do contexto do medidor.
+  const elapsedRatio =
+    (now.getTime() - startOfMonth.getTime()) / (startOfNextMonth.getTime() - startOfMonth.getTime());
+  const monthTotals = summarizeUsage(monthDetail);
+
+  return c.json({
+    month: {
+      ...monthTotals,
+      elapsedRatio,
+      // Ritmo atual extrapolado até o fim do mês.
+      projectedCostUsd: elapsedRatio > 0 ? monthTotals.costUsd / elapsedRatio : 0,
+      projectedTokens: elapsedRatio > 0 ? Math.round(monthTotals.tokens / elapsedRatio) : 0,
+      byFeature: foldBy("feature"),
+      byModel: foldBy("model").map((entry) => ({
+        ...entry,
+        costNote: entry.hasUnpricedUsage ? costUnavailableReason(entry.id) : null,
+      })),
+    },
+    windows: {
+      last1d: summarizeUsage(day),
+      last7d: summarizeUsage(week),
+      last30d: summarizeUsage(month30),
+    },
+    allTime: summarizeUsage(allTime),
+    monthlyTokenLimit: settings.monthlyTokenLimit,
+    monthlyBudgetUsd: settings.monthlyBudgetUsd,
+  });
 });
 
 // ── Gamificação (prêmios da Roleta Semanal) ──────────────────────────────────

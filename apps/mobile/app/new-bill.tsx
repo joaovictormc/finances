@@ -2,6 +2,7 @@ import { useState } from "react";
 import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { api } from "@/lib/api-client";
+import { DateField } from "@/components/date-field";
 import { useTheme } from "@/lib/theme";
 
 const FREQUENCY_OPTIONS: { value: string; label: string }[] = [
@@ -99,13 +100,10 @@ export default function NewBillScreen() {
         </>
       )}
 
-      <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Próximo vencimento (AAAA-MM-DD, opcional)</Text>
-      <TextInput
-        className="mb-4 rounded-md border border-border bg-card px-3 py-3 text-foreground dark:border-border-dark dark:bg-card-dark dark:text-foreground-dark"
-        placeholder="2026-07-10"
-        placeholderTextColor={colors.mutedForeground}
+      <DateField
+        label="Próximo vencimento (opcional)"
         value={nextDueDate}
-        onChangeText={setNextDueDate}
+        onChange={setNextDueDate}
       />
 
       {error && <Text className="mb-3 text-sm text-destructive dark:text-destructive-dark">{error}</Text>}

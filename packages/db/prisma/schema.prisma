@@ -606,11 +606,13 @@ model Referral {
 model AiSettings {
   id String @id @default("singleton") // linha única de configuração global
 
-  textModel   String @default("llama-3.3-70b-versatile")
+  // A Groq aposenta modelos com frequência — os `llama-3.x` saíram do catálogo em
+  // 08/2026 e passaram a responder 404 / model_decommissioned. Os três ids são
+  // editáveis em /admin/ai sem deploy; confira os vigentes em
+  // console.groq.com/docs/models antes de trocar.
+  textModel   String @default("openai/gpt-oss-120b")
   audioModel  String @default("whisper-large-v3-turbo")
-  // Modelo de visão (multimodal) da Groq — confirme/ajuste o id exato disponível
-  // na conta em uso; editável em /admin/ai sem precisar de deploy.
-  visionModel String @default("llama-3.2-90b-vision-preview")
+  visionModel String @default("qwen/qwen3.8-27b") // multimodal: aceita imagem + JSON mode
 
   expenseParsingEnabled     Boolean @default(true) // parsing de mensagens do bot (texto/voz)
   monthlyInsightsEnabled    Boolean @default(true) // geração de insight mensal
@@ -619,6 +621,10 @@ model AiSettings {
   receiptScanEnabled        Boolean @default(true) // POST /api/transactions/receipt-scan (kill-switch)
 
   monthlyTokenLimit Int? // null = ilimitado; soma de prompt+completion tokens do mês corrente
+  // Teto de gasto do mês em USD, só para o medidor em /admin/ai: serve de
+  // denominador da barra e base do alerta. Não bloqueia chamadas — quem corta
+  // o uso é o monthlyTokenLimit, via isWithinUsageLimit().
+  monthlyBudgetUsd Float?
 
   updatedAt DateTime @updatedAt
 

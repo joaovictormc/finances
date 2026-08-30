@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { api } from "@/lib/api-client";
+import { DateField } from "@/components/date-field";
 import { useTheme } from "@/lib/theme";
 import type { Group } from "@/lib/types";
 
@@ -96,14 +97,7 @@ export default function NewGoalScreen() {
         onChangeText={setCurrentAmount}
       />
 
-      <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Prazo (AAAA-MM-DD, opcional)</Text>
-      <TextInput
-        className="mb-4 rounded-md border border-border bg-card px-3 py-3 text-foreground dark:border-border-dark dark:bg-card-dark dark:text-foreground-dark"
-        placeholder="2026-12-31"
-        placeholderTextColor={colors.mutedForeground}
-        value={targetDate}
-        onChangeText={setTargetDate}
-      />
+      <DateField label="Prazo (opcional)" value={targetDate} onChange={setTargetDate} />
 
       {groups.length > 0 && (
         <>

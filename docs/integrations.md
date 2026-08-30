@@ -79,8 +79,17 @@ Schema já preparado: `OpenFinanceConsent`, `OpenFinanceAccount`. Quando aprovad
 **Status:** Implementado — `apps/api/src/lib/ai/groq-client.ts`
 
 **Modelos usados (configuráveis em runtime via `AiSettings`, editável em `/admin/ai`):**
-- `llama-3.3-70b-versatile` (default `textModel`) — parsing de gastos em PT-BR, insights mensais, detecção de recorrências, forecast de orçamento, NL queries
+- `openai/gpt-oss-120b` (default `textModel`) — parsing de gastos em PT-BR, insights mensais, detecção de recorrências, forecast de orçamento, NL queries
 - `whisper-large-v3-turbo` (default `audioModel`) — transcrição de áudio do bot
+- `qwen/qwen3.8-27b` (default `visionModel`) — leitura de cupom fiscal/NF-e por foto (multimodal, aceita imagem + JSON mode)
+
+**⚠️ A Groq aposenta modelos com frequência.** Toda a família `llama-3.x` saiu do catálogo em 08/2026 e passou a responder `404` / `model_decommissioned` — o que derruba *todas* as features de IA de uma vez. Antes de acusar bug no código, confira os ids vigentes na conta:
+
+```bash
+curl -s https://api.groq.com/openai/v1/models -H "Authorization: Bearer $GROQ_API_KEY" | jq -r '.data[].id'
+```
+
+Os três ids são editáveis em `/admin/ai` sem deploy.
 
 **4 pontos de chamada:**
 1. `lib/ai/expense-parser.ts` — parsing de mensagens (bot)
