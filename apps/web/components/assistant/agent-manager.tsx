@@ -222,7 +222,9 @@ export function AgentManager({
                   <p className="text-xs text-muted-foreground">
                     {agent.enabledTools.length === 0
                       ? "Todas as ferramentas"
-                      : `${agent.enabledTools.length} de 5 ferramentas`}
+                      : tools.length > 0
+                        ? `${agent.enabledTools.length} de ${tools.length} ferramentas`
+                        : `${agent.enabledTools.length} ferramentas`}
                   </p>
                 </div>
                 <button

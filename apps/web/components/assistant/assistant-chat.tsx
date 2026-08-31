@@ -252,7 +252,8 @@ export function AssistantChat() {
             </select>
             {activeAgent && activeAgent.enabledTools.length > 0 && (
               <p className="mt-2 text-xs text-muted-foreground">
-                Este agente consulta apenas {activeAgent.enabledTools.length} de 5 ferramentas.
+                Este agente consulta apenas {activeAgent.enabledTools.length} das ferramentas
+                disponíveis.
               </p>
             )}
           </div>
