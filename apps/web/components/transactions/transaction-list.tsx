@@ -58,6 +58,12 @@ const DEFAULT_WIDTHS: Record<ColumnKey, number> = {
   amount: 120,
 };
 
+const COLUMN_ORDER: ColumnKey[] = ["date", "description", "category", "account", "amount"];
+
+// Colunas de largura fixa que emolduram a grid (seleção e ações).
+const CHECKBOX_WIDTH = 48;
+const ACTIONS_WIDTH = 64;
+
 const MIN_WIDTH = 80;
 const STORAGE_KEY = "transactions-column-widths";
 
@@ -105,27 +111,24 @@ function useColumnWidths() {
   return { widths, startResize };
 }
 
-function pinnedWidth(px: number): React.CSSProperties {
-  return { width: px, minWidth: px, maxWidth: px, overflow: "hidden" };
+function totalWidth(widths: Record<ColumnKey, number>): number {
+  return COLUMN_ORDER.reduce((sum, column) => sum + widths[column], CHECKBOX_WIDTH + ACTIONS_WIDTH);
 }
 
 function ResizableTh({
   column,
-  widths,
   startResize,
   className,
   children,
 }: {
   column: ColumnKey;
-  widths: Record<ColumnKey, number>;
   startResize: (key: ColumnKey, startX: number) => void;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <th
-      className={`relative px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide ${className ?? "text-left"}`}
-      style={pinnedWidth(widths[column])}
+      className={`relative overflow-hidden px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide ${className ?? "text-left"}`}
     >
       {children}
       <span
@@ -142,7 +145,7 @@ function ResizableTh({
 function SkeletonRow() {
   return (
     <tr>
-      {Array.from({ length: 7 }).map((_, i) => (
+      {Array.from({ length: 8 }).map((_, i) => (
         <td key={i} className="px-4 py-3">
           <div className="h-4 bg-muted animate-pulse rounded" />
         </td>
@@ -177,7 +180,6 @@ export function TransactionList({
   onDismissSuggestion,
 }: TransactionListProps) {
   const { widths, startResize } = useColumnWidths();
-  const td = (column: ColumnKey) => pinnedWidth(widths[column]);
   const allSelected =
     transactions.length > 0 && transactions.every((transaction) => selectedIds.has(transaction.id));
 
@@ -204,10 +206,26 @@ export function TransactionList({
     <>
       {/* Desktop table */}
       <div className="hidden md:block bg-card rounded-2xl border border-border/60 shadow-sm overflow-x-auto">
-        <table className="text-sm" style={{ tableLayout: "fixed", minWidth: "100%" }}>
+        <table
+          className="text-sm"
+          style={{ tableLayout: "fixed", width: "100%", minWidth: totalWidth(widths) }}
+        >
+          {/* Em layout fixo é o colgroup que define a coluna — largura em <th>/<td>
+              das linhas seguintes é ignorada. A penúltima coluna fica sem largura
+              de propósito: é ela que absorve a sobra quando as colunas somam menos
+              que o card. Sem essa folga, o navegador reparte a sobra entre todas as
+              colunas e nenhuma fica com a largura que o usuário arrastou. */}
+          <colgroup>
+            <col style={{ width: CHECKBOX_WIDTH }} />
+            {COLUMN_ORDER.map((column) => (
+              <col key={column} style={{ width: widths[column] }} />
+            ))}
+            <col />
+            <col style={{ width: ACTIONS_WIDTH }} />
+          </colgroup>
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="w-12 px-4 py-3">
+              <th className="px-4 py-3">
                 <input
                   type="checkbox"
                   checked={allSelected}
@@ -217,12 +235,13 @@ export function TransactionList({
                   className="h-4 w-4 accent-primary"
                 />
               </th>
-              <ResizableTh column="date" widths={widths} startResize={startResize}>Data</ResizableTh>
-              <ResizableTh column="description" widths={widths} startResize={startResize}>Descrição</ResizableTh>
-              <ResizableTh column="category" widths={widths} startResize={startResize}>Categoria</ResizableTh>
-              <ResizableTh column="account" widths={widths} startResize={startResize}>Conta</ResizableTh>
-              <ResizableTh column="amount" widths={widths} startResize={startResize} className="text-right">Valor</ResizableTh>
-              <th className="px-4 py-3 w-16" />
+              <ResizableTh column="date" startResize={startResize}>Data</ResizableTh>
+              <ResizableTh column="description" startResize={startResize}>Descrição</ResizableTh>
+              <ResizableTh column="category" startResize={startResize}>Categoria</ResizableTh>
+              <ResizableTh column="account" startResize={startResize}>Conta</ResizableTh>
+              <ResizableTh column="amount" startResize={startResize} className="text-right">Valor</ResizableTh>
+              <th />
+              <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody>
@@ -230,7 +249,7 @@ export function TransactionList({
               ? Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
               : transactions.map((t) => (
                   <tr key={t.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="w-12 px-4 py-3">
+                    <td className="px-4 py-3">
                       <input
                         type="checkbox"
                         checked={selectedIds.has(t.id)}
@@ -239,10 +258,10 @@ export function TransactionList({
                         className="h-4 w-4 accent-primary"
                       />
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap" style={td("date")}>
+                    <td className="px-4 py-3 overflow-hidden text-xs text-muted-foreground whitespace-nowrap">
                       {formatShortDate(t.date)}
                     </td>
-                    <td className="px-4 py-3" style={td("description")}>
+                    <td className="overflow-hidden px-4 py-3">
                       <div className="flex items-center gap-2 min-w-0">
                         <p className="font-medium text-foreground truncate min-w-0">{t.description}</p>
                         {t.paymentMethod && PAYMENT_METHOD_BADGE[t.paymentMethod] && (
@@ -255,7 +274,7 @@ export function TransactionList({
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3" style={td("category")}>
+                    <td className="overflow-hidden px-4 py-3">
                       {t.category ? (
                         <span className="inline-flex items-center gap-2 text-xs text-muted-foreground min-w-0 max-w-full">
                           <CategoryIcon icon={t.category.icon} iconUrl={t.category.iconUrl} color={t.category.color} size="sm" />
@@ -271,8 +290,8 @@ export function TransactionList({
                         <span className="text-xs text-muted-foreground/50">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground truncate" style={td("account")}>{t.account.name}</td>
-                    <td className="px-4 py-3 text-right font-semibold whitespace-nowrap" style={td("amount")}>
+                    <td className="truncate px-4 py-3 text-xs text-muted-foreground">{t.account.name}</td>
+                    <td className="overflow-hidden px-4 py-3 text-right font-semibold whitespace-nowrap">
                       <span
                         className={
                           t.type === "income"
@@ -286,6 +305,7 @@ export function TransactionList({
                         {formatBRL(Number(t.amount))}
                       </span>
                     </td>
+                    <td />
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-end">
                         <button
