@@ -8,6 +8,7 @@ import { getAiSettings, isWithinUsageLimit, logAiUsage } from "../lib/ai/ai-sett
 import { TOOLS, executeTool, buildDateContext } from "../lib/ai/finance-tools";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { isAiInsightsAllowed } from "../lib/plan-limits";
+import { checkRateLimit } from "../lib/rate-limit";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -58,6 +59,12 @@ app.post("/query", zValidator("json", QuerySchema), async (c) => {
       403
     );
   }
+  // Cada pergunta vira uma ou mais chamadas à Groq (o laço de ferramentas roda
+  // até 4 rodadas), então o custo não é limitado pelo tamanho do pedido.
+  if (!(await checkRateLimit({ key: "ai-query", userId, max: 20, windowSeconds: 15 * 60 }))) {
+    return c.json({ error: "Muitas consultas seguidas. Tente novamente em alguns minutos." }, 429);
+  }
+
   const settings = await getAiSettings();
   if (!settings.nlQueryEnabled) {
     return c.json({ error: "Consultas de IA temporariamente desativadas" }, 503);

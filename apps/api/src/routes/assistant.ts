@@ -15,6 +15,7 @@ import {
 import { AGENT_PRESETS } from "../lib/ai/agent-presets";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { isAssistantAllowed } from "../lib/plan-limits";
+import { checkRateLimit } from "../lib/rate-limit";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -204,6 +205,13 @@ app.post("/conversations/:id/messages", zValidator("json", MessageSchema), async
   const userId = c.get("userId");
   const conversationId = c.req.param("id");
   const { content } = c.req.valid("json");
+
+  // Conversa contínua é a rota mais cara da aplicação: cada mensagem manda o
+  // histórico inteiro e pode disparar até 4 rodadas de ferramentas. 30 por 15
+  // minutos é folgado pra uso humano e corta laço de script.
+  if (!(await checkRateLimit({ key: "assistant-message", userId, max: 30, windowSeconds: 15 * 60 }))) {
+    return c.json({ error: "Muitas mensagens seguidas. Tente novamente em alguns minutos." }, 429);
+  }
 
   const settings = await getAiSettings();
   if (!settings.assistantEnabled) {

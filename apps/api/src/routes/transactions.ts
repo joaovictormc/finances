@@ -18,7 +18,7 @@ import { parseOfxTransactions } from "../lib/import/ofx-parser";
 import { validateImportFileBatch } from "../lib/import/import-limits";
 import { validateReceiptImage, describeBytes } from "../lib/import/receipt-limits";
 import { parseMonthlyReportPeriod } from "../lib/report-period";
-import { redis } from "../lib/redis";
+import { checkRateLimit } from "../lib/rate-limit";
 import { awardDailyPoints } from "../lib/gamification";
 
 const app = new Hono<{ Variables: AuthVariables }>();
@@ -96,16 +96,10 @@ app.get("/", zValidator("query", TransactionFiltersSchema), async (c) => {
 
 app.post("/import/batch", async (c) => {
   const userId = c.get("userId");
-  try {
-    const rateLimitKey = `rate-limit:statement-import:${userId}`;
-    const requests = await redis.incr(rateLimitKey);
-    if (requests === 1) await redis.expire(rateLimitKey, 15 * 60);
-    if (requests > 10) {
-      return c.json({ error: "Muitas importações. Tente novamente mais tarde." }, 429);
-    }
-  } catch {
-    // Redis indisponível não deve impedir o acesso aos próprios dados. Os
-    // limites rígidos de tamanho e quantidade continuam sendo aplicados.
+  // Os limites rígidos de tamanho e quantidade continuam valendo mesmo se o
+  // Redis estiver fora e o `checkRateLimit` liberar a passagem.
+  if (!(await checkRateLimit({ key: "statement-import", userId, max: 10, windowSeconds: 15 * 60 }))) {
+    return c.json({ error: "Muitas importações. Tente novamente mais tarde." }, 429);
   }
 
   const formData = await c.req.raw.formData();
@@ -206,6 +200,12 @@ app.post("/receipt-scan", async (c) => {
       { error: "Leitura de cupom fiscal disponível nos planos Pro e Família. Faça upgrade para usar." },
       403
     );
+  }
+
+  // Cada leitura manda a imagem inteira pro modelo de visão (~2k tokens), então
+  // vale o mesmo limite das outras rotas de IA.
+  if (!(await checkRateLimit({ key: "receipt-scan", userId, max: 20, windowSeconds: 15 * 60 }))) {
+    return c.json({ error: "Muitas leituras seguidas. Tente novamente em alguns minutos." }, 429);
   }
 
   // Dois formatos de entrada. O app nativo manda JSON com o base64 que o
