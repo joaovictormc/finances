@@ -59,12 +59,17 @@ export function FinansTabBar({ state, descriptors, navigation }: TabBarProps) {
     );
   }
 
-  // Duas metades em torno do FAB: [0][1] · FAB · [resto].
+  // Duas metades em torno do FAB. O corte é calculado, não fixo: com um ponto
+  // fixo em 2, toda aba nova caía na direita — com 6 abas isso dava 2 à
+  // esquerda e 4 à direita, e como cada metade ocupa 50% da barra, os itens da
+  // direita ficavam com ~36px e os rótulos truncavam.
+  //
   // Cada metade é um container `flex: 1` próprio, e não itens `flex: 1` soltos
-  // numa linha única — senão, com número ímpar de abas de cada lado, o FAB sai
-  // do centro da tela e os itens da esquerda ficam mais largos que os da direita.
-  const left = state.routes.slice(0, 2);
-  const right = state.routes.slice(2);
+  // numa linha única — senão o FAB sai do centro da tela quando os lados têm
+  // quantidades diferentes de abas.
+  const splitAt = Math.ceil(state.routes.length / 2);
+  const left = state.routes.slice(0, splitAt);
+  const right = state.routes.slice(splitAt);
 
   return (
     <View
