@@ -7,7 +7,8 @@ export type AiFeature =
   | "monthly_insight"
   | "nl_query"
   | "category_suggestion"
-  | "receipt_scan";
+  | "receipt_scan"
+  | "assistant";
 
 export async function getAiSettings() {
   return db.aiSettings.upsert({
@@ -20,6 +21,8 @@ export async function getAiSettings() {
 export async function updateAiSettings(data: {
   textModel?: string;
   visionModel?: string;
+  assistantModel?: string;
+  assistantEnabled?: boolean;
   monthlyInsightsEnabled?: boolean;
   nlQueryEnabled?: boolean;
   categorySuggestionEnabled?: boolean;

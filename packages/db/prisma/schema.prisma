@@ -50,6 +50,8 @@ model User {
   aiUsageLogs     AiUsageLog[]
   gamificationProfile GamificationProfile?
   gamificationSpinLogs GamificationSpinLog[]
+  assistantAgents        AssistantAgent[]
+  assistantConversations AssistantConversation[]
 
   @@map("users")
 }
@@ -563,10 +565,12 @@ model AiSettings {
   // 08/2026 e passaram a responder 404 / model_decommissioned. Os três ids são
   // editáveis em /admin/ai sem deploy; confira os vigentes em
   // console.groq.com/docs/models antes de trocar.
-  textModel   String @default("openai/gpt-oss-120b")
-  visionModel String @default("qwen/qwen3.8-27b") // multimodal: aceita imagem + JSON mode
+  textModel      String @default("openai/gpt-oss-120b")
+  visionModel    String @default("qwen/qwen3.8-27b") // multimodal: aceita imagem + JSON mode
+  assistantModel String @default("openai/gpt-oss-120b") // assistente de IA (/api/assistant)
 
   monthlyInsightsEnabled    Boolean @default(true) // geração de insight mensal
+  assistantEnabled          Boolean @default(true) // kill-switch do assistente de IA
   nlQueryEnabled            Boolean @default(true) // POST /api/ai/query
   categorySuggestionEnabled Boolean @default(true) // POST /api/transactions/suggest-categories
   receiptScanEnabled        Boolean @default(true) // POST /api/transactions/receipt-scan (kill-switch)
@@ -622,4 +626,71 @@ model AiUsageLog {
   @@index([createdAt])
   @@index([feature])
   @@map("ai_usage_logs")
+}
+
+// ─────────────────────────────────────────────
+// ASSISTENTE DE IA (chat sobre os dados do usuário)
+// ─────────────────────────────────────────────
+
+/// Agente personalizado: um recorte de assunto criado pelo usuário, com persona
+/// própria e um subconjunto das ferramentas de consulta financeira.
+model AssistantAgent {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name         String
+  icon         String? // emoji escolhido pelo usuário
+  instructions String  // system prompt — define o assunto e o tom do agente
+
+  /// Nomes das ferramentas liberadas, validados contra TOOL_NAMES
+  /// (apps/api/src/lib/ai/finance-tools.ts). Lista vazia = todas.
+  enabledTools String[] @default([])
+
+  conversations AssistantConversation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("assistant_agents")
+}
+
+model AssistantConversation {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Null = assistente genérico, sem agente. SetNull para que apagar um agente
+  /// não leve junto o histórico de conversas dele.
+  agentId String?
+  agent   AssistantAgent? @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  title String // derivado da primeira pergunta, sem custo de outra chamada de IA
+
+  messages AssistantMessage[]
+
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([userId, lastMessageAt])
+  @@map("assistant_conversations")
+}
+
+model AssistantMessage {
+  id             String                @id @default(cuid())
+  conversationId String
+  conversation   AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  role    String // user | assistant
+  content String
+
+  /// Ferramentas que o modelo chamou para montar esta resposta. Guardado para a
+  /// UI poder mostrar o que foi consultado e para depurar respostas estranhas.
+  toolCalls Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("assistant_messages")
 }

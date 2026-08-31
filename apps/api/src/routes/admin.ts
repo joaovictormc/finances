@@ -236,6 +236,8 @@ app.get("/ai/settings", async (c) => {
 const AiSettingsSchema = z.object({
   textModel: z.string().min(1).optional(),
   visionModel: z.string().min(1).optional(),
+  assistantModel: z.string().min(1).optional(),
+  assistantEnabled: z.boolean().optional(),
   monthlyInsightsEnabled: z.boolean().optional(),
   nlQueryEnabled: z.boolean().optional(),
   categorySuggestionEnabled: z.boolean().optional(),
