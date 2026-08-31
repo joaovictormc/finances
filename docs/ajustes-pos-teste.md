@@ -92,5 +92,6 @@ The column `ai_settings.categorySuggestionEnabled` does not exist in the current
   > inserir no app mobile uma feature que pode ser inserida a partir do plano pro que é o envio de foto diretamente pelo app de cupom fiscal, notinhas de maquininhas de cartão, nf-e, etc, e abra um menu para edição dessa transação, realizar a pré classificação antes do usuário cadastrar via IA
   >
   > Implementado: `POST /api/transactions/receipt-scan` (mobile, planos Pro/Família — `isReceiptScanAllowed`) envia a foto pra um modelo de visão da Groq (`AiSettings.visionModel`, editável em `/admin/ai`, kill-switch `receiptScanEnabled`) que extrai `{merchant, amount, date, categoryHint, items[]}` (`ParsedReceiptSchema`). Nunca cria a transação sozinho — só pré-preenche o formulário de `new-transaction.tsx` (botão "Preencher com foto do cupom", câmera ou galeria via `expo-image-picker`), o usuário revisa e confirma. `categoryHint` tenta casar com uma categoria existente automaticamente.
-- Desenvolver a integração via whatsapp
-  > Como já existe o bot do telegram, podemos em paralelo configurar e inserir o bot para whatsapp selehante ao do telegram
+- Remover bot telegram/whatsapp e alterar a página de Integração Bot para um assistente de IA interno onde pode tirar dúvidas sobre os dados do usuário, ajuda a planejar orçamentos, traçar metas, etc. Esse assistente deve estar disponível para o mobile também na barra de menu inferior. O recurso será somente para planos pro e familia
+  > Podemos inserir uma função de criar agentes personalizados para falar sobre cada assunto que o usuário quiser 
+  > Adicione uma área no menu admin/ia para alteração do modelo desse agente

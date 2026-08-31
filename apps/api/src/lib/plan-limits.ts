@@ -38,9 +38,9 @@ export async function isReceiptScanAllowed(userId: string): Promise<boolean> {
   return plan.receiptScan;
 }
 
-export async function isChannelAllowed(userId: string, channel: "telegram" | "whatsapp"): Promise<boolean> {
+export async function isAssistantAllowed(userId: string): Promise<boolean> {
   const plan = await getEffectivePlan(userId);
-  return plan.channels.includes(channel);
+  return plan.assistant;
 }
 
 /** Data mais antiga visível para o usuário, ou null se o plano não tem limite de histórico. */
@@ -66,7 +66,10 @@ export async function canAddGroupMember(groupId: string): Promise<boolean> {
 // ─────────────────────────────────────────────
 
 export function planHasIntegrationsModule(plan: PlanDefinition): boolean {
-  return plan.channels.length > 0 || plan.maxBankConnections !== 0;
+  // Antes isto também olhava `channels` (bot Telegram/WhatsApp, removido).
+  // `maxBankConnections` separa os planos do mesmo jeito: 0 no free,
+  // ilimitado no pro/família — a semântica do módulo não muda.
+  return plan.maxBankConnections !== 0;
 }
 
 export function planHasFamilyModule(plan: PlanDefinition): boolean {

@@ -6,9 +6,9 @@ export interface PlanDefinition {
   priceCents: number; // em centavos (BRL)
   maxBankConnections: number | null; // null = ilimitado
   historyMonths: number | null; // null = ilimitado
-  channels: Array<"telegram" | "whatsapp">;
   aiInsights: boolean;
   receiptScan: boolean; // leitura de cupom fiscal/NF-e por foto (mobile)
+  assistant: boolean; // assistente de IA com conversa e agentes personalizados
   maxGroupMembers: number; // 1 = sem grupo
 }
 
@@ -19,9 +19,9 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     priceCents: 0,
     maxBankConnections: 0, // sem módulo de integrações: só contas manuais
     historyMonths: 3,
-    channels: [], // sem módulo de integrações: sem bot
     aiInsights: false,
     receiptScan: false,
+    assistant: false,
     maxGroupMembers: 1, // sem módulo família
   },
   pro: {
@@ -30,9 +30,9 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     priceCents: 1990,
     maxBankConnections: null,
     historyMonths: null,
-    channels: ["telegram", "whatsapp"],
     aiInsights: true,
     receiptScan: true,
+    assistant: true,
     maxGroupMembers: 1, // sem módulo família — só Família libera grupos
   },
   familia: {
@@ -41,9 +41,9 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     priceCents: 2990,
     maxBankConnections: null,
     historyMonths: null,
-    channels: ["telegram", "whatsapp"],
     aiInsights: true,
     receiptScan: true,
+    assistant: true,
     maxGroupMembers: 5,
   },
 };
@@ -59,8 +59,8 @@ export const ADMIN_PLAN: PlanDefinition = {
   priceCents: 0,
   maxBankConnections: null,
   historyMonths: null,
-  channels: ["telegram", "whatsapp"],
   aiInsights: true,
   receiptScan: true,
+  assistant: true,
   maxGroupMembers: Number.MAX_SAFE_INTEGER,
 };

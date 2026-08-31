@@ -11,9 +11,7 @@ import { api } from "@/lib/api-client";
 
 type AiSettings = {
   textModel: string;
-  audioModel: string;
   visionModel: string;
-  expenseParsingEnabled: boolean;
   monthlyInsightsEnabled: boolean;
   nlQueryEnabled: boolean;
   categorySuggestionEnabled: boolean;
@@ -126,11 +124,6 @@ export default function AdminAiPage() {
               onChange={(e) => setSettings({ ...settings, textModel: e.target.value })}
             />
             <Input
-              label="Modelo de áudio (Groq)"
-              value={settings.audioModel}
-              onChange={(e) => setSettings({ ...settings, audioModel: e.target.value })}
-            />
-            <Input
               label="Modelo de visão (Groq)"
               value={settings.visionModel}
               onChange={(e) => setSettings({ ...settings, visionModel: e.target.value })}
@@ -142,12 +135,6 @@ export default function AdminAiPage() {
           <h2 className="text-base font-semibold mb-1">Features</h2>
           <p className="text-sm text-muted-foreground mb-4">Ative ou desative funcionalidades de IA globalmente</p>
           <div className="space-y-3">
-            <ToggleRow
-              label="Parsing de despesas pelo bot"
-              description="Interpretar mensagens de texto/voz do bot como gastos/receitas"
-              enabled={settings.expenseParsingEnabled}
-              onChange={(v) => setSettings({ ...settings, expenseParsingEnabled: v })}
-            />
             <ToggleRow
               label="Insights mensais"
               description="Geração automática do resumo mensal por IA"

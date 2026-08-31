@@ -235,9 +235,7 @@ app.get("/ai/settings", async (c) => {
 // não salva — sem erro visível na tela.
 const AiSettingsSchema = z.object({
   textModel: z.string().min(1).optional(),
-  audioModel: z.string().min(1).optional(),
   visionModel: z.string().min(1).optional(),
-  expenseParsingEnabled: z.boolean().optional(),
   monthlyInsightsEnabled: z.boolean().optional(),
   nlQueryEnabled: z.boolean().optional(),
   categorySuggestionEnabled: z.boolean().optional(),

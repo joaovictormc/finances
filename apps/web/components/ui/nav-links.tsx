@@ -32,7 +32,7 @@ const baseNavItems = [
 ];
 
 const groupsItem = { href: "/groups", label: "Família", icon: Users };
-const botItem = { href: "/bot", label: "Integração Bot", icon: Bot };
+const assistantItem = { href: "/assistant", label: "Assistente", icon: Bot };
 const settingsItem = { href: "/settings", label: "Configurações", icon: Settings };
 
 type NavItem = {
@@ -58,9 +58,9 @@ export function NavLinks({ collapsed = false }: { collapsed?: boolean }) {
       lockedMessage: "Família é exclusivo do plano Família. Faça upgrade para criar ou entrar em um grupo.",
     },
     {
-      ...botItem,
+      ...assistantItem,
       locked: !hasIntegrations,
-      lockedMessage: "Integração com bot disponível nos planos Pro e Família. Faça upgrade para usar.",
+      lockedMessage: "O assistente de IA está disponível nos planos Pro e Família. Faça upgrade para usar.",
     },
     { ...settingsItem, locked: false, lockedMessage: "" },
     ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: ShieldCheck, locked: false, lockedMessage: "" }] : []),

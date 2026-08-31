@@ -21,8 +21,8 @@ interface PlanDefinition {
   priceCents: number;
   maxBankConnections: number | null;
   historyMonths: number | null;
-  channels: Array<"telegram" | "whatsapp">;
   aiInsights: boolean;
+  assistant: boolean;
   maxGroupMembers: number;
 }
 
@@ -48,7 +48,7 @@ function planFeatures(plan: PlanDefinition): string[] {
   return [
     plan.maxBankConnections === null ? "Conexões bancárias ilimitadas" : `${plan.maxBankConnections} conexão bancária`,
     plan.historyMonths === null ? "Histórico completo" : `${plan.historyMonths} meses de histórico`,
-    plan.channels.includes("whatsapp") ? "Telegram + WhatsApp" : "Telegram",
+    plan.assistant ? "Assistente de IA com agentes personalizados" : "Sem assistente de IA",
     plan.aiInsights ? "Insights e IA conversacional" : "Sem insights de IA",
     plan.maxGroupMembers > 1 ? `Família até ${plan.maxGroupMembers} membros` : "Sem compartilhamento familiar",
   ];

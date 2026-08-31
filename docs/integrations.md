@@ -1,49 +1,26 @@
 # Integrações
 
-## Telegram Bot (grammy)
+## Bots de mensageria (Telegram/WhatsApp) — **removidos**
 
-**Status:** Implementado — `apps/api/src/routes/bots/telegram.ts`
+**Status:** Removidos em 08/2026, substituídos pelo assistente de IA interno.
 
-**Configuração:**
-1. Criar bot via @BotFather no Telegram → copiar token
-2. Definir `TELEGRAM_BOT_TOKEN` no `.env`
-3. Setar webhook: `POST https://api.telegram.org/bot<TOKEN>/setWebhook?url=<API_URL>/api/bots/telegram`
+O bot do Telegram era funcional e o do WhatsApp chegou a ser implementado, mas ambos
+foram retirados: dependiam de infraestrutura externa fora do controle do projeto (no caso
+da Meta, verificação de negócio com CNPJ e ~2 semanas de espera) e tiravam o usuário de
+dentro do produto. O assistente interno usa a mesma IA sobre os mesmos dados, sem
+dependência externa.
 
-**Comandos disponíveis:**
-- `/start` — gera código de vinculação one-time (Redis, TTL 10min)
-- `/ajuda` — lista de exemplos de uso
-- `/resumo` — resumo financeiro do mês corrente
+O que saiu: `routes/bots/`, `lib/bot/`, `lib/ai/expense-parser.ts`,
+`lib/ai/voice-transcriber.ts`, os workers `bot-messages` e `voice-transcription`, as
+filas correspondentes, a dependência `grammy`, os models `BotConversation`/`BotMessage` e
+as colunas de vínculo em `user_profiles`.
 
-**Registro de gastos via NLP (texto e voz):**
-```
-Usuário: "gastei 50 reais no mercado hoje"
-Bot: "💸 Gasto detectado:
-      💵 Valor: R$ 50,00
-      📁 Categoria: Supermercado
-      📅 Data: 14/06/2026
-      [✅ Confirmar] [✏️ Editar] [❌ Cancelar]"
-```
+O que ficou de propósito: `transactions.source` e `notifications.channel` continuam
+aceitando os valores `telegram`/`whatsapp` — linhas históricas seguem válidas. O
+`ai_usage_logs.feature` também mantém `expense_parsing` e `voice_transcription`, para o
+medidor de consumo em `/admin/ai` continuar somando o histórico.
 
-**Pipeline NLP:**
-1. Webhook recebe mensagem (texto ou áudio) → enfileira em `bot-messages` (BullMQ)
-2. Se for áudio: `voice-transcription` worker transcreve via Groq Whisper antes de seguir o mesmo pipeline
-3. Worker chama `parseExpenseMessage()` → Groq (`llama-3.3-70b-versatile`, tool calling)
-4. Se confiança ≥ 0.7: cria transação pendente em Redis (TTL 5min) + envia confirmação
-5. Usuário confirma → worker cria `Transaction` no banco
-
-**Rate limits:** 30 msg/seg global, 1 msg/seg por chat.
-
----
-
-## WhatsApp Business API (Meta)
-
-**Status:** Planejado — nunca iniciado
-
-- Free tier: 1.000 conversas/mês (janela de 24h por conversa)
-- Aprovação: ~2 semanas (Business Verification com CNPJ)
-- Env vars: `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN`
-- Webhook: `POST /api/bots/whatsapp` (a implementar)
-- Atenção: mídia de áudio disponível apenas por 30s após webhook — download imediato obrigatório
+Para recuperar o código: `git show 73c711c -- apps/api/src/routes/bots`.
 
 ---
 
@@ -79,8 +56,7 @@ Schema já preparado: `OpenFinanceConsent`, `OpenFinanceAccount`. Quando aprovad
 **Status:** Implementado — `apps/api/src/lib/ai/groq-client.ts`
 
 **Modelos usados (configuráveis em runtime via `AiSettings`, editável em `/admin/ai`):**
-- `openai/gpt-oss-120b` (default `textModel`) — parsing de gastos em PT-BR, insights mensais, detecção de recorrências, forecast de orçamento, NL queries
-- `whisper-large-v3-turbo` (default `audioModel`) — transcrição de áudio do bot
+- `openai/gpt-oss-120b` (default `textModel`) — assistente de IA, insights mensais, detecção de recorrências, forecast de orçamento, NL queries
 - `qwen/qwen3.8-27b` (default `visionModel`) — leitura de cupom fiscal/NF-e por foto (multimodal, aceita imagem + JSON mode)
 
 **⚠️ A Groq aposenta modelos com frequência.** Toda a família `llama-3.x` saiu do catálogo em 08/2026 e passou a responder `404` / `model_decommissioned` — o que derruba *todas* as features de IA de uma vez. Antes de acusar bug no código, confira os ids vigentes na conta:
@@ -91,11 +67,11 @@ curl -s https://api.groq.com/openai/v1/models -H "Authorization: Bearer $GROQ_AP
 
 Os três ids são editáveis em `/admin/ai` sem deploy.
 
-**4 pontos de chamada:**
-1. `lib/ai/expense-parser.ts` — parsing de mensagens (bot)
-2. `lib/ai/financial-insights.ts` — insight mensal (worker `ai-analysis`)
-3. `routes/ai.ts` (`POST /api/ai/query`) — NL query com tool calling
-4. `lib/ai/voice-transcriber.ts` — transcrição de voz (worker `voice-transcription`)
+**Pontos de chamada:**
+1. `lib/ai/financial-insights.ts` — insight mensal (worker `ai-analysis`)
+2. `routes/ai.ts` (`POST /api/ai/query`) — NL query com tool calling
+3. `lib/ai/category-suggester.ts` — sugestão de categoria
+4. `lib/ai/receipt-parser.ts` — leitura de cupom fiscal (modelo de visão)
 
 Cada chamada passa por `getAiSettings()` (kill-switch + modelo) e grava uso em `AiUsageLog` via `logAiUsage()`. `monthlyTokenLimit` (opcional) corta o uso quando excedido (`isWithinUsageLimit()`).
 

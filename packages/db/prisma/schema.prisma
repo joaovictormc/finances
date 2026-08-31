@@ -41,7 +41,6 @@ model User {
   goals           Goal[]
   recurringBills  RecurringBill[]
   ofConsents      OpenFinanceConsent[]
-  botConversations BotConversation[]
   notifications   Notification[]
   aiInsights      AiInsight[]
   subscription    Subscription?
@@ -109,14 +108,11 @@ model UserProfile {
   // de @finances/db (packages/db/src/crypto.ts), não em texto puro.
   cpf             String?
   phoneE164       String?   // e.g. +5511999999999
-  telegramChatId  BigInt?   @unique
-  whatsappPhone   String?   @unique
 
   defaultCurrency String    @default("BRL")
   timezone        String    @default("America/Sao_Paulo")
   aiInsightsEnabled Boolean @default(true)
   notifyEmail     Boolean   @default(true)
-  notifyTelegram  Boolean   @default(true)
   onboardingCompletedAt DateTime?
 
   createdAt       DateTime  @default(now())
@@ -273,7 +269,6 @@ model Transaction {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  botMessages BotMessage[]
 
   @@unique([externalId, accountId])
   @@index([userId, date])
@@ -413,48 +408,6 @@ model OpenFinanceAccount {
 // ─────────────────────────────────────────────
 // BOTS + NOTIFICATIONS
 // ─────────────────────────────────────────────
-
-model BotConversation {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  platform       String // telegram | whatsapp
-  platformChatId String
-
-  state   String @default("idle") // idle | awaiting_amount | awaiting_category | awaiting_confirmation | nl_query
-  context Json?  // pending transaction data, partial parse result
-
-  lastMessageAt DateTime @default(now())
-
-  messages BotMessage[]
-
-  @@unique([platform, platformChatId])
-  @@map("bot_conversations")
-}
-
-model BotMessage {
-  id             String @id @default(cuid())
-  conversationId String
-  conversation   BotConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-
-  direction   String // inbound | outbound
-  messageType String // text | audio | image
-  content     String?
-  rawPayload  Json?
-
-  // AI processing
-  parsedIntent String? // record_expense | record_income | query | unknown
-  parsedData   Json?
-  aiConfidence Decimal? @db.Decimal(4, 3)
-
-  resultedInTransactionId String?
-  resultedInTransaction   Transaction? @relation(fields: [resultedInTransactionId], references: [id])
-
-  createdAt DateTime @default(now())
-
-  @@map("bot_messages")
-}
 
 model Notification {
   id     String @id @default(cuid())
@@ -611,10 +564,8 @@ model AiSettings {
   // editáveis em /admin/ai sem deploy; confira os vigentes em
   // console.groq.com/docs/models antes de trocar.
   textModel   String @default("openai/gpt-oss-120b")
-  audioModel  String @default("whisper-large-v3-turbo")
   visionModel String @default("qwen/qwen3.8-27b") // multimodal: aceita imagem + JSON mode
 
-  expenseParsingEnabled     Boolean @default(true) // parsing de mensagens do bot (texto/voz)
   monthlyInsightsEnabled    Boolean @default(true) // geração de insight mensal
   nlQueryEnabled            Boolean @default(true) // POST /api/ai/query
   categorySuggestionEnabled Boolean @default(true) // POST /api/transactions/suggest-categories

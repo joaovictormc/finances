@@ -36,12 +36,6 @@ export function NotificationsSection() {
         onToggle={(v) => updatePref("notifyEmail", v)}
       />
       <ToggleRow
-        label="Telegram Bot"
-        description="Receba notificações e gerencie finanças pelo Telegram"
-        enabled={prefs?.notifyTelegram ?? true}
-        onToggle={(v) => updatePref("notifyTelegram", v)}
-      />
-      <ToggleRow
         label="Alertas preditivos"
         description="Avisos quando você estiver no caminho de ultrapassar um orçamento"
         enabled={prefs?.aiInsightsEnabled ?? true}

@@ -6,8 +6,6 @@ import { logger } from "hono/logger";
 import { auth } from "./lib/auth";
 import { enforcePasswordPolicy } from "./middleware/password-policy";
 import { bootstrapAdmin } from "./lib/bootstrap-admin";
-import { telegramWebhookHandler } from "./routes/bots/telegram";
-import telegramLinkRoute from "./routes/bots/telegram-link";
 import transactionsRoute from "./routes/transactions";
 import financialAccountsRoute from "./routes/financial-accounts";
 import categoriesRoute from "./routes/categories";
@@ -30,9 +28,7 @@ import { registerRepeatableJobs } from "./jobs/scheduler";
 import { db } from "@finances/db";
 
 // Start BullMQ workers
-import "./jobs/workers/bot-messages.worker";
 import "./jobs/workers/email.worker";
-import "./jobs/workers/voice-transcription.worker";
 import "./jobs/workers/open-finance-sync.worker";
 import "./jobs/workers/ai-analysis.worker";
 import "./jobs/workers/bill-detector.worker";
@@ -87,12 +83,6 @@ app.get("/health/ready", async (c) => {
 // ── Better Auth handler (handles /api/auth/* requests) ────────────────────────
 app.use("/api/auth/*", enforcePasswordPolicy);
 app.on(["GET", "POST"], "/api/auth/*", (c) => auth.handler(c.req.raw));
-
-// ── Bot webhooks ──────────────────────────────────────────────────────────────
-app.post("/api/bots/telegram", telegramWebhookHandler);
-
-// ── Telegram account linking (web → bot) ──────────────────────────────────────
-app.route("/api/bots/telegram", telegramLinkRoute);
 
 // ── API routes ────────────────────────────────────────────────────────────────
 app.route("/api/transactions", transactionsRoute);

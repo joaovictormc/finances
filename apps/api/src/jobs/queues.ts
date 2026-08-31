@@ -17,8 +17,6 @@ export const gamificationQueue = new Queue("gamification", { connection });
 
 export const allQueues = [
   emailQueue,
-  botMessagesQueue,
-  voiceTranscriptionQueue,
   openFinanceSyncQueue,
   aiAnalysisQueue,
   billDetectorQueue,

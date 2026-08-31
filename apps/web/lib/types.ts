@@ -124,6 +124,5 @@ export type RecurringBill = {
 
 export type NotificationPreferences = {
   notifyEmail: boolean;
-  notifyTelegram: boolean;
   aiInsightsEnabled: boolean;
 };

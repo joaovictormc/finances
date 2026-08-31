@@ -130,8 +130,8 @@ export type PlanDefinition = {
   priceCents: number;
   maxBankConnections: number | null;
   historyMonths: number | null;
-  channels: Array<"telegram" | "whatsapp">;
   aiInsights: boolean;
+  assistant: boolean;
   maxGroupMembers: number;
 };
 
@@ -163,6 +163,5 @@ export type ReferralSummary = {
 
 export type NotificationPreferences = {
   notifyEmail: boolean;
-  notifyTelegram: boolean;
   aiInsightsEnabled: boolean;
 };

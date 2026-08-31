@@ -7,7 +7,6 @@ import { File, Paths } from "expo-file-system";
 import { api, API_URL, nativeAuthHeaders } from "@/lib/api-client";
 import { authClient, useSession } from "@/lib/auth-client";
 import { useTheme, type ThemeColors } from "@/lib/theme";
-import { TelegramLink } from "@/components/telegram-link";
 import { TwoFactorSection } from "@/components/two-factor-section";
 import { ChangePasswordSection } from "@/components/change-password-section";
 import { DeleteAccountSection } from "@/components/delete-account-section";
@@ -215,14 +214,6 @@ export default function SettingsScreen() {
       </View>
 
       <View className="rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
-        <Text className="mb-1 text-base font-semibold text-foreground dark:text-foreground-dark">Telegram</Text>
-        <Text className="mb-4 text-sm text-muted-foreground dark:text-muted-foreground-dark">
-          Vincule sua conta ao bot pra registrar gastos e receber notificações pelo Telegram.
-        </Text>
-        <TelegramLink />
-      </View>
-
-      <View className="rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
         <Text className="mb-1 text-base font-semibold text-foreground dark:text-foreground-dark">Notificações</Text>
         <Text className="mb-4 text-sm text-muted-foreground dark:text-muted-foreground-dark">
           Configure como deseja receber alertas.
@@ -233,13 +224,6 @@ export default function SettingsScreen() {
           description="Receba avisos de orçamento e vencimentos por email"
           value={prefs?.notifyEmail ?? true}
           onChange={(v) => updatePref("notifyEmail", v)}
-          colors={colors}
-        />
-        <NotificationRow
-          label="Telegram Bot"
-          description="Receba notificações e gerencie finanças pelo Telegram"
-          value={prefs?.notifyTelegram ?? true}
-          onChange={(v) => updatePref("notifyTelegram", v)}
           colors={colors}
         />
         <NotificationRow

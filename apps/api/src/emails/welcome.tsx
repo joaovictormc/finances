@@ -14,7 +14,7 @@ export default function Welcome({ name = "usuário" }: Props) {
         <ul>
           <li>Registrar gastos e receitas</li>
           <li>Conectar sua conta bancária via Open Finance</li>
-          <li>Registrar gastos pelo Telegram com IA</li>
+          <li>Tirar dúvidas sobre suas finanças com o assistente de IA</li>
           <li>Criar orçamentos e metas financeiras</li>
         </ul>
         <p>Boas finanças! 🚀</p>

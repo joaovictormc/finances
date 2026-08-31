@@ -12,19 +12,17 @@ app.get("/notifications", async (c) => {
   const userId = c.get("userId");
   const profile = await db.userProfile.findUnique({
     where: { userId },
-    select: { notifyEmail: true, notifyTelegram: true, aiInsightsEnabled: true },
+    select: { notifyEmail: true, aiInsightsEnabled: true },
   });
 
   return c.json({
     notifyEmail: profile?.notifyEmail ?? true,
-    notifyTelegram: profile?.notifyTelegram ?? true,
     aiInsightsEnabled: profile?.aiInsightsEnabled ?? true,
   });
 });
 
 const NotificationPreferencesSchema = z.object({
   notifyEmail: z.boolean().optional(),
-  notifyTelegram: z.boolean().optional(),
   aiInsightsEnabled: z.boolean().optional(),
 });
 
@@ -36,7 +34,7 @@ app.patch("/notifications", zValidator("json", NotificationPreferencesSchema), a
     where: { userId },
     create: { userId, ...data },
     update: data,
-    select: { notifyEmail: true, notifyTelegram: true, aiInsightsEnabled: true },
+    select: { notifyEmail: true, aiInsightsEnabled: true },
   });
 
   return c.json(profile);

@@ -10,7 +10,6 @@ import { DataExportSection } from "@/components/settings/data-export-section";
 import { ReferralSection } from "@/components/settings/referral-section";
 import { TwoFactorSection } from "@/components/settings/two-factor-section";
 import { ChangePasswordSection } from "@/components/settings/change-password-section";
-import { TelegramLink } from "@/components/bot/telegram-link";
 
 export default function SettingsPage() {
   return (
@@ -67,14 +66,6 @@ export default function SettingsPage() {
         </section>
 
         <ReferralSection />
-
-        <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
-          <h2 className="text-base font-semibold mb-1">Telegram</h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            Vincule sua conta ao bot pra registrar gastos e receber notificações pelo Telegram
-          </p>
-          <TelegramLink />
-        </section>
 
         <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
           <h2 className="text-base font-semibold mb-1">Notificações</h2>

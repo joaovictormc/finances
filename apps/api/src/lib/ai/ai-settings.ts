@@ -4,10 +4,8 @@ import type { CompletionUsage } from "groq-sdk/resources/completions";
 const SINGLETON_ID = "singleton";
 
 export type AiFeature =
-  | "expense_parsing"
   | "monthly_insight"
   | "nl_query"
-  | "voice_transcription"
   | "category_suggestion"
   | "receipt_scan";
 
@@ -21,9 +19,7 @@ export async function getAiSettings() {
 
 export async function updateAiSettings(data: {
   textModel?: string;
-  audioModel?: string;
   visionModel?: string;
-  expenseParsingEnabled?: boolean;
   monthlyInsightsEnabled?: boolean;
   nlQueryEnabled?: boolean;
   categorySuggestionEnabled?: boolean;

@@ -12,7 +12,6 @@ app.use("*", requireAuth);
 // Cobre décadas de uso real; se algum dia precisar exportar mais que isso,
 // vale trocar por um job assíncrono em vez de aumentar o número.
 const EXPORT_LIST_LIMIT = 5000;
-const EXPORT_MESSAGES_PER_CONVERSATION_LIMIT = 500;
 
 // Roda um objeto de promises em paralelo preservando as chaves — evita o
 // desalinhamento silencioso de um Promise.all posicional (uma reordenação
@@ -85,24 +84,11 @@ app.get("/export", async (c) => {
         revokedAt: true,
       },
     }),
-    botConversations: db.botConversation.findMany({
-      where: { userId },
-      include: {
-        messages: {
-          orderBy: { createdAt: "desc" },
-          take: EXPORT_MESSAGES_PER_CONVERSATION_LIMIT,
-        },
-      },
-    }),
   });
 
   const exportData = {
     exportedAt: new Date().toISOString(),
     ...data,
-    // telegramChatId é BigInt — JSON.stringify não serializa BigInt nativamente.
-    profile: data.profile
-      ? { ...data.profile, telegramChatId: data.profile.telegramChatId?.toString() ?? null }
-      : null,
   };
 
   c.header(
