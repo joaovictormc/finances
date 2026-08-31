@@ -26,7 +26,7 @@ const navItems = [
   { href: "/accounts", label: "Contas Bancárias", icon: CreditCard },
   { href: "/rewards", label: "Recompensas", icon: Sparkles },
   { href: "/groups", label: "Família", icon: Users },
-  { href: "/bot", label: "Integração Bot", icon: Bot },
+  { href: "/assistant", label: "Assistente", icon: Bot },
   { href: "/settings", label: "Configurações", icon: Settings },
 ];
 

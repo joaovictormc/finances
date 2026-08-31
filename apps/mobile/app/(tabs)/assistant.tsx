@@ -39,6 +39,9 @@ export default function AssistantScreen() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // O banco guarda o nome técnico da ferramenta (bom pra depurar); a tela
+  // mostra o rótulo amigável que a própria API expõe em /tools.
+  const [toolLabels, setToolLabels] = useState<Record<string, string>>({});
 
   const scrollRef = useRef<ScrollView>(null);
 
@@ -48,6 +51,11 @@ export default function AssistantScreen() {
         .get<Subscription>("/api/billing/subscription")
         .then((sub) => setAllowed(sub.plan !== "free" || Boolean(sub.hasIntegrationsModule)))
         .catch(() => setAllowed(false));
+
+      api
+        .get<{ name: string; label: string }[]>("/api/assistant/tools")
+        .then((tools) => setToolLabels(Object.fromEntries(tools.map((t) => [t.name, t.label]))))
+        .catch(() => {});
     }, [])
   );
 
@@ -200,7 +208,10 @@ export default function AssistantScreen() {
                 </Text>
                 {message.toolCalls && message.toolCalls.length > 0 && (
                   <Text className="mt-2 text-[11px] text-muted-foreground dark:text-muted-foreground-dark">
-                    Consultei: {message.toolCalls.join(", ")}
+                    Consultei:{" "}
+                    {[...new Set(message.toolCalls)]
+                      .map((name) => toolLabels[name] ?? name)
+                      .join(" · ")}
                   </Text>
                 )}
               </View>

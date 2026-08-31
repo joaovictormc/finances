@@ -48,17 +48,22 @@ export function AssistantChat() {
   const [sending, setSending] = useState(false);
   const [agentsOpen, setAgentsOpen] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
+  // O banco guarda o nome técnico da ferramenta (bom pra depurar); a tela
+  // mostra o rótulo amigável que a própria API expõe em /tools.
+  const [toolLabels, setToolLabels] = useState<Record<string, string>>({});
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const loadSidebar = useCallback(async () => {
     try {
-      const [convs, ags] = await Promise.all([
+      const [convs, ags, tools] = await Promise.all([
         api.get<Conversation[]>("/api/assistant/conversations"),
         api.get<Agent[]>("/api/assistant/agents"),
+        api.get<{ name: string; label: string }[]>("/api/assistant/tools"),
       ]);
       setConversations(convs);
       setAgents(ags);
+      setToolLabels(Object.fromEntries(tools.map((t) => [t.name, t.label])));
     } catch {
       toast({ title: "Erro ao carregar o assistente", variant: "error" });
     } finally {
@@ -293,7 +298,10 @@ export function AssistantChat() {
                   {message.content}
                   {message.toolCalls && message.toolCalls.length > 0 && (
                     <p className="mt-2 text-xs opacity-70">
-                      Consultei: {message.toolCalls.join(", ")}
+                      Consultei:{" "}
+                      {[...new Set(message.toolCalls)]
+                        .map((name) => toolLabels[name] ?? name)
+                        .join(" · ")}
                     </p>
                   )}
                 </div>

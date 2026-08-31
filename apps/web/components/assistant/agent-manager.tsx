@@ -19,6 +19,15 @@ export type Agent = {
 
 type Tool = { name: string; label: string };
 
+type Preset = {
+  slug: string;
+  name: string;
+  icon: string;
+  description: string;
+  instructions: string;
+  enabledTools: string[];
+};
+
 type Draft = {
   id?: string;
   name: string;
@@ -44,20 +53,26 @@ export function AgentManager({
   const confirm = useConfirm();
 
   const [tools, setTools] = useState<Tool[]>([]);
+  const [presets, setPresets] = useState<Preset[]>([]);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const loadTools = useCallback(async () => {
+  const loadCatalog = useCallback(async () => {
     try {
-      setTools(await api.get<Tool[]>("/api/assistant/tools"));
+      const [tls, pre] = await Promise.all([
+        api.get<Tool[]>("/api/assistant/tools"),
+        api.get<Preset[]>("/api/assistant/presets"),
+      ]);
+      setTools(tls);
+      setPresets(pre);
     } catch {
       // sem a lista, o formulário ainda salva com "todas as ferramentas"
     }
   }, []);
 
   useEffect(() => {
-    if (open) loadTools();
-  }, [open, loadTools]);
+    if (open) loadCatalog();
+  }, [open, loadCatalog]);
 
   function toggleTool(name: string) {
     if (!draft) return;
@@ -241,6 +256,42 @@ export function AgentManager({
           <Button onClick={() => setDraft({ ...EMPTY_DRAFT })} className="w-full justify-center">
             <Plus size={16} /> Novo agente
           </Button>
+
+          {/* Presets abrem o formulário preenchido em vez de criar direto: o
+              usuário vê o que vai ser criado e pode ajustar antes de salvar. */}
+          {presets.length > 0 && (
+            <div className="pt-2">
+              <p className="text-sm font-medium mb-1">Modelos prontos</p>
+              <p className="text-xs text-muted-foreground mb-2">
+                Começam preenchidos; você pode editar tudo antes de salvar.
+              </p>
+              <div className="space-y-2">
+                {presets.map((preset) => (
+                  <button
+                    key={preset.slug}
+                    type="button"
+                    onClick={() =>
+                      setDraft({
+                        name: preset.name,
+                        icon: preset.icon,
+                        instructions: preset.instructions,
+                        enabledTools: preset.enabledTools,
+                      })
+                    }
+                    className="flex w-full items-center gap-3 rounded-xl border border-border/60 p-3 text-left hover:bg-muted/60"
+                  >
+                    <span className="text-lg">{preset.icon}</span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-medium">{preset.name}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {preset.description}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </Modal>

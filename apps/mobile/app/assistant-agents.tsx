@@ -14,6 +14,15 @@ type Agent = {
 
 type Tool = { name: string; label: string };
 
+type Preset = {
+  slug: string;
+  name: string;
+  icon: string;
+  description: string;
+  instructions: string;
+  enabledTools: string[];
+};
+
 type Draft = {
   id?: string;
   name: string;
@@ -28,6 +37,7 @@ export default function AssistantAgentsScreen() {
   const { colors } = useTheme();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [tools, setTools] = useState<Tool[]>([]);
+  const [presets, setPresets] = useState<Preset[]>([]);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -35,12 +45,14 @@ export default function AssistantAgentsScreen() {
 
   async function load() {
     try {
-      const [ags, tls] = await Promise.all([
+      const [ags, tls, pre] = await Promise.all([
         api.get<Agent[]>("/api/assistant/agents"),
         api.get<Tool[]>("/api/assistant/tools"),
+        api.get<Preset[]>("/api/assistant/presets"),
       ]);
       setAgents(ags);
       setTools(tls);
+      setPresets(pre);
     } catch {
       setError("Erro ao carregar os agentes.");
     } finally {
@@ -278,6 +290,43 @@ export default function AssistantAgentsScreen() {
               Novo agente
             </Text>
           </Pressable>
+
+          {/* Presets abrem o formulário preenchido em vez de criar direto: o
+              usuário vê o que vai ser criado e pode ajustar antes de salvar. */}
+          {presets.length > 0 && (
+            <View className="mt-4 gap-2">
+              <Text className="text-sm font-medium text-foreground dark:text-foreground-dark">
+                Modelos prontos
+              </Text>
+              <Text className="mb-1 text-xs text-muted-foreground dark:text-muted-foreground-dark">
+                Começam preenchidos; você pode editar tudo antes de salvar.
+              </Text>
+              {presets.map((preset) => (
+                <Pressable
+                  key={preset.slug}
+                  onPress={() =>
+                    setDraft({
+                      name: preset.name,
+                      icon: preset.icon,
+                      instructions: preset.instructions,
+                      enabledTools: preset.enabledTools,
+                    })
+                  }
+                  className="flex-row items-center gap-3 rounded-2xl border border-border bg-card p-4 dark:border-border-dark dark:bg-card-dark"
+                >
+                  <Text className="text-lg">{preset.icon}</Text>
+                  <View className="flex-1">
+                    <Text className="text-sm font-medium text-foreground dark:text-foreground-dark">
+                      {preset.name}
+                    </Text>
+                    <Text className="text-xs text-muted-foreground dark:text-muted-foreground-dark">
+                      {preset.description}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          )}
         </View>
       )}
     </ScrollView>

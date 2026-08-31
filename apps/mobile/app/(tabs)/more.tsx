@@ -12,13 +12,15 @@ const THEME_OPTIONS: { value: ThemePreference; label: string; icon: keyof typeof
 ];
 
 const MENU_ITEMS: {
-  href: "/bills" | "/goals" | "/budgets" | "/groups" | "/billing" | "/settings";
+  href: "/bills" | "/goals" | "/rewards" | "/groups" | "/billing" | "/settings";
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
-  { href: "/budgets", label: "Orçamentos", icon: "pie-chart-outline" },
+  // Orçamentos saiu daqui ao virar aba. Recompensas entrou no lugar: não havia
+  // entrada para ela em nenhum menu, só pelo card de gamificação na Home.
   { href: "/bills", label: "Contas a Pagar", icon: "receipt-outline" },
   { href: "/goals", label: "Metas", icon: "flag-outline" },
+  { href: "/rewards", label: "Recompensas", icon: "sparkles-outline" },
   { href: "/groups", label: "Grupos", icon: "people-outline" },
   { href: "/billing", label: "Planos e Assinatura", icon: "card-outline" },
   { href: "/settings", label: "Configurações", icon: "settings-outline" },

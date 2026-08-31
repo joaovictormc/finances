@@ -2,14 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, CreditCard, Bot, Settings, Users, X } from "lucide-react";
+import { FileText, CreditCard, Bot, Settings, Sparkles, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// A grade é de 2 colunas: manter a contagem par evita um item órfão na última
+// linha. Recompensas também fechava uma lacuna — não havia entrada para ela em
+// nenhuma navegação mobile.
 const moreItems = [
   { href: "/bills", label: "Contas a Pagar", icon: FileText },
   { href: "/accounts", label: "Contas Bancárias", icon: CreditCard },
   { href: "/groups", label: "Família", icon: Users },
-  { href: "/bot", label: "Integração Bot", icon: Bot },
+  { href: "/assistant", label: "Assistente", icon: Bot },
+  { href: "/rewards", label: "Recompensas", icon: Sparkles },
   { href: "/settings", label: "Configurações", icon: Settings },
 ];
 

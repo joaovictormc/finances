@@ -11,7 +11,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Visão Geral",
+          // "Início" e não "Visão Geral": com 6 abas cada uma fica com ~48px,
+          // e o nome longo truncaria. Mesmo rótulo já usado na navegação
+          // mobile da web (mobile-bottom-nav.tsx).
+          title: "Início",
           tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />,
         }}
       />
@@ -20,6 +23,13 @@ export default function TabsLayout() {
         options={{
           title: "Transações",
           tabBarIcon: ({ color, size }) => <Ionicons name="swap-horizontal-outline" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="budgets"
+        options={{
+          title: "Orçamentos",
+          tabBarIcon: ({ color, size }) => <Ionicons name="pie-chart-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen

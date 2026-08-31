@@ -3,6 +3,7 @@ import { View, Text, Pressable, FlatList, ActivityIndicator } from "react-native
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api-client";
+import { Screen } from "@/components/screen";
 import { IconBadge } from "@/components/icon-badge";
 import { ProgressBar } from "@/components/progress-bar";
 import { ProgressRing } from "@/components/progress-ring";
@@ -31,14 +32,19 @@ export default function BudgetsScreen() {
   );
 
   return (
-    <View className="flex-1 bg-background dark:bg-background-dark">
-      <View className="flex-row justify-end p-4">
+    <Screen>
+      {/* Como aba, a tela não recebe mais o header do Stack — o título passa a
+          ser próprio, no mesmo padrão de transactions.tsx. */}
+      <View className="flex-row items-center justify-between px-4 pb-2">
+        <Text className="text-2xl font-bold text-foreground dark:text-foreground-dark">
+          Orçamentos
+        </Text>
         <Pressable
           onPress={() => router.push("/new-budget")}
           className="flex-row items-center gap-1 rounded-full bg-primary px-3 py-2"
         >
           <Ionicons name="add" size={16} color="#1C1C1E" />
-          <Text className="text-sm font-semibold text-primary-foreground">Novo Orçamento</Text>
+          <Text className="text-sm font-semibold text-primary-foreground">Novo</Text>
         </Pressable>
       </View>
 
@@ -90,6 +96,6 @@ export default function BudgetsScreen() {
           }}
         />
       )}
-    </View>
+    </Screen>
   );
 }

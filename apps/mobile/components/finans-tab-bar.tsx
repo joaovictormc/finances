@@ -28,6 +28,10 @@ export function FinansTabBar({ state, descriptors, navigation }: TabBarProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
+  // Com 5+ abas, cada uma cai de ~72px para ~48px numa tela de 360px e os
+  // rótulos de 10 caracteres ("Transações", "Orçamentos") não cabem a 11px.
+  const labelSize = state.routes.length > 4 ? 10 : 11;
+
   function renderTab(route: { key: string; name: string }, index: number) {
     const { options } = descriptors[route.key];
     const focused = state.index === index;
@@ -48,7 +52,7 @@ export function FinansTabBar({ state, descriptors, navigation }: TabBarProps) {
         className="flex-1 items-center justify-center gap-1 py-2"
       >
         {options.tabBarIcon?.({ focused, color, size: 24 })}
-        <Text style={{ color }} numberOfLines={1} className="text-[11px] font-medium">
+        <Text style={{ color, fontSize: labelSize }} numberOfLines={1} className="font-medium">
           {label}
         </Text>
       </Pressable>

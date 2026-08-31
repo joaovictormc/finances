@@ -12,6 +12,7 @@ import {
   executeTool,
   buildDateContext,
 } from "../lib/ai/finance-tools";
+import { AGENT_PRESETS } from "../lib/ai/agent-presets";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { isAssistantAllowed } from "../lib/plan-limits";
 
@@ -53,6 +54,12 @@ const AgentSchema = z.object({
   // acabar sem nenhuma habilitada na hora de conversar.
   enabledTools: z.array(z.enum(TOOL_NAMES as [string, ...string[]])).default([]),
 });
+
+/**
+ * Modelos prontos. Só um catálogo — quem escolhe um cria um agente normal via
+ * POST /agents, então nada aqui precisa de estado.
+ */
+app.get("/presets", (c) => c.json(AGENT_PRESETS));
 
 app.get("/agents", async (c) => {
   const agents = await db.assistantAgent.findMany({

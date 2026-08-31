@@ -102,10 +102,19 @@ export default function OverviewScreen() {
   const balance = report?.balance ?? income - expense;
   const monthLabel = `${MONTHS[month - 1]} ${year}`;
 
-  const pieData = (report?.byCategory ?? [])
+  // O donut é pequeno demais para rótulo dentro da fatia — o nome da categoria
+  // vem na legenda abaixo. Sem ela, as fatias eram só cores sem significado.
+  const pieSlices = (report?.byCategory ?? [])
     .filter((row) => row.total > 0)
     .slice(0, 8)
-    .map((row, i) => ({ value: row.total, color: SLICE_COLORS[i % SLICE_COLORS.length] }));
+    .map((row, i) => ({
+      value: row.total,
+      color: row.category?.color ?? SLICE_COLORS[i % SLICE_COLORS.length],
+      name: row.category?.name ?? "Sem categoria",
+    }));
+
+  const pieTotal = pieSlices.reduce((sum, slice) => sum + slice.value, 0);
+  const pieData = pieSlices.map(({ value, color }) => ({ value, color }));
 
   // Mesmos dados do donut acima, em ranking — leitura diferente (quem pesa
   // mais) em vez de composição do todo.
@@ -217,7 +226,47 @@ export default function OverviewScreen() {
           Gastos por categoria
         </Text>
         {pieData.length > 0 ? (
-          <PieChart data={pieData} donut radius={80} innerRadius={52} innerCircleColor={colors.card} />
+          <>
+            <PieChart
+              data={pieData}
+              donut
+              radius={80}
+              innerRadius={52}
+              innerCircleColor={colors.card}
+              centerLabelComponent={() => (
+                <View className="items-center">
+                  <Text className="text-[10px] text-muted-foreground dark:text-muted-foreground-dark">
+                    Total
+                  </Text>
+                  <Text className="text-sm font-bold text-foreground dark:text-foreground-dark">
+                    {formatBRL(pieTotal)}
+                  </Text>
+                </View>
+              )}
+            />
+            <View className="mt-4 w-full gap-2">
+              {pieSlices.map((slice) => (
+                <View key={slice.name} className="flex-row items-center gap-2">
+                  <View
+                    style={{ backgroundColor: slice.color }}
+                    className="h-2.5 w-2.5 rounded-full"
+                  />
+                  <Text
+                    className="flex-1 text-sm text-foreground dark:text-foreground-dark"
+                    numberOfLines={1}
+                  >
+                    {slice.name}
+                  </Text>
+                  <Text className="text-sm text-muted-foreground dark:text-muted-foreground-dark">
+                    {formatBRL(slice.value)}
+                  </Text>
+                  <Text className="w-10 text-right text-xs text-muted-foreground dark:text-muted-foreground-dark">
+                    {pieTotal > 0 ? Math.round((slice.value / pieTotal) * 100) : 0}%
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </>
         ) : (
           <Text className="py-6 text-sm text-muted-foreground dark:text-muted-foreground-dark">
             Sem gastos neste mês
