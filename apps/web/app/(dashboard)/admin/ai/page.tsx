@@ -12,6 +12,8 @@ import { api } from "@/lib/api-client";
 type AiSettings = {
   textModel: string;
   visionModel: string;
+  assistantModel: string;
+  assistantEnabled: boolean;
   monthlyInsightsEnabled: boolean;
   nlQueryEnabled: boolean;
   categorySuggestionEnabled: boolean;
@@ -50,13 +52,17 @@ function formatUsd(value: number) {
   return `US$ ${value >= 0.01 ? value.toFixed(2) : value.toFixed(4)}`;
 }
 
+// `expense_parsing` e `voice_transcription` saíram junto com o bot, mas os
+// rótulos ficam: o AiUsageLog guarda linhas históricas com esses valores e o
+// medidor de consumo precisa continuar nomeando-as.
 const FEATURE_LABELS: Record<string, string> = {
-  expense_parsing: "Parsing de despesas (bot)",
+  expense_parsing: "Parsing de despesas (bot, removido)",
+  voice_transcription: "Transcrição de voz (bot, removido)",
   monthly_insight: "Insight mensal",
   nl_query: "Consultas em linguagem natural",
-  voice_transcription: "Transcrição de voz",
   category_suggestion: "Sugestão de categoria",
   receipt_scan: "Leitura de cupom fiscal",
+  assistant: "Assistente de IA",
 };
 
 export default function AdminAiPage() {
@@ -128,6 +134,11 @@ export default function AdminAiPage() {
               value={settings.visionModel}
               onChange={(e) => setSettings({ ...settings, visionModel: e.target.value })}
             />
+            <Input
+              label="Modelo do assistente (Groq)"
+              value={settings.assistantModel}
+              onChange={(e) => setSettings({ ...settings, assistantModel: e.target.value })}
+            />
           </div>
         </section>
 
@@ -135,6 +146,12 @@ export default function AdminAiPage() {
           <h2 className="text-base font-semibold mb-1">Features</h2>
           <p className="text-sm text-muted-foreground mb-4">Ative ou desative funcionalidades de IA globalmente</p>
           <div className="space-y-3">
+            <ToggleRow
+              label="Assistente de IA"
+              description="Chat com histórico e agentes personalizados (planos Pro e Família)"
+              enabled={settings.assistantEnabled}
+              onChange={(v) => setSettings({ ...settings, assistantEnabled: v })}
+            />
             <ToggleRow
               label="Insights mensais"
               description="Geração automática do resumo mensal por IA"

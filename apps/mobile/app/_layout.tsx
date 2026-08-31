@@ -93,6 +93,10 @@ function RootNavigator() {
         <Stack.Screen name="group-detail" options={{ ...stackHeaderOptions, title: "Grupo" }} />
         <Stack.Screen name="new-group" options={{ ...modalHeaderOptions, title: "Novo Grupo" }} />
         <Stack.Screen name="join-group" options={{ ...modalHeaderOptions, title: "Entrar com código" }} />
+        <Stack.Screen
+          name="assistant-agents"
+          options={{ ...stackHeaderOptions, title: "Agentes" }}
+        />
         <Stack.Screen name="settings" options={{ ...stackHeaderOptions, title: "Configurações" }} />
         <Stack.Screen name="billing" options={{ ...stackHeaderOptions, title: "Planos e Assinatura" }} />
       </Stack>

@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "bounce-easing",
+        "value": "spin-wheel-pointer-wobble",
+        "createdAt": "2026-08-31T02:17:44.940Z",
+        "reason": "User confirmed spin-wheel-pointer-wobble is intentional"
+      }
+    ]
+  }
+}

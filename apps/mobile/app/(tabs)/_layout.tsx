@@ -30,6 +30,17 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="assistant"
+        options={{
+          // Rótulo curto: com 5 abas cada uma fica com ~48px de largura, e
+          // "Assistente" truncaria. O ícone de balão dá o resto do contexto.
+          title: "IA",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubble-ellipses-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="more"
         options={{
           title: "Mais",

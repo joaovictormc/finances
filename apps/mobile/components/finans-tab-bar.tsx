@@ -48,14 +48,17 @@ export function FinansTabBar({ state, descriptors, navigation }: TabBarProps) {
         className="flex-1 items-center justify-center gap-1 py-2"
       >
         {options.tabBarIcon?.({ focused, color, size: 24 })}
-        <Text style={{ color }} className="text-[11px] font-medium">
+        <Text style={{ color }} numberOfLines={1} className="text-[11px] font-medium">
           {label}
         </Text>
       </Pressable>
     );
   }
 
-  // 4 abas: [0][1] · FAB · [2][3]
+  // Duas metades em torno do FAB: [0][1] · FAB · [resto].
+  // Cada metade é um container `flex: 1` próprio, e não itens `flex: 1` soltos
+  // numa linha única — senão, com número ímpar de abas de cada lado, o FAB sai
+  // do centro da tela e os itens da esquerda ficam mais largos que os da direita.
   const left = state.routes.slice(0, 2);
   const right = state.routes.slice(2);
 
@@ -72,7 +75,9 @@ export function FinansTabBar({ state, descriptors, navigation }: TabBarProps) {
         overflow: "visible",
       }}
     >
-      {left.map((r) => renderTab(r, state.routes.indexOf(r)))}
+      <View style={{ flex: 1, flexDirection: "row" }}>
+        {left.map((r) => renderTab(r, state.routes.indexOf(r)))}
+      </View>
 
       {/* slot central que ancora o FAB elevado */}
       <View style={{ width: 72, alignItems: "center", justifyContent: "center" }}>
@@ -102,7 +107,9 @@ export function FinansTabBar({ state, descriptors, navigation }: TabBarProps) {
         </Pressable>
       </View>
 
-      {right.map((r) => renderTab(r, state.routes.indexOf(r)))}
+      <View style={{ flex: 1, flexDirection: "row" }}>
+        {right.map((r) => renderTab(r, state.routes.indexOf(r)))}
+      </View>
     </View>
   );
 }
