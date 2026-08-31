@@ -18,8 +18,11 @@ const app = new Hono();
 app.post("/", async (c) => {
   const forwardedFor = c.req.header("x-forwarded-for");
   const sourceIp = forwardedFor?.split(",")[0]?.trim();
+  // Só rejeita quando o IP de origem é conhecido e diferente: sem proxy na
+  // frente (dev local) o header não vem, e aí não há o que comparar.
   if (sourceIp && sourceIp !== PLUGGY_WEBHOOK_IP) {
-    console.warn(`[pluggy-webhook] IP inesperado: ${sourceIp}`);
+    console.warn(`[pluggy-webhook] recusado, IP inesperado: ${sourceIp}`);
+    return c.json({ error: "Origem não autorizada" }, 403);
   }
 
   const payload = await c.req.json<PluggyWebhookPayload>();

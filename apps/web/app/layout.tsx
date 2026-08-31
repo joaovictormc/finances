@@ -12,7 +12,7 @@ const ledgerMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], v
 
 export const metadata: Metadata = {
   title: { default: "ControlAI", template: "%s | ControlAI" },
-  description: "Controle financeiro inteligente com IA, Open Finance e integração com WhatsApp",
+  description: "Controle financeiro inteligente com IA, Open Finance e assistente financeiro",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

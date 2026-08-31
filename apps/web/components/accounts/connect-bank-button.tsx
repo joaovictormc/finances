@@ -16,16 +16,13 @@ export function ConnectBankButton({ onConnected }: { onConnected: () => void }) 
         "/api/pluggy/connect-token",
         {}
       );
-      console.log("[pluggy] connectToken obtido");
 
       const { PluggyConnect } = await import("pluggy-connect-sdk");
-      console.log("[pluggy] módulo pluggy-connect-sdk carregado");
 
       const pluggyConnect = new PluggyConnect({
         connectToken,
         includeSandbox: process.env.NODE_ENV !== "production",
         onSuccess: async (itemData) => {
-          console.log("[pluggy] onSuccess", itemData);
           try {
             await api.post("/api/pluggy/items", { itemId: itemData.item.id });
             toast({ title: "Banco conectado! Sincronizando transações…", variant: "success" });
@@ -40,9 +37,7 @@ export function ConnectBankButton({ onConnected }: { onConnected: () => void }) 
         },
       });
 
-      console.log("[pluggy] instância criada, chamando init()");
       await pluggyConnect.init();
-      console.log("[pluggy] init() concluído com sucesso — widget deve estar visível");
     } catch (err) {
       console.error("[pluggy] falha ao iniciar widget:", err);
       toast({ title: (err as Error).message || "Erro ao iniciar conexão com o banco", variant: "error" });
