@@ -24,6 +24,7 @@ Levantamento feito por leitura direta do código (não é uma lista de desejos g
 | Sem 2FA | `twoFactor()` habilitado em `lib/auth.ts` — TOTP por app autenticador + códigos de backup, sem SMS/email OTP. |
 | Política de senha não verificada | `minPasswordLength` configurado explicitamente em `lib/auth.ts:56`. |
 | Flags de cookie não explícitas | `lib/auth.ts:147-150` define `httpOnly`, `sameSite: "lax"` e `useSecureCookies` atrelado ao protocolo real da `baseURL`. |
+| Assistente sem histórico no mobile | A aba IA passou a ter lista de conversas (abrir, excluir, nova) e escolha de agente na criação — antes os agentes criados no celular só funcionavam na web. |
 | Mobile era só scaffold | `apps/mobile` hoje é um app completo: 6 abas, transações, orçamentos, contas, metas, recompensas, leitura de cupom por foto e assistente de IA. |
 
 ## 🟠 Lacunas estruturais
@@ -44,7 +45,6 @@ Levantamento feito por leitura direta do código (não é uma lista de desejos g
 
 Estes **não foram pedidos** — são lacunas observadas durante o desenvolvimento. Cada um precisaria de brainstorming antes de virar trabalho:
 
-- **Lista de conversas do assistente no mobile** — hoje cada abertura da aba "IA" começa uma conversa nova; o histórico só é navegável pela web. É a pendência conhecida do recurso que acabou de entrar.
 - **Exportar transações para CSV/Excel** (hoje só existe import) — útil pra levar os dados pra outra ferramenta ou pro contador.
 - **Filtro de débito/crédito na tela de Transações** — o campo `paymentMethod` existe desde a Fase 8, mas não há filtro dedicado.
 - **Reativar conta arquivada** (hoje só arquivar e excluir definitivamente).
