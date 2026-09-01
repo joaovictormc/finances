@@ -13,6 +13,7 @@ import {
   isAiInsightsAllowed,
   isAssistantAllowed,
   isReceiptScanAllowed,
+  isSubscriptionExpired,
 } from "./plan-limits";
 
 beforeEach(() => {
@@ -20,9 +21,17 @@ beforeEach(() => {
   dbMock.subscription.findUnique.mockReset();
 });
 
-function asUser(role: string | null, subscription: { plan: string; status: string } | null) {
+type FakeSubscription = { plan: string; status: string; currentPeriodEnd?: Date | null };
+
+function asUser(role: string | null, subscription: FakeSubscription | null) {
   dbMock.user.findUnique.mockResolvedValue(role ? { role } : null);
   dbMock.subscription.findUnique.mockResolvedValue(subscription);
+}
+
+function daysFromNow(days: number): Date {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date;
 }
 
 describe("getEffectivePlan", () => {
@@ -48,6 +57,47 @@ describe("getEffectivePlan", () => {
   it("usa o plano da assinatura ativa", async () => {
     asUser("user", { plan: "familia", status: "active" });
     expect((await getEffectivePlan("u1")).id).toBe("familia");
+  });
+
+  it("derruba pro free quando o período pago acabou", async () => {
+    // Sem isso, um Pix pago uma única vez valia pra sempre: Pix não tem
+    // recorrência e nada mais rebaixava a assinatura.
+    asUser("user", { plan: "pro", status: "active", currentPeriodEnd: daysFromNow(-32) });
+    expect((await getEffectivePlan("u1")).id).toBe("free");
+  });
+
+  it("mantém o plano dentro da carência depois do vencimento", async () => {
+    asUser("user", { plan: "pro", status: "active", currentPeriodEnd: daysFromNow(-2) });
+    expect((await getEffectivePlan("u1")).id).toBe("pro");
+  });
+
+  it("não expira concessão manual sem prazo", async () => {
+    asUser("user", { plan: "familia", status: "active", currentPeriodEnd: null });
+    expect((await getEffectivePlan("u1")).id).toBe("familia");
+  });
+});
+
+describe("isSubscriptionExpired", () => {
+  it("considera vencida a ativa cujo período acabou faz mais que a carência", () => {
+    expect(isSubscriptionExpired({ status: "active", currentPeriodEnd: daysFromNow(-10) })).toBe(true);
+  });
+
+  it("não considera vencida dentro da carência", () => {
+    expect(isSubscriptionExpired({ status: "active", currentPeriodEnd: daysFromNow(-1) })).toBe(false);
+  });
+
+  it("não considera vencida a que ainda está no prazo", () => {
+    expect(isSubscriptionExpired({ status: "active", currentPeriodEnd: daysFromNow(10) })).toBe(false);
+  });
+
+  it("trata período nulo como concessão sem prazo", () => {
+    expect(isSubscriptionExpired({ status: "active", currentPeriodEnd: null })).toBe(false);
+  });
+
+  it("não se aplica a quem já não está ativo", () => {
+    // Cancelada já não dá acesso por outro caminho; marcar como "vencida"
+    // aqui só confundiria o status mostrado na tela de cobrança.
+    expect(isSubscriptionExpired({ status: "canceled", currentPeriodEnd: daysFromNow(-99) })).toBe(false);
   });
 });
 

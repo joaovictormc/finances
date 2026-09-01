@@ -12,12 +12,18 @@ Nenhum aberto no momento.
 
 | Item | Como |
 |---|---|
+| Assinatura paga nunca expirava | `getEffectivePlan` decidia só por `status`; `currentPeriodEnd` era gravado e exibido, mas nenhuma decisão de acesso o consultava. Como Pix não tem recorrência, um pagamento único valia pra sempre. Agora expira com 3 dias de carência (`isSubscriptionExpired`), e `currentPeriodEnd` nulo significa concessão manual do admin, que não expira. |
+| Plano derivado do valor pago no webhook | `PLAN_BY_AMOUNT` era um literal `19.9/29.9` com fallback silencioso pra `pro` — mudança de preço, cupom ou proração rebaixava quem pagou `familia`. A fonte da verdade passou a ser o evento `checkout_created:{preapprovalId}`, com o preço real de `PLANS` como segundo caminho; sem conseguir justificar o plano, a assinatura **não** é ativada. |
+| Idempotência do webhook com corrida | `findUnique` + `create` deixava dois webhooks simultâneos passarem juntos, e o guard de primeira ativação concedia a recompensa por indicação em dobro. Virou `create` com captura de `P2002`. |
+| Checkout Pix confirmável para sempre | `confirm-pix` aceitava qualquer evento `pix_checkout_created`, de qualquer idade, numa lista que só crescia. Passou a recusar acima de 7 dias (`409`). |
+| Checkouts sem rate limit | `/checkout` e `/checkout-pix` (10/15min por usuário) — cada chamada criava um preapproval no Mercado Pago e uma linha na fila do admin. |
+| Assinatura HMAC comparada por string | `verifyMercadoPagoSignature` usa `timingSafeEqual` com checagem de tamanho. |
 | Segredos de `PaymentMethodConfig` em texto plano no banco | Access token e webhook secret do Mercado Pago passaram a ser gravados com AES-256-GCM (`packages/db/src/crypto.ts`, formato marcado `enc:v1:`) e só são descriptografados na hora de falar com o gateway. Registro legado em texto puro continua legível e é convertido ao salvar ou pelo backfill `pnpm --filter @finances/api secrets:encrypt`. Sem `APP_ENCRYPTION_KEY` a rota recusa salvar (`503`) em vez de cair pra texto puro. |
 | Colunas da grid de Transações não redimensionavam | Em `table-layout: fixed` quem define a coluna é o `<colgroup>` — `min-width`/`max-width` não valem em célula de tabela, e sem nenhuma coluna livre o navegador redistribui a sobra entre todas, desfazendo o arrasto. `transaction-list.tsx` passou a declarar as larguras no `colgroup`, com uma coluna vazia absorvendo a folga. |
 | Import de extrato sem limite de tamanho | `validateImportFileBatch` aplicado em `/import` e `/import/batch` (extensão, 10 MB por arquivo, 50 MB e 20 arquivos por lote), com testes em `import-limits.test.ts`. |
 | Webhook da Pluggy não rejeitava IP inesperado | `webhooks/pluggy.ts` agora responde `403` quando o `x-forwarded-for` existe e não é o IP da Pluggy (sem o header — dev local, sem proxy — segue passando, porque não há o que comparar). |
 | Webhook do Telegram sem validação de secret | Deixou de existir: o bot Telegram/WhatsApp foi removido por completo. |
-| Zero testes automatizados | 6 arquivos de teste, 36 casos: `pix` (CRC-16/CCITT-FALSE contra vetor publicado + estrutura EMV), `payment-methods` (mascaramento e criptografia em repouso dos segredos), `plan-limits` (gates de plano com o banco mockado), `import-limits`, `bulk-categorize`, `report-period`. |
+| Zero testes automatizados | 6 arquivos de teste, 44 casos: `pix` (CRC-16/CCITT-FALSE contra vetor publicado + estrutura EMV), `payment-methods` (mascaramento e criptografia em repouso dos segredos), `plan-limits` (gates de plano com o banco mockado), `import-limits`, `bulk-categorize`, `report-period`. |
 | Sem rate limiting | `lib/rate-limit.ts` (INCR/EXPIRE no Redis, falha aberta) aplicado em `/api/ai/query` (20/15min), `/api/assistant/conversations/:id/messages` (30/15min), `/api/transactions/receipt-scan` (20/15min) e `/import/batch` (10/15min). Login já tinha o rate limit do Better Auth. |
 | Sem `not-found.tsx` / `error.tsx` | `app/not-found.tsx` (404 próprio) e `app/(dashboard)/error.tsx` (boundary do dashboard inteiro; `overview/error.tsx` continua valendo por ser mais específico). `loading.tsx` já existia em 19 rotas. |
 | `console.log` de debug em produção | Os 5 logs do fluxo Pluggy em `connect-bank-button.tsx` foram removidos; não sobrou nenhum `console.log` em `apps/web` nem em `apps/mobile` (os `console.error` de erro real ficaram). |
@@ -31,7 +37,7 @@ Nenhum aberto no momento.
 
 | Item | Detalhe |
 |---|---|
-| **Testes só de unidade** | Os 36 casos cobrem funções puras e dois módulos com banco mockado. Nenhuma rota Hono é exercida ponta a ponta, e os workers de fila (`jobs/workers/*`) não têm teste nenhum. O próximo degrau natural é um teste de rota com o app Hono em memória. |
+| **Testes só de unidade** | Os 44 casos cobrem funções puras e dois módulos com banco mockado. Nenhuma rota Hono é exercida ponta a ponta, e os workers de fila (`jobs/workers/*`) não têm teste nenhum. O próximo degrau natural é um teste de rota com o app Hono em memória. |
 | **Sem `global-error.tsx`** | O boundary novo cobre o dashboard, mas um erro dentro do próprio `app/layout.tsx` ainda cai na tela genérica do Next. |
 | **Bibliotecas pesadas sem carregamento sob demanda** | `recharts` (gráficos) e `react-day-picker` (filtro de período) entram no bundle inicial de qualquer página que as usa. Nenhum componente do app usa `next/dynamic` hoje — confirmado por busca. |
 
@@ -54,6 +60,8 @@ Estes **não foram pedidos** — são lacunas observadas durante o desenvolvimen
 
 | Item | Detalhe |
 |---|---|
+| Confirmação de Pix é 100% manual, sem conferência de valor | O admin confirma no olho em `/admin/checkouts`; nada verifica que o Pix daquele `txid` entrou, nem o valor. É o desenho do método (`Pix direto` = conciliação manual), mas o passo seguinte natural é consultar a conta recebedora, ou ao menos exibir o valor esperado na confirmação. |
+| Cancelamento derruba o acesso na hora | `getEffectivePlan` trata `status != "active"` como free, então cancelar no meio do período pago encerra o acesso imediatamente. A tela de cobrança prometia o contrário; o texto foi corrigido, mas a decisão de produto (encerrar na hora × manter até `currentPeriodEnd`) continua em aberto. |
 | Sem alerta de novo login / dispositivo desconhecido | `Session` guarda `ipAddress`/`userAgent`, mas nada notifica o usuário quando um login acontece de um dispositivo ou local novo. |
 
 ## 🕵️ Mascaramento de código pelo DevTools

@@ -1,6 +1,34 @@
 import { db } from "@finances/db";
 import { getPlan, ADMIN_PLAN, type PlanDefinition } from "./plans";
 
+/**
+ * Carência depois do fim do período pago. A renovação do Mercado Pago pode
+ * levar horas pra virar webhook, e derrubar o plano de quem pagou por causa
+ * desse atraso é pior que dar alguns dias de sobra.
+ */
+const GRACE_DAYS = 3;
+
+/**
+ * Assinatura ativa cujo período já acabou (mais a carência) não vale mais.
+ *
+ * `currentPeriodEnd` nulo significa concessão sem prazo — é como a alteração
+ * manual de plano pelo admin grava — e essa nunca expira sozinha.
+ *
+ * Sem essa checagem o campo era gravado e exibido, mas nenhuma decisão de
+ * acesso o consultava: um Pix pago uma única vez valia pra sempre, porque Pix
+ * não tem recorrência e nada mais rebaixava a assinatura.
+ */
+export function isSubscriptionExpired(subscription: {
+  status: string;
+  currentPeriodEnd: Date | null;
+}): boolean {
+  if (subscription.status !== "active") return false; // já não dá acesso por outro motivo
+  if (!subscription.currentPeriodEnd) return false;
+  const limit = new Date(subscription.currentPeriodEnd);
+  limit.setDate(limit.getDate() + GRACE_DAYS);
+  return limit.getTime() < Date.now();
+}
+
 /** Contas com role "admin" têm acesso completo ao sistema, independente da assinatura. */
 export async function getEffectivePlan(userId: string): Promise<PlanDefinition> {
   const user = await db.user.findUnique({ where: { id: userId }, select: { role: true } });
@@ -8,6 +36,7 @@ export async function getEffectivePlan(userId: string): Promise<PlanDefinition> 
 
   const subscription = await db.subscription.findUnique({ where: { userId } });
   if (!subscription || subscription.status !== "active") return getPlan("free");
+  if (isSubscriptionExpired(subscription)) return getPlan("free");
   return getPlan(subscription.plan);
 }
 

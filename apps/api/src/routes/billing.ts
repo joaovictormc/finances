@@ -6,7 +6,13 @@ import { db } from "@finances/db";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { PLANS, getPlan } from "../lib/plans";
 import { createSubscriptionCheckout, cancelSubscriptionAtMercadoPago } from "../lib/mercadopago";
-import { getEffectivePlan, planHasIntegrationsModule, planHasFamilyModule } from "../lib/plan-limits";
+import {
+  getEffectivePlan,
+  isSubscriptionExpired,
+  planHasIntegrationsModule,
+  planHasFamilyModule,
+} from "../lib/plan-limits";
+import { checkRateLimit } from "../lib/rate-limit";
 import { getPaymentMethodConfig, readPaymentMethodConfig } from "../lib/payment-methods";
 import { buildPixPayload, pixTxidFromId } from "../lib/pix";
 
@@ -31,9 +37,15 @@ app.get("/subscription", async (c) => {
   const userId = c.get("userId");
   const subscription = await db.subscription.findUnique({ where: { userId } });
   const plan = await getEffectivePlan(userId);
+
+  // O status tem que contar a mesma história que o gate de acesso: assinatura
+  // ativa com período vencido já não dá plano pago, e devolver "active" aqui
+  // faria a tela de cobrança contradizer o resto do app.
+  const expired = subscription ? isSubscriptionExpired(subscription) : false;
+
   return c.json({
     plan: plan.id,
-    status: subscription?.status ?? "active",
+    status: expired ? "past_due" : (subscription?.status ?? "active"),
     currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
     canceledAt: subscription?.canceledAt ?? null,
     hasIntegrationsModule: planHasIntegrationsModule(plan),
@@ -46,6 +58,13 @@ const CheckoutSchema = z.object({ plan: z.enum(["pro", "familia"]) });
 app.post("/checkout", zValidator("json", CheckoutSchema), async (c) => {
   const userId = c.get("userId");
   const { plan } = c.req.valid("json");
+
+  // Cada checkout cria um preapproval no Mercado Pago (chamada externa) e uma
+  // linha em PaymentEvent. Sem limite, um laço de script enche a mesma lista
+  // que o admin usa pra confirmar pagamento.
+  if (!(await checkRateLimit({ key: "checkout", userId, max: 10, windowSeconds: 15 * 60 }))) {
+    return c.json({ error: "Muitas tentativas de checkout. Tente novamente em alguns minutos." }, 429);
+  }
 
   const user = await db.user.findUnique({ where: { id: userId }, select: { email: true } });
   if (!user) return c.json({ error: "Usuário não encontrado" }, 404);
@@ -80,6 +99,10 @@ app.post("/checkout", zValidator("json", CheckoutSchema), async (c) => {
 app.post("/checkout-pix", zValidator("json", CheckoutSchema), async (c) => {
   const userId = c.get("userId");
   const { plan } = c.req.valid("json");
+
+  if (!(await checkRateLimit({ key: "checkout-pix", userId, max: 10, windowSeconds: 15 * 60 }))) {
+    return c.json({ error: "Muitas tentativas de checkout. Tente novamente em alguns minutos." }, 429);
+  }
 
   const { enabled, config } = await readPaymentMethodConfig("pix");
   if (!enabled || !config.key) {

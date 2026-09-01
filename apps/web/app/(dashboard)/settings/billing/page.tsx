@@ -215,9 +215,14 @@ export default function BillingPage() {
           Sua assinatura está pendente de confirmação do pagamento.
         </p>
       )}
+      {subscription?.status === "past_due" && (
+        <p className="text-sm text-muted-foreground mt-4">
+          O período pago da sua assinatura terminou. Renove para voltar a ter acesso ao plano.
+        </p>
+      )}
       {subscription?.canceledAt && (
         <p className="text-sm text-muted-foreground mt-4">
-          Assinatura cancelada — acesso ao plano pago continua até o fim do período já pago.
+          Assinatura cancelada — o acesso ao plano pago já foi encerrado.
         </p>
       )}
 

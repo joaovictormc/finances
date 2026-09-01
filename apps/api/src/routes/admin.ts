@@ -74,10 +74,13 @@ app.patch("/users/:id/plan", zValidator("json", PlanSchema), async (c) => {
   const adminId = c.get("userId");
   const { plan, status } = c.req.valid("json");
 
+  // Concessão manual não tem prazo: zerar `currentPeriodEnd` deixa isso
+  // explícito pro gate de acesso, que trata nulo como "não expira". Sem isso um
+  // valor antigo sobreviveria ao upsert e a liberação do admin morreria na hora.
   const subscription = await db.subscription.upsert({
     where: { userId },
-    update: { plan, status: status ?? "active" },
-    create: { userId, plan, status: status ?? "active" },
+    update: { plan, status: status ?? "active", currentPeriodEnd: null, canceledAt: null },
+    create: { userId, plan, status: status ?? "active", currentPeriodEnd: null },
   });
 
   await db.paymentEvent.create({
@@ -152,6 +155,13 @@ app.get("/payment-events/types", async (c) => {
   return c.json(rows.map((r) => r.type));
 });
 
+/**
+ * Janela em que um checkout Pix ainda pode ser confirmado. O QR e o txid não
+ * sobrevivem semanas, e a lista de eventos só cresce — nada fecha o que nunca
+ * foi pago. Confirmar um checkout velho é, na prática, clique errado na lista.
+ */
+const PIX_CHECKOUT_MAX_AGE_DAYS = 7;
+
 /** Confirma manualmente um pagamento Pix pendente e ativa o plano do usuário. */
 app.post("/payment-events/:id/confirm-pix", async (c) => {
   const id = c.req.param("id");
@@ -162,7 +172,22 @@ app.post("/payment-events/:id/confirm-pix", async (c) => {
     return c.json({ error: "Evento de checkout Pix não encontrado" }, 404);
   }
 
-  const payload = event.rawPayload as { userId?: string; plan?: string; txid?: string };
+  const ageDays = (Date.now() - event.processedAt.getTime()) / 86_400_000;
+  if (ageDays > PIX_CHECKOUT_MAX_AGE_DAYS) {
+    return c.json(
+      {
+        error: `Checkout Pix expirado (gerado há ${Math.floor(ageDays)} dias). Peça um novo ao usuário.`,
+      },
+      409
+    );
+  }
+
+  const payload = event.rawPayload as {
+    userId?: string;
+    plan?: string;
+    txid?: string;
+    amount?: number;
+  };
   if (!payload.userId || !payload.plan || !["pro", "familia"].includes(payload.plan)) {
     return c.json({ error: "Evento de checkout Pix inválido" }, 400);
   }

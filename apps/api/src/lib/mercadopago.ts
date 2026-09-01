@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { MercadoPagoConfig, PreApproval } from "mercadopago";
 import { getPlan, type PlanId } from "./plans";
 import { readPaymentMethodConfig } from "./payment-methods";
@@ -85,5 +85,10 @@ export async function verifyMercadoPagoSignature(input: {
 
   const manifest = `id:${input.dataId};request-id:${input.xRequestId ?? ""};ts:${ts};`;
   const expected = createHmac("sha256", secret).update(manifest).digest("hex");
-  return expected === hash;
+
+  // Comparar as strings direto vaza pelo tempo de execução onde elas divergem.
+  // timingSafeEqual exige buffers do mesmo tamanho, daí a checagem antes.
+  const expectedBytes = Buffer.from(expected, "utf8");
+  const receivedBytes = Buffer.from(hash, "utf8");
+  return expectedBytes.length === receivedBytes.length && timingSafeEqual(expectedBytes, receivedBytes);
 }
