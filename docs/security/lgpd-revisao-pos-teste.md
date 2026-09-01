@@ -63,7 +63,7 @@ Recomendação: substituir ou atualizar o SDK Brevo em uma entrega dedicada e
 acompanhar releases compatíveis do Expo/mobile. Não promover para exposição
 pública sem reavaliar os achados que atinjam o artefato efetivamente implantado.
 
-## Criptografia de campo (CPF / tokens Open Finance)
+## Criptografia de campo (segredos de pagamento / CPF / tokens Open Finance)
 
 `UserProfile.cpf` e `OpenFinanceConsent.accessTokenEnc`/`refreshTokenEnc`
 tinham comentários no schema afirmando "criptografado em nível de
@@ -80,6 +80,14 @@ aplicação" sem nenhuma implementação real — achado corrigido:
   existe; quando esses campos ganharem um endpoint de escrita real, usar
   `encryptField`/`decryptField` obrigatoriamente, nunca gravar em texto
   puro.
+
+Atualização de 01/09/2026 — o helper deixou de ser código sem uso: os
+segredos de `PaymentMethodConfig` (access token e webhook secret do Mercado
+Pago) passaram a ser gravados criptografados, com formato marcado (`enc:v1:`)
+pra conviver com o que já estava em texto puro, backfill idempotente
+(`pnpm --filter @finances/api secrets:encrypt`) e recusa explícita (`503`) se
+`APP_ENCRYPTION_KEY` não estiver configurada. `cpf` e os tokens de Open
+Finance continuam sem nenhuma escrita — a nota acima segue valendo pra eles.
 
 ## Lacunas organizacionais para LGPD
 

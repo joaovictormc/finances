@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { db } from "@finances/db";
+import { db, EncryptionKeyMissingError } from "@finances/db";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { requireAdmin } from "../middleware/admin";
 import { getAiSettings, updateAiSettings } from "../lib/ai/ai-settings";
@@ -219,8 +219,16 @@ app.patch("/payment-methods/:id", zValidator("json", PaymentMethodUpdateSchema),
   if (!PAYMENT_METHODS.some((m) => m.id === id)) return c.json({ error: "Método desconhecido" }, 404);
 
   const data = c.req.valid("json");
-  const updated = await updatePaymentMethodConfig(id, data);
-  return c.json(toPaymentMethodResponse(id, updated.enabled, (updated.config as Record<string, string>) ?? {}));
+
+  try {
+    const updated = await updatePaymentMethodConfig(id, data);
+    return c.json(toPaymentMethodResponse(id, updated.enabled, (updated.config as Record<string, string>) ?? {}));
+  } catch (error) {
+    // Segredo só é gravado criptografado. Sem a chave, recusar é melhor que
+    // salvar em texto puro — e a mensagem diz ao operador o que configurar.
+    if (error instanceof EncryptionKeyMissingError) return c.json({ error: error.message }, 503);
+    throw error;
+  }
 });
 
 // ── IA (configuração e observabilidade) ──────────────────────────────────────

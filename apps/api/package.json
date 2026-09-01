@@ -8,7 +8,8 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "vitest run"
+    "test": "vitest run",
+    "secrets:encrypt": "tsx src/scripts/encrypt-payment-secrets.ts"
   },
   "dependencies": {
     "@bull-board/api": "^6.8.0",

@@ -186,7 +186,20 @@ NEXT_PUBLIC_API_URL="http://100.104.200.37:3011"
 NEXT_PUBLIC_APP_URL="http://100.104.200.37:3010"  # porta dedicada pro web de staging
 AUTH_REQUIRE_EMAIL_VERIFICATION="false"
 ADMIN_BOOTSTRAP="true"                             # útil pra sempre ter uma conta de teste
+APP_ENCRYPTION_KEY="..."                           # openssl rand -base64 32
 ```
+
+> **`APP_ENCRYPTION_KEY` é obrigatória.** Os segredos de meio de pagamento
+> (access token e webhook secret do Mercado Pago) são gravados criptografados
+> em repouso — AES-256-GCM, `packages/db/src/crypto.ts`. Gere uma chave por
+> ambiente com `openssl rand -base64 32` e **nunca troque depois que houver
+> segredo salvo**: sem ela o valor no banco é irrecuperável, e
+> `/admin/payment-methods` recusa salvar com `503` em vez de cair pra texto
+> puro. Migrar de servidor mantendo os dados exige copiar esse valor junto.
+>
+> Se o ambiente já tinha credencial gravada antes dessa mudança, converta uma
+> vez com `pnpm --filter @finances/api secrets:encrypt` (idempotente — salvar
+> o método de novo pela tela do admin tem o mesmo efeito).
 
 Ideia das portas: produção/dev usam 3000/3001; homologação usa 3010/3011 —
 só uma convenção pra não colidir se algum dia rodar os dois ao mesmo tempo
@@ -375,7 +388,8 @@ qualquer uma falhar (firewall, VLAN isolando os hosts, etc.), use o
 
 Copie `.env.selfhosted.example` (raiz do repo) para `.env.selfhosted` no
 host onde for rodar, e preencha as credenciais reais — esse arquivo nunca
-é commitado (já está no `.gitignore`). Ajuste `NEXT_PUBLIC_APP_URL`,
+é commitado (já está no `.gitignore`). Inclui `APP_ENCRYPTION_KEY`, que é
+obrigatória (ver a nota em B.3). Ajuste `NEXT_PUBLIC_APP_URL`,
 `API_URL`, `NEXT_PUBLIC_API_URL` e `BETTER_AUTH_URL` pro IP do host que vai
 rodar os containers (`192.168.1.2` ou `192.168.1.4` pra acesso só na LAN;
 o IP Tailscale do próprio host — `tailscale ip -4`, diferente do IP

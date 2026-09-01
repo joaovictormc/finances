@@ -6,18 +6,18 @@ Levantamento feito por leitura direta do código (não é uma lista de desejos g
 
 ## 🔴 Bugs conhecidos (corrigir primeiro)
 
-| Item | Onde | Detalhe |
-|---|---|---|
-| Colunas da grid de Transações não redimensionam de forma confiável | `apps/web/components/transactions/transaction-list.tsx` | Resize ainda falha em alguns casos mesmo após as correções de hidratação e largura fixa da Fase 8. Precisa de uma nova rodada de diagnóstico — possivelmente trocar a abordagem (lib de tabela como `@tanstack/table` em vez de resize manual). **Não foi reverificado na revisão de 31/08.** |
+Nenhum aberto no momento.
 
 ## ✅ Resolvidos desde a última revisão
 
 | Item | Como |
 |---|---|
+| Segredos de `PaymentMethodConfig` em texto plano no banco | Access token e webhook secret do Mercado Pago passaram a ser gravados com AES-256-GCM (`packages/db/src/crypto.ts`, formato marcado `enc:v1:`) e só são descriptografados na hora de falar com o gateway. Registro legado em texto puro continua legível e é convertido ao salvar ou pelo backfill `pnpm --filter @finances/api secrets:encrypt`. Sem `APP_ENCRYPTION_KEY` a rota recusa salvar (`503`) em vez de cair pra texto puro. |
+| Colunas da grid de Transações não redimensionavam | Em `table-layout: fixed` quem define a coluna é o `<colgroup>` — `min-width`/`max-width` não valem em célula de tabela, e sem nenhuma coluna livre o navegador redistribui a sobra entre todas, desfazendo o arrasto. `transaction-list.tsx` passou a declarar as larguras no `colgroup`, com uma coluna vazia absorvendo a folga. |
 | Import de extrato sem limite de tamanho | `validateImportFileBatch` aplicado em `/import` e `/import/batch` (extensão, 10 MB por arquivo, 50 MB e 20 arquivos por lote), com testes em `import-limits.test.ts`. |
 | Webhook da Pluggy não rejeitava IP inesperado | `webhooks/pluggy.ts` agora responde `403` quando o `x-forwarded-for` existe e não é o IP da Pluggy (sem o header — dev local, sem proxy — segue passando, porque não há o que comparar). |
 | Webhook do Telegram sem validação de secret | Deixou de existir: o bot Telegram/WhatsApp foi removido por completo. |
-| Zero testes automatizados | 6 arquivos de teste, 27 casos: `pix` (CRC-16/CCITT-FALSE contra vetor publicado + estrutura EMV), `payment-methods` (mascaramento de segredos), `plan-limits` (gates de plano com o banco mockado), `import-limits`, `bulk-categorize`, `report-period`. |
+| Zero testes automatizados | 6 arquivos de teste, 36 casos: `pix` (CRC-16/CCITT-FALSE contra vetor publicado + estrutura EMV), `payment-methods` (mascaramento e criptografia em repouso dos segredos), `plan-limits` (gates de plano com o banco mockado), `import-limits`, `bulk-categorize`, `report-period`. |
 | Sem rate limiting | `lib/rate-limit.ts` (INCR/EXPIRE no Redis, falha aberta) aplicado em `/api/ai/query` (20/15min), `/api/assistant/conversations/:id/messages` (30/15min), `/api/transactions/receipt-scan` (20/15min) e `/import/batch` (10/15min). Login já tinha o rate limit do Better Auth. |
 | Sem `not-found.tsx` / `error.tsx` | `app/not-found.tsx` (404 próprio) e `app/(dashboard)/error.tsx` (boundary do dashboard inteiro; `overview/error.tsx` continua valendo por ser mais específico). `loading.tsx` já existia em 19 rotas. |
 | `console.log` de debug em produção | Os 5 logs do fluxo Pluggy em `connect-bank-button.tsx` foram removidos; não sobrou nenhum `console.log` em `apps/web` nem em `apps/mobile` (os `console.error` de erro real ficaram). |
@@ -31,7 +31,7 @@ Levantamento feito por leitura direta do código (não é uma lista de desejos g
 
 | Item | Detalhe |
 |---|---|
-| **Testes só de unidade** | Os 27 casos cobrem funções puras e um módulo com banco mockado. Nenhuma rota Hono é exercida ponta a ponta, e os workers de fila (`jobs/workers/*`) não têm teste nenhum. O próximo degrau natural é um teste de rota com o app Hono em memória. |
+| **Testes só de unidade** | Os 36 casos cobrem funções puras e dois módulos com banco mockado. Nenhuma rota Hono é exercida ponta a ponta, e os workers de fila (`jobs/workers/*`) não têm teste nenhum. O próximo degrau natural é um teste de rota com o app Hono em memória. |
 | **Sem `global-error.tsx`** | O boundary novo cobre o dashboard, mas um erro dentro do próprio `app/layout.tsx` ainda cai na tela genérica do Next. |
 | **Bibliotecas pesadas sem carregamento sob demanda** | `recharts` (gráficos) e `react-day-picker` (filtro de período) entram no bundle inicial de qualquer página que as usa. Nenhum componente do app usa `next/dynamic` hoje — confirmado por busca. |
 
@@ -54,7 +54,6 @@ Estes **não foram pedidos** — são lacunas observadas durante o desenvolvimen
 
 | Item | Detalhe |
 |---|---|
-| Segredos de `PaymentMethodConfig` em texto plano no banco | `config` (JSON) guarda `accessToken`/chave Pix sem criptografia em repouso — só é mascarado na resposta da API (`maskSecrets()`, agora coberto por teste), não no banco. `packages/db/src/crypto.ts` (AES-256-GCM) já existe e é usado em `OpenFinanceConsent.accessTokenEnc`; falta aplicar aqui. |
 | Sem alerta de novo login / dispositivo desconhecido | `Session` guarda `ipAddress`/`userAgent`, mas nada notifica o usuário quando um login acontece de um dispositivo ou local novo. |
 
 ## 🕵️ Mascaramento de código pelo DevTools

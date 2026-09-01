@@ -7,7 +7,7 @@ import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { PLANS, getPlan } from "../lib/plans";
 import { createSubscriptionCheckout, cancelSubscriptionAtMercadoPago } from "../lib/mercadopago";
 import { getEffectivePlan, planHasIntegrationsModule, planHasFamilyModule } from "../lib/plan-limits";
-import { getPaymentMethodConfig } from "../lib/payment-methods";
+import { getPaymentMethodConfig, readPaymentMethodConfig } from "../lib/payment-methods";
 import { buildPixPayload, pixTxidFromId } from "../lib/pix";
 
 const app = new Hono<{ Variables: AuthVariables }>();
@@ -81,9 +81,8 @@ app.post("/checkout-pix", zValidator("json", CheckoutSchema), async (c) => {
   const userId = c.get("userId");
   const { plan } = c.req.valid("json");
 
-  const pixConfig = await getPaymentMethodConfig("pix");
-  const config = (pixConfig.config as Record<string, string>) ?? {};
-  if (!pixConfig.enabled || !config.key) {
+  const { enabled, config } = await readPaymentMethodConfig("pix");
+  if (!enabled || !config.key) {
     return c.json({ error: "Pagamento via Pix não está disponível no momento" }, 503);
   }
 

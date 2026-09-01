@@ -1,11 +1,13 @@
 import { createHmac } from "node:crypto";
 import { MercadoPagoConfig, PreApproval } from "mercadopago";
 import { getPlan, type PlanId } from "./plans";
-import { getPaymentMethodConfig } from "./payment-methods";
+import { readPaymentMethodConfig } from "./payment-methods";
 
+// Access token e webhook secret ficam criptografados no banco; ler por aqui
+// garante o texto claro pra quem fala com o Mercado Pago.
 async function getMercadoPagoConfig(): Promise<Record<string, string>> {
-  const stored = await getPaymentMethodConfig("mercadopago");
-  return (stored.config as Record<string, string>) ?? {};
+  const { config } = await readPaymentMethodConfig("mercadopago");
+  return config;
 }
 
 async function getClient(): Promise<MercadoPagoConfig> {

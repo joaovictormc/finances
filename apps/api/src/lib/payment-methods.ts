@@ -1,4 +1,4 @@
-import { db } from "@finances/db";
+import { db, decryptTaggedField, encryptTaggedField } from "@finances/db";
 
 export type PaymentMethodId = "mercadopago" | "pix";
 
@@ -6,7 +6,7 @@ export type PaymentMethodFieldDef = {
   key: string;
   label: string;
   type: "text" | "password" | "select";
-  secret?: boolean; // nunca é devolvido em texto puro pelo GET
+  secret?: boolean; // nunca é devolvido em texto puro pelo GET, e vai criptografado pro banco
   required?: boolean; // precisa estar preenchido para o método ser liberado automaticamente
   options?: { value: string; label: string }[];
   placeholder?: string;
@@ -72,6 +72,49 @@ export function getPaymentMethodDef(id: PaymentMethodId): PaymentMethodDef {
   return def;
 }
 
+function secretKeys(id: PaymentMethodId): string[] {
+  return getPaymentMethodDef(id)
+    .fields.filter((field) => field.secret)
+    .map((field) => field.key);
+}
+
+/**
+ * Config com os campos secret em texto claro. Campo gravado antes desta
+ * mudança está em texto puro e passa direto — ver decryptTaggedField.
+ */
+export function decryptConfig(
+  id: PaymentMethodId,
+  config: Record<string, string>
+): Record<string, string> {
+  const plain = { ...config };
+  for (const key of secretKeys(id)) {
+    const value = plain[key];
+    if (value) plain[key] = decryptTaggedField(value);
+  }
+  return plain;
+}
+
+/**
+ * Config pronto pra gravar: todo campo marcado como secret sai criptografado.
+ * Campo não-secret fica legível de propósito — o admin precisa conferir
+ * chave Pix e public key na tela, e nada aqui é credencial.
+ */
+export function encryptConfig(
+  id: PaymentMethodId,
+  config: Record<string, string>
+): Record<string, string> {
+  const stored = { ...config };
+  for (const key of secretKeys(id)) {
+    const value = stored[key];
+    if (value) stored[key] = encryptTaggedField(value);
+  }
+  return stored;
+}
+
+/**
+ * Linha crua do banco — o config vem como está gravado, com os secrets
+ * criptografados. Use readPaymentMethodConfig quando precisar do valor real.
+ */
 export async function getPaymentMethodConfig(id: PaymentMethodId) {
   return db.paymentMethodConfig.upsert({
     where: { id },
@@ -84,6 +127,17 @@ export async function listPaymentMethodConfigs() {
   return Promise.all(PAYMENT_METHODS.map((def) => getPaymentMethodConfig(def.id)));
 }
 
+/** Estado de ativação + config com os secrets já em texto claro, pronto pra uso. */
+export async function readPaymentMethodConfig(
+  id: PaymentMethodId
+): Promise<{ enabled: boolean; config: Record<string, string> }> {
+  const stored = await getPaymentMethodConfig(id);
+  return {
+    enabled: stored.enabled,
+    config: decryptConfig(id, (stored.config as Record<string, string>) ?? {}),
+  };
+}
+
 function isFullyConfigured(id: PaymentMethodId, config: Record<string, string>): boolean {
   const def = getPaymentMethodDef(id);
   const requiredKeys = def.fields.filter((f) => f.required).map((f) => f.key);
@@ -94,15 +148,21 @@ function isFullyConfigured(id: PaymentMethodId, config: Record<string, string>):
  * Atualiza enabled/config; chaves com valor "" são ignoradas (mantém o valor atual — usado para não
  * sobrescrever secrets mascarados). Sem campos obrigatórios preenchidos, o método nunca fica ativo —
  * assim que ficam completos, é liberado automaticamente (a menos que o admin desative explicitamente).
+ *
+ * A mesclagem acontece em texto claro: o que chega do admin vem em texto puro e o que está no banco
+ * está criptografado, então misturar os dois formatos no mesmo objeto daria merge errado. Como o
+ * resultado é recriptografado inteiro, salvar de novo já converte um registro legado.
+ *
+ * Lança EncryptionKeyMissingError se houver segredo a gravar sem APP_ENCRYPTION_KEY: sem a chave o
+ * certo é recusar, não cair pra texto puro em silêncio.
  */
 export async function updatePaymentMethodConfig(
   id: PaymentMethodId,
   data: { enabled?: boolean; config?: Record<string, string> }
 ) {
   const current = await getPaymentMethodConfig(id);
-  const currentConfig = (current.config as Record<string, string>) ?? {};
+  const mergedConfig = decryptConfig(id, (current.config as Record<string, string>) ?? {});
 
-  const mergedConfig = { ...currentConfig };
   for (const [key, value] of Object.entries(data.config ?? {})) {
     if (value !== "") mergedConfig[key] = value;
   }
@@ -112,7 +172,7 @@ export async function updatePaymentMethodConfig(
 
   return db.paymentMethodConfig.update({
     where: { id },
-    data: { enabled, config: mergedConfig },
+    data: { enabled, config: encryptConfig(id, mergedConfig) },
   });
 }
 
@@ -132,12 +192,11 @@ export function maskSecrets(id: PaymentMethodId, config: Record<string, string>)
   return { config: masked, secretsSet };
 }
 
-/** Valor configurado de um campo (não-secret), com fallback opcional. */
+/** Valor configurado de um campo, já descriptografado, com fallback opcional. */
 export async function getPaymentMethodConfigValue(
   id: PaymentMethodId,
   key: string
 ): Promise<string | undefined> {
-  const stored = await getPaymentMethodConfig(id);
-  const config = (stored.config as Record<string, string>) ?? {};
+  const { config } = await readPaymentMethodConfig(id);
   return config[key] || undefined;
 }
