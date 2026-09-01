@@ -5,6 +5,7 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NavLinks } from "@/components/ui/nav-links";
 import { UserMenu } from "@/components/ui/user-menu";
+import { NotificationBell } from "@/components/ui/notification-bell";
 import { Logo } from "@/components/ui/logo";
 import { PointsBadge } from "@/components/ui/points-badge";
 import { useSidebar } from "@/app/providers/sidebar-provider";
@@ -84,6 +85,9 @@ export function DashboardSidebar() {
             )}
           </div>
         )}
+        <div className={collapsed ? "flex justify-center" : ""}>
+          <NotificationBell collapsed={collapsed} openUpward />
+        </div>
         <UserMenu collapsed={collapsed} />
       </div>
     </aside>

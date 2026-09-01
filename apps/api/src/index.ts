@@ -23,6 +23,7 @@ import reportsRoute from "./routes/reports";
 import referralsRoute from "./routes/referrals";
 import adminRoute from "./routes/admin";
 import settingsRoute from "./routes/settings";
+import notificationsRoute from "./routes/notifications";
 import userRoute from "./routes/user";
 import gamificationRoute from "./routes/gamification";
 import { registerRepeatableJobs } from "./jobs/scheduler";
@@ -104,6 +105,7 @@ app.route("/api/reports", reportsRoute);
 app.route("/api/referrals", referralsRoute);
 app.route("/api/admin", adminRoute);
 app.route("/api/settings", settingsRoute);
+app.route("/api/notifications", notificationsRoute);
 app.route("/api/user", userRoute);
 app.route("/api/gamification", gamificationRoute);
 

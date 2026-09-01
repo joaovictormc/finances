@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, CheckCircle, AlertCircle, AlertTriangle } from "lucide-react";
+import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type ToastVariant = "success" | "error" | "warning";
+// `info` existe pra aviso neutro (notificação chegando): pintar de verde o
+// pop-up de "Pix venceu" leria como confirmação de sucesso.
+export type ToastVariant = "success" | "error" | "warning" | "info";
 
 export interface ToastItem {
   id: string;
@@ -17,18 +19,21 @@ const icons: Record<ToastVariant, React.ReactNode> = {
   success: <CheckCircle size={16} className="text-success" />,
   error: <AlertCircle size={16} className="text-destructive" />,
   warning: <AlertTriangle size={16} className="text-warning" />,
+  info: <Info size={16} className="text-primary" />,
 };
 
 const borderColors: Record<ToastVariant, string> = {
   success: "border-success/40",
   error: "border-destructive/40",
   warning: "border-warning/40",
+  info: "border-primary/40",
 };
 
 const barColors: Record<ToastVariant, string> = {
   success: "bg-success",
   error: "bg-destructive",
   warning: "bg-warning",
+  info: "bg-primary",
 };
 
 export function Toast({ item, onRemove }: { item: ToastItem; onRemove: (id: string) => void }) {

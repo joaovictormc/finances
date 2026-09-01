@@ -13,6 +13,7 @@ import { ThemeToggle } from "./theme-toggle";
 import { Logo } from "./logo";
 import { PointsBadge } from "./points-badge";
 import { UserMenu } from "./user-menu";
+import { NotificationBell } from "./notification-bell";
 import { usePlanAccess } from "@/lib/use-plan-access";
 
 const PLAN_LABELS: Record<string, string> = { free: "Plano Gratuito", pro: "Plano Pro", familia: "Plano Família" };
@@ -54,6 +55,7 @@ export function MobileSidebar() {
         )}
         <div className="flex items-center gap-1.5 shrink-0">
           <PointsBadge />
+          <NotificationBell />
           <ThemeToggle />
         </div>
       </header>

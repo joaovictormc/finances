@@ -416,8 +416,10 @@ model Notification {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  type    String // bill_reminder | budget_alert | overdraft_warning | sync_complete | new_transaction | insight_ready | goal_milestone
-  channel String // email | telegram | whatsapp | push
+  type    String // bill_reminder | budget_alert | overdraft_warning | sync_complete | new_transaction | insight_ready | goal_milestone | pix_checkout_pending
+  // inapp = registro que a campainha da web lê, gravado sempre; email = tentativa
+  // de entrega adicional. Linhas antigas ainda têm telegram/whatsapp, canais removidos.
+  channel String
   title   String
   body    String
   metadata Json?
