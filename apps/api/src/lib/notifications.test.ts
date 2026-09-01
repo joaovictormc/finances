@@ -13,7 +13,13 @@ vi.mock("./email", () => ({ sendEmail: sendEmailMock }));
 
 import { sendNotification } from "./notifications";
 
-type CreateData = { channel: string; status: string; type: string; title: string };
+type CreateData = {
+  channel: string;
+  status: string;
+  type: string;
+  title: string;
+  metadata?: Record<string, unknown>;
+};
 
 function lastCreateData(): CreateData {
   const call = dbMock.notification.create.mock.calls.at(-1);
@@ -84,6 +90,23 @@ describe("sendNotification", () => {
     expect(dbMock.notification.create).toHaveBeenCalledOnce();
     const update = dbMock.notification.update.mock.calls.at(-1);
     expect((update?.[0] as { data: { error: string } }).data.error).toContain("Brevo fora do ar");
+  });
+
+  it("guarda o destino do clique junto do resto do metadata", async () => {
+    dbMock.userProfile.findUnique.mockResolvedValue({ notifyEmail: false, aiInsightsEnabled: true });
+
+    await sendNotification("u1", { ...aviso, link: "/admin/checkouts", metadata: { txid: "ABC" } });
+
+    expect(lastCreateData().metadata).toEqual({ txid: "ABC", link: "/admin/checkouts" });
+  });
+
+  it("deixa metadata nulo quando não há link nem dado extra", async () => {
+    // Sem isso o campo passaria a gravar `{}` em toda notificação simples.
+    dbMock.userProfile.findUnique.mockResolvedValue({ notifyEmail: false, aiInsightsEnabled: true });
+
+    await sendNotification("u1", aviso);
+
+    expect(lastCreateData().metadata).toBeUndefined();
   });
 
   it("não tenta e-mail para usuário sem endereço, mas registra o aviso", async () => {

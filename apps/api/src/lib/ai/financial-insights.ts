@@ -116,6 +116,7 @@ export async function generateMonthlyInsight(userId: string) {
     type: "insight_ready",
     title,
     body,
+    link: "/overview",
     emailData: { title, body },
   });
 

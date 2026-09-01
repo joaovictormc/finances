@@ -77,6 +77,7 @@ async function notifyPendingPixCheckouts() {
     for (const admin of admins) {
       await sendNotification(admin.id, {
         type: "pix_checkout_pending",
+        link: "/admin/checkouts",
         title: `${STAGE_TITLE[stage]} — plano ${checkout.plan}`,
         body,
         metadata: { txid: checkout.txid, stage, eventId: checkout.eventId },

@@ -152,6 +152,9 @@ export async function detectRecurringBills(userId: string) {
         type: "insight_ready",
         title: insight.title,
         body: insight.body,
+        // Este insight é sobre conta recorrente, não sobre o mês — vai pra
+        // tela de contas, não pra visão geral.
+        link: "/bills",
       });
     }
 

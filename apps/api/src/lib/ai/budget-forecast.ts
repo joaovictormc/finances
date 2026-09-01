@@ -91,6 +91,7 @@ export async function checkBudgetForecasts(userId: string) {
 
     const notificationInput = {
       type: "budget_alert",
+      link: "/budgets",
       title,
       body,
       emailTemplate: "budget-alert",

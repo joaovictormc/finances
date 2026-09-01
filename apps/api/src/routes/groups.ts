@@ -165,6 +165,7 @@ app.post("/join/:inviteCode", async (c) => {
       type: "group_activity",
       title: "Novo membro no grupo",
       body: `${user?.name ?? "Alguém"} entrou no grupo "${group.name}".`,
+      link: `/groups/${group.id}`,
     },
     userId
   );

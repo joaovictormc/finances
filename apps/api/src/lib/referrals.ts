@@ -52,6 +52,7 @@ export async function grantReferralReward(referredUserId: string) {
 
   await sendNotification(referral.referrerId, {
     type: "referral_reward",
+    link: "/rewards",
     title: "Você ganhou 30 dias grátis! 🎉",
     body: "Alguém que você indicou assinou um plano pago. Adicionamos 30 dias à sua assinatura como recompensa.",
   });

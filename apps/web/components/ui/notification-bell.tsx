@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { Bell, CheckCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowUpRight, Bell, CheckCheck } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast-provider";
@@ -12,6 +13,7 @@ type Notification = {
   type: string;
   title: string;
   body: string;
+  metadata: Record<string, unknown> | null;
   readAt: string | null;
   createdAt: string;
 };
@@ -29,6 +31,33 @@ const ALERT_TYPES = new Set([
   "overdraft_warning",
   "bill_reminder",
 ]);
+
+/**
+ * Destino por tipo, para as notificações gravadas antes de cada emissor passar
+ * a mandar o próprio link. Quem emite hoje manda o destino exato — e precisa
+ * mandar, porque o tipo não basta: `insight_ready` sai tanto do insight mensal
+ * quanto da conta recorrente detectada, que vão pra telas diferentes.
+ */
+const FALLBACK_LINKS: Record<string, string> = {
+  insight_ready: "/overview",
+  budget_alert: "/budgets",
+  overdraft_warning: "/accounts",
+  bill_reminder: "/bills",
+  goal_milestone: "/goals",
+  group_activity: "/groups",
+  referral_reward: "/rewards",
+  pix_checkout_pending: "/admin/checkouts",
+};
+
+function linkFor(item: Notification): string | null {
+  const stored = item.metadata?.link;
+  // Só caminho interno: aceitar URL absoluta aqui transformaria o campo num
+  // redirecionador aberto para qualquer coisa que consiga gravar metadata.
+  if (typeof stored === "string" && stored.startsWith("/") && !stored.startsWith("//")) {
+    return stored;
+  }
+  return FALLBACK_LINKS[item.type] ?? null;
+}
 
 function relativeTime(iso: string): string {
   const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
@@ -83,6 +112,7 @@ function panelStyle(anchor: DOMRect): CSSProperties {
 
 export function NotificationBell({ collapsed = false }: { collapsed?: boolean }) {
   const { toast } = useToast();
+  const router = useRouter();
   const [items, setItems] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
@@ -189,6 +219,15 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
     }
   }
 
+  function handleItemClick(item: Notification) {
+    if (!item.readAt) void markRead(item.id);
+
+    const link = linkFor(item);
+    if (!link) return;
+    setOpen(false);
+    router.push(link);
+  }
+
   async function markAll() {
     setItems((prev) => prev.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })));
     setUnread(0);
@@ -231,10 +270,11 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => !item.readAt && markRead(item.id)}
+                    onClick={() => handleItemClick(item)}
                     className={cn(
-                      "flex w-full flex-col items-start gap-0.5 border-b border-border/40 px-3 py-2.5 text-left transition-colors last:border-b-0 hover:bg-accent/50",
-                      !item.readAt && "bg-primary/5"
+                      "group flex w-full flex-col items-start gap-0.5 border-b border-border/40 px-3 py-2.5 text-left transition-colors last:border-b-0 hover:bg-accent/50",
+                      !item.readAt && "bg-primary/5",
+                      linkFor(item) ? "cursor-pointer" : "cursor-default"
                     )}
                   >
                     <span className="flex w-full items-center gap-2">
@@ -242,6 +282,12 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
                       <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                         {item.title}
                       </span>
+                      {linkFor(item) && (
+                        <ArrowUpRight
+                          size={13}
+                          className="shrink-0 text-muted-foreground/60 transition-colors group-hover:text-foreground"
+                        />
+                      )}
                       <span className="shrink-0 text-[11px] text-muted-foreground">
                         {relativeTime(item.createdAt)}
                       </span>

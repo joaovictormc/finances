@@ -5,6 +5,16 @@ export type NotificationInput = {
   type: string; // bill_reminder | budget_alert | overdraft_warning | sync_complete | new_transaction | insight_ready | goal_milestone | pix_checkout_pending
   title: string;
   body: string;
+  /**
+   * Rota da web pra onde a notificação leva ao ser clicada. Guardada dentro de
+   * `metadata`, sem coluna nova.
+   *
+   * Quem emite define o destino porque só ele sabe o alvo exato — o tipo não
+   * basta: `insight_ready` nasce tanto do insight mensal (`/overview`) quanto
+   * da conta recorrente detectada (`/bills`), e `group_activity` precisa do id
+   * do grupo.
+   */
+  link?: string;
   metadata?: Record<string, unknown>;
   emailTemplate?: string;
   emailData?: Record<string, unknown>;
@@ -32,6 +42,9 @@ export async function sendNotification(userId: string, input: NotificationInput)
     return;
   }
 
+  // Sem link nem metadata o campo continua nulo, como antes — não vira `{}`.
+  const metadata = input.link ? { ...input.metadata, link: input.link } : input.metadata;
+
   const notification = await db.notification.create({
     data: {
       userId,
@@ -39,7 +52,7 @@ export async function sendNotification(userId: string, input: NotificationInput)
       channel: "inapp",
       title: input.title,
       body: input.body,
-      metadata: input.metadata as Prisma.InputJsonValue | undefined,
+      metadata: metadata as Prisma.InputJsonValue | undefined,
       status: "sent",
       sentAt: new Date(),
     },
