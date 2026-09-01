@@ -3,22 +3,13 @@ import { db } from "@finances/db";
 import { verifyMercadoPagoSignature, getMercadoPagoPreapproval } from "../../lib/mercadopago";
 import { grantReferralReward } from "../../lib/referrals";
 import { PLANS, type PlanId } from "../../lib/plans";
+import { isUniqueViolation } from "../../lib/prisma-errors";
 
 type MercadoPagoWebhookPayload = {
   type?: string; // "subscription_preapproval" | "payment" | ...
   action?: string;
   data?: { id?: string };
 };
-
-/** P2002 = violação de unique no Prisma. Aqui significa "evento já registrado". */
-function isUniqueViolation(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: string }).code === "P2002"
-  );
-}
 
 /**
  * Qual plano o usuário comprou. A fonte da verdade é o evento

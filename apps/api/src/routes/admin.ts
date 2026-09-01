@@ -17,6 +17,7 @@ import {
   maskSecrets,
   type PaymentMethodId,
 } from "../lib/payment-methods";
+import { isPixCheckoutExpired, pixCheckoutExpiresAt, pixCheckoutStage } from "../lib/pix-checkout";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -143,7 +144,22 @@ app.get("/payment-events", async (c) => {
     db.paymentEvent.count({ where }),
   ]);
 
-  return c.json({ events, total, page, pageSize });
+  // O estágio vem calculado no servidor pra tela não reimplementar a janela:
+  // se as duas contas divergirem, o admin vê "no prazo" e leva 409 ao confirmar.
+  return c.json({
+    events: events.map((event) =>
+      event.type === "pix_checkout_created"
+        ? {
+            ...event,
+            pixStage: pixCheckoutStage(event.processedAt),
+            pixExpiresAt: pixCheckoutExpiresAt(event.processedAt),
+          }
+        : event
+    ),
+    total,
+    page,
+    pageSize,
+  });
 });
 
 app.get("/payment-events/types", async (c) => {
@@ -155,13 +171,6 @@ app.get("/payment-events/types", async (c) => {
   return c.json(rows.map((r) => r.type));
 });
 
-/**
- * Janela em que um checkout Pix ainda pode ser confirmado. O QR e o txid não
- * sobrevivem semanas, e a lista de eventos só cresce — nada fecha o que nunca
- * foi pago. Confirmar um checkout velho é, na prática, clique errado na lista.
- */
-const PIX_CHECKOUT_MAX_AGE_DAYS = 7;
-
 /** Confirma manualmente um pagamento Pix pendente e ativa o plano do usuário. */
 app.post("/payment-events/:id/confirm-pix", async (c) => {
   const id = c.req.param("id");
@@ -172,12 +181,10 @@ app.post("/payment-events/:id/confirm-pix", async (c) => {
     return c.json({ error: "Evento de checkout Pix não encontrado" }, 404);
   }
 
-  const ageDays = (Date.now() - event.processedAt.getTime()) / 86_400_000;
-  if (ageDays > PIX_CHECKOUT_MAX_AGE_DAYS) {
+  if (isPixCheckoutExpired(event.processedAt)) {
+    const expiresAt = pixCheckoutExpiresAt(event.processedAt);
     return c.json(
-      {
-        error: `Checkout Pix expirado (gerado há ${Math.floor(ageDays)} dias). Peça um novo ao usuário.`,
-      },
+      { error: `Checkout Pix vencido em ${expiresAt.toLocaleDateString("pt-BR")}. Peça um novo ao usuário.` },
       409
     );
   }

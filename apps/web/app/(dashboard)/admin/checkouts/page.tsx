@@ -17,7 +17,25 @@ type PaymentEvent = {
   type: string;
   rawPayload: unknown;
   processedAt: string;
+  // Calculados no servidor, só para checkout Pix — a janela de confirmação mora
+  // lá (lib/pix-checkout.ts) e refazer a conta aqui abriria divergência.
+  pixStage?: "expiring" | "expired" | null;
+  pixExpiresAt?: string;
 };
+
+function PixStageBadge({ stage, expiresAt }: { stage: "expiring" | "expired"; expiresAt?: string }) {
+  const expired = stage === "expired";
+  return (
+    <span
+      className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+        expired ? "bg-destructive/10 text-destructive" : "bg-amber-500/10 text-amber-600"
+      }`}
+      title={expiresAt ? `${expired ? "Venceu" : "Vence"} em ${formatDate(expiresAt)}` : undefined}
+    >
+      {expired ? "Vencido" : "Vence em breve"}
+    </span>
+  );
+}
 
 const TYPE_LABELS: Record<string, string> = {
   checkout_created: "Checkout iniciado",
@@ -27,6 +45,7 @@ const TYPE_LABELS: Record<string, string> = {
   payment: "Pagamento (Mercado Pago)",
   pix_checkout_created: "Checkout Pix iniciado (pendente)",
   pix_payment_confirmed: "Pagamento Pix confirmado",
+  pix_checkout_notified: "Aviso de Pix pendente enviado ao admin",
 };
 
 export default function AdminCheckoutsPage() {
@@ -116,22 +135,33 @@ export default function AdminCheckoutsPage() {
             {events.map((ev) => (
               <details key={ev.id} className="bg-card rounded-xl border border-border/60 shadow-sm p-4">
                 <summary className="cursor-pointer flex items-center justify-between gap-3 text-sm">
-                  <span className="font-medium text-foreground">{TYPE_LABELS[ev.type] ?? ev.type}</span>
-                  <span className="text-muted-foreground text-xs">{formatDate(ev.processedAt)}</span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="font-medium text-foreground truncate">{TYPE_LABELS[ev.type] ?? ev.type}</span>
+                    {ev.pixStage && <PixStageBadge stage={ev.pixStage} expiresAt={ev.pixExpiresAt} />}
+                  </span>
+                  <span className="text-muted-foreground text-xs shrink-0">{formatDate(ev.processedAt)}</span>
                 </summary>
                 <pre className="mt-3 overflow-x-auto rounded-lg bg-muted p-3 text-xs text-muted-foreground">
                   {JSON.stringify(ev.rawPayload, null, 2)}
                 </pre>
-                {ev.type === "pix_checkout_created" && (
-                  <Button
-                    size="sm"
-                    className="mt-3"
-                    loading={confirmingId === ev.id}
-                    onClick={() => handleConfirmPix(ev.id)}
-                  >
-                    Confirmar pagamento e ativar plano
-                  </Button>
-                )}
+                {ev.type === "pix_checkout_created" &&
+                  (ev.pixStage === "expired" ? (
+                    // Esconder o botão em vez de deixá-lo levar 409: o admin não
+                    // tem como reabrir a janela, só pedir um checkout novo.
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Checkout vencido{ev.pixExpiresAt ? ` em ${formatDate(ev.pixExpiresAt)}` : ""} — a confirmação não é
+                      mais aceita. Peça um novo ao usuário.
+                    </p>
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="mt-3"
+                      loading={confirmingId === ev.id}
+                      onClick={() => handleConfirmPix(ev.id)}
+                    >
+                      Confirmar pagamento e ativar plano
+                    </Button>
+                  ))}
               </details>
             ))}
           </div>

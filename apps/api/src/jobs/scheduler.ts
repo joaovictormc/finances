@@ -1,4 +1,4 @@
-import { aiAnalysisQueue, billDetectorQueue, gamificationQueue } from "./queues";
+import { aiAnalysisQueue, billDetectorQueue, billingQueue, gamificationQueue } from "./queues";
 
 // jobId fixo: BullMQ não duplica o repeat ao reexecutar isso em cada boot da API.
 export async function registerRepeatableJobs() {
@@ -21,5 +21,12 @@ export async function registerRepeatableJobs() {
     "fan-out-weekly-recap",
     {},
     { repeat: { pattern: "0 6 * * 1" }, jobId: "fan-out-weekly-recap" }
+  );
+  // 9h: horário em que o admin consegue agir no mesmo dia sobre um Pix que
+  // está pra vencer, diferente das varreduras da madrugada.
+  await billingQueue.add(
+    "scan-pix-checkouts",
+    {},
+    { repeat: { pattern: "0 9 * * *" }, jobId: "scan-pix-checkouts" }
   );
 }

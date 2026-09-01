@@ -115,8 +115,8 @@ Better Auth com:
 | Queue | Worker | Trigger |
 |---|---|---|
 | `email` | `email.worker.ts` | `sendEmail()` de qualquer rota/worker |
-| `bot-messages` | `bot-messages.worker.ts` | Webhook Telegram |
-| `voice-transcription` | `voice-transcription.worker.ts` | Mensagem de voz no bot |
 | `open-finance-sync` | `open-finance-sync.worker.ts` | Pluggy: nova conta conectada ou webhook |
 | `ai-analysis` | `ai-analysis.worker.ts` | Agendado (scheduler) — insight mensal, recorrências, forecast |
 | `bill-detector` | `bill-detector.worker.ts` | Agendado — detecta contas recorrentes a partir do histórico |
+| `gamification` | `gamification.worker.ts` | Agendado — recap semanal |
+| `billing` | `billing.worker.ts` | Agendado (9h) — avisa o admin sobre checkout Pix perto de vencer ou já vencido |

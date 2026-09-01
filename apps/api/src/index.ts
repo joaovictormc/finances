@@ -34,6 +34,7 @@ import "./jobs/workers/open-finance-sync.worker";
 import "./jobs/workers/ai-analysis.worker";
 import "./jobs/workers/bill-detector.worker";
 import "./jobs/workers/gamification.worker";
+import "./jobs/workers/billing.worker";
 
 const app = new Hono();
 
