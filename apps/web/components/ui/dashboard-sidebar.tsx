@@ -67,11 +67,19 @@ export function DashboardSidebar() {
       <NavLinks collapsed={collapsed} />
 
       <div className="mt-auto shrink-0 border-t border-border p-4 space-y-3">
-        {!collapsed && (
-          <div>
-            <PointsBadge />
-          </div>
-        )}
+        {/* Créditos à esquerda, campainha à direita, mesma linha. O wrapper
+            vazio é proposital: PointsBadge devolve null enquanto não carrega, e
+            sem ele o justify-between jogaria a campainha pra esquerda. */}
+        <div
+          className={`flex items-center gap-2 ${collapsed ? "justify-center" : "justify-between"}`}
+        >
+          {!collapsed && (
+            <div className="min-w-0">
+              <PointsBadge />
+            </div>
+          )}
+          <NotificationBell collapsed={collapsed} />
+        </div>
         {!collapsed && !loading && (
           <div>
             <p className="text-xs text-muted-foreground">{PLAN_LABELS[plan]}</p>
@@ -85,9 +93,6 @@ export function DashboardSidebar() {
             )}
           </div>
         )}
-        <div className={collapsed ? "flex justify-center" : ""}>
-          <NotificationBell collapsed={collapsed} openUpward />
-        </div>
         <UserMenu collapsed={collapsed} />
       </div>
     </aside>
