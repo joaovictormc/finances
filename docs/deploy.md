@@ -110,7 +110,34 @@ free tier do EAS demoram uns 10-20 min (fila compartilhada); dá pra rodar
 `eas build --profile preview --local` se quiser compilar na sua própria
 máquina em vez de esperar a fila (exige Android Studio/SDK instalado).
 
-### A.4 — Atualizar sem recompilar (opcional, EAS Update)
+### A.4 — Credenciais de push (uma vez por projeto)
+
+O push do celular passa pelo **Expo Push Service**: a API guarda o
+`ExponentPushToken[...]` de cada aparelho (tabela `push_tokens`) e manda o aviso
+pra `exp.host`. Quem fala com Google e Apple é a Expo — a API **não** tem
+credencial de push nenhuma, e não precisa ter.
+
+O que precisa existir é a credencial do **build**, gerenciada pelo EAS:
+
+```bash
+# Android: cria/associa a chave FCM V1 do projeto
+eas credentials --platform android
+
+# iOS: chave APNs (exige conta paga do Apple Developer)
+eas credentials --platform ios
+```
+
+Dois pontos que costumam morder:
+
+- **Push não funciona no Expo Go** desde o SDK 53 no Android. Precisa de build
+  de desenvolvimento (`expo-dev-client`, já é dependência) ou build de produção.
+- **Emulador não recebe push.** O `registerPushToken()` desiste cedo quando
+  `Device.isDevice` é falso, de propósito — teste em aparelho real.
+
+Sem essas credenciais o app continua funcionando: a central de notificações
+dentro do app é alimentada pela API e não depende de push.
+
+### A.5 — Atualizar sem recompilar (opcional, EAS Update)
 
 Se quiser aplicar ajustes de JS/TSX sem gerar um novo APK a cada vez,
 `expo-updates` + `eas update` publica a atualização OTA pro app já

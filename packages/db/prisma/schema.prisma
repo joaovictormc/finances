@@ -42,6 +42,7 @@ model User {
   recurringBills  RecurringBill[]
   ofConsents      OpenFinanceConsent[]
   notifications   Notification[]
+  pushTokens      PushToken[]
   aiInsights      AiInsight[]
   subscription    Subscription?
   referralCode    ReferralCode?
@@ -433,6 +434,25 @@ model Notification {
 
   @@index([userId, status])
   @@map("notifications")
+}
+
+// Token de push do aparelho (Expo). Um usuário pode ter vários — um por
+// dispositivo —, por isso é tabela e não coluna no perfil. O token é do Expo
+// Push Service, não do FCM/APNs direto: quem fala com Google/Apple é a Expo.
+model PushToken {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token      String  @unique // ExponentPushToken[...]
+  platform   String // ios | android
+  deviceName String?
+
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("push_tokens")
 }
 
 model AiInsight {

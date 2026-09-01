@@ -2,6 +2,7 @@ import { View, Text, Pressable, ScrollView } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { signOut } from "@/lib/auth-client";
+import { unregisterCurrentPushToken } from "@/lib/push";
 import { Screen } from "@/components/screen";
 import { useTheme, type ThemePreference } from "@/lib/theme";
 
@@ -82,7 +83,12 @@ export default function MoreScreen() {
         </View>
 
         <Pressable
-          onPress={() => signOut()}
+          onPress={async () => {
+            // Antes do signOut: depois dele a chamada iria sem sessão e o
+            // aparelho continuaria recebendo aviso da conta que saiu.
+            await unregisterCurrentPushToken();
+            void signOut();
+          }}
           className="flex-row items-center justify-center gap-2 rounded-2xl border border-border bg-card py-3.5 dark:border-border-dark dark:bg-card-dark"
         >
           <Ionicons name="log-out-outline" size={18} color={colors.destructive} />

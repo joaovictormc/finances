@@ -12,8 +12,11 @@ import { useEffect } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { View, ActivityIndicator } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import * as Notifications from "expo-notifications";
 import { useSession } from "@/lib/auth-client";
 import { ThemeProvider, useTheme } from "@/lib/theme";
+import { registerPushToken } from "@/lib/push";
+import { routeFromPushData } from "@/lib/notification-links";
 
 function RootNavigator() {
   const { data: session, isPending } = useSession();
@@ -31,6 +34,21 @@ function RootNavigator() {
       router.replace("/(tabs)");
     }
   }, [session, isPending, segments, router]);
+
+  // Registra o aparelho pra push e trata o toque no aviso. Depende da sessão:
+  // o token é gravado por usuário, então registrar antes do login o atribuiria
+  // à conta errada.
+  useEffect(() => {
+    if (!session) return;
+    void registerPushToken();
+
+    // Tocar no aviso abre a tela do assunto, não só o app.
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const route = routeFromPushData(response.notification.request.content.data);
+      if (route) router.push(route as never);
+    });
+    return () => subscription.remove();
+  }, [session, router]);
 
   if (isPending) {
     return (
@@ -95,6 +113,10 @@ function RootNavigator() {
         <Stack.Screen
           name="assistant-agents"
           options={{ ...stackHeaderOptions, title: "Agentes" }}
+        />
+        <Stack.Screen
+          name="notifications"
+          options={{ ...stackHeaderOptions, title: "Notificações" }}
         />
         <Stack.Screen name="settings" options={{ ...stackHeaderOptions, title: "Configurações" }} />
         <Stack.Screen name="billing" options={{ ...stackHeaderOptions, title: "Planos e Assinatura" }} />

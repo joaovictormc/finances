@@ -7,9 +7,11 @@ const dbMock = vi.hoisted(() => ({
   notification: { create: vi.fn(), update: vi.fn() },
 }));
 const sendEmailMock = vi.hoisted(() => vi.fn());
+const sendPushMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@finances/db", () => ({ db: dbMock, Prisma: {} }));
 vi.mock("./email", () => ({ sendEmail: sendEmailMock }));
+vi.mock("./push", () => ({ sendPushToUser: sendPushMock }));
 
 import { sendNotification } from "./notifications";
 
@@ -33,6 +35,7 @@ beforeEach(() => {
   dbMock.notification.create.mockReset();
   dbMock.notification.update.mockReset();
   sendEmailMock.mockReset();
+  sendPushMock.mockReset();
 
   dbMock.notification.create.mockResolvedValue({ id: "n1" });
   dbMock.user.findUnique.mockResolvedValue({ email: "pessoa@exemplo.com", name: "Fulano" });
@@ -90,6 +93,18 @@ describe("sendNotification", () => {
     expect(dbMock.notification.create).toHaveBeenCalledOnce();
     const update = dbMock.notification.update.mock.calls.at(-1);
     expect((update?.[0] as { data: { error: string } }).data.error).toContain("Brevo fora do ar");
+  });
+
+  it("manda push com o destino junto, mesmo com e-mail desligado", async () => {
+    // Push e e-mail são canais independentes: desligar um não pode calar o outro.
+    dbMock.userProfile.findUnique.mockResolvedValue({ notifyEmail: false, aiInsightsEnabled: true });
+
+    await sendNotification("u1", { ...aviso, link: "/admin/checkouts" });
+
+    expect(sendPushMock).toHaveBeenCalledOnce();
+    const [userId, payload] = sendPushMock.mock.calls[0] as [string, { data: { link?: string } }];
+    expect(userId).toBe("u1");
+    expect(payload.data.link).toBe("/admin/checkouts");
   });
 
   it("guarda o destino do clique junto do resto do metadata", async () => {

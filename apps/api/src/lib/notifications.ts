@@ -1,5 +1,6 @@
 import { db, Prisma } from "@finances/db";
 import { sendEmail } from "./email";
+import { sendPushToUser } from "./push";
 
 export type NotificationInput = {
   type: string; // bill_reminder | budget_alert | overdraft_warning | sync_complete | new_transaction | insight_ready | goal_milestone | pix_checkout_pending
@@ -56,6 +57,14 @@ export async function sendNotification(userId: string, input: NotificationInput)
       status: "sent",
       sentAt: new Date(),
     },
+  });
+
+  // Push no celular. Vai o link junto, pra que tocar na notificação abra a
+  // tela do assunto em vez de só o app. Nunca lança — ver lib/push.ts.
+  await sendPushToUser(userId, {
+    title: input.title,
+    body: input.body,
+    data: { notificationId: notification.id, ...(input.link && { link: input.link }) },
   });
 
   // E-mail é entrega adicional. Falhar aqui não apaga o aviso in-app — só fica
