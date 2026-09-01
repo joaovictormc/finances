@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, Bell, CheckCheck } from "lucide-react";
+import { ArrowUpRight, Bell, CheckCheck, Trash2 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast-provider";
+import { useConfirm } from "@/components/ui/confirm-provider";
 
 type Notification = {
   id: string;
@@ -112,6 +113,7 @@ function panelStyle(anchor: DOMRect): CSSProperties {
 
 export function NotificationBell({ collapsed = false }: { collapsed?: boolean }) {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const router = useRouter();
   const [items, setItems] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
@@ -219,6 +221,30 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
     }
   }
 
+  async function clearAll() {
+    // Fecha o painel antes de perguntar: o diálogo fica fora dele, e o
+    // clique-fora fecharia o painel no meio da pergunta de qualquer jeito.
+    setOpen(false);
+
+    const confirmed = await confirm({
+      title: "Limpar notificações",
+      description: `Isso apaga as ${items.length} notificações da sua lista, inclusive as não lidas. Não dá pra desfazer.`,
+      confirmLabel: "Limpar tudo",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
+
+    setItems([]);
+    setUnread(0);
+    // `seenIds` fica como está de propósito: zerar faria o próximo ciclo tratar
+    // como novidade tudo que voltasse caso a exclusão falhasse no servidor.
+    try {
+      await api.delete<{ count: number }>("/api/notifications");
+    } catch {
+      void load();
+    }
+  }
+
   function handleItemClick(item: Notification) {
     if (!item.readAt) void markRead(item.id);
 
@@ -248,16 +274,29 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
           >
             <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-3 py-2">
               <span className="text-sm font-semibold text-foreground">Notificações</span>
-              {unread > 0 && (
-                <button
-                  type="button"
-                  onClick={markAll}
-                  className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <CheckCheck size={13} />
-                  Marcar todas
-                </button>
-              )}
+              <span className="flex items-center gap-1">
+                {unread > 0 && (
+                  <button
+                    type="button"
+                    onClick={markAll}
+                    className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  >
+                    <CheckCheck size={13} />
+                    Marcar todas
+                  </button>
+                )}
+                {items.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearAll}
+                    title="Limpar todas as notificações"
+                    aria-label="Limpar todas as notificações"
+                    className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </span>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto">

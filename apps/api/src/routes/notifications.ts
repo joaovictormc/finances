@@ -33,6 +33,13 @@ app.get("/", async (c) => {
   return c.json({ items, unread });
 });
 
+/** Apaga o histórico inteiro do usuário — inclusive o que não foi lido. */
+app.delete("/", async (c) => {
+  const userId = c.get("userId");
+  const { count } = await db.notification.deleteMany({ where: { userId } });
+  return c.json({ count });
+});
+
 app.post("/read-all", async (c) => {
   const userId = c.get("userId");
   const { count } = await db.notification.updateMany({
