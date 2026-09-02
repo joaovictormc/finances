@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { View, Text, Pressable, Modal } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api-client";
 import { useTheme } from "@/lib/theme";
@@ -44,12 +44,23 @@ export function GamificationCard() {
   // animação terminar, pra revelação bater com o desenho da roleta.
   const pendingResult = useRef<SpinApiResult | null>(null);
 
-  useEffect(() => {
-    api
-      .get<GamificationProfile>("/api/gamification/profile")
-      .then(setProfile)
-      .catch(() => setProfile(null));
-  }, []);
+  // No foco, não na montagem: a aba de visão geral fica montada, então comprar
+  // um giro em /rewards e voltar não remontaria este card — pontos e barra de
+  // progresso ficariam parados no valor de antes.
+  useFocusEffect(
+    useCallback(() => {
+      // Um giro já confirmado pelo servidor mas ainda girando na tela tem o
+      // resultado guardado em pendingResult; recarregar aqui aplicaria os
+      // pontos novos antes da roleta parar e estragaria a revelação.
+      if (pendingResult.current) return;
+      void api
+        .get<GamificationProfile>("/api/gamification/profile")
+        .then(setProfile)
+        // Mantém o último perfil: rodando a cada foco, zerar aqui faria o card
+        // inteiro sumir por causa de uma falha momentânea de rede.
+        .catch(() => {});
+    }, []),
+  );
 
   if (!profile) return null;
 

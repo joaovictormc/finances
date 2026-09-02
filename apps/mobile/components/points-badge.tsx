@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Pressable, Text } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api-client";
 import { useTheme } from "@/lib/theme";
@@ -10,12 +10,19 @@ export function PointsBadge() {
   const { colors } = useTheme();
   const [points, setPoints] = useState<number | null>(null);
 
-  useEffect(() => {
-    api
-      .get<{ points: number }>("/api/gamification/profile")
-      .then((p) => setPoints(p.points))
-      .catch(() => setPoints(null));
-  }, []);
+  // No foco, não na montagem: a aba de visão geral fica montada, então voltar
+  // de /rewards depois de gastar pontos não remontaria este componente — e o
+  // saldo continuaria mostrando o valor de antes da compra.
+  useFocusEffect(
+    useCallback(() => {
+      void api
+        .get<{ points: number }>("/api/gamification/profile")
+        .then((p) => setPoints(p.points))
+        // Mantém o último valor: rodando a cada foco, zerar aqui faria o badge
+        // sumir da tela por causa de uma falha momentânea de rede.
+        .catch(() => {});
+    }, []),
+  );
 
   if (points === null) return null;
 
