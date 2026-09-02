@@ -31,14 +31,21 @@ function progressToNextLevel(points: number, level: number): number {
   return Math.min(Math.max((points - floor) / (ceil - floor), 0), 1);
 }
 
-type SpinApiResult = { prizeLabel: string; prizePoints: number; points: number; level: number };
+type SpinApiResult = {
+  prizeLabel: string;
+  /** Frase pronta vinda da API: "+30 dias de Pro" ou "+50 pontos". */
+  prizeSummary: string;
+  prizePoints: number;
+  points: number;
+  level: number;
+};
 
 export function GamificationCard() {
   const [profile, setProfile] = useState<GamificationProfile | null>(null);
   const [spinning, setSpinning] = useState(false);
   const [wheelTargetIndex, setWheelTargetIndex] = useState<number | null>(null);
   const [spinToken, setSpinToken] = useState(0);
-  const [prizeResult, setPrizeResult] = useState<{ label: string; points: number } | null>(null);
+  const [prizeResult, setPrizeResult] = useState<{ label: string; summary: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Guarda o resultado já confirmado pelo servidor enquanto a roleta ainda está
   // girando visualmente — só aplica no state (pontos/nível/modal) quando a
@@ -73,7 +80,7 @@ export function GamificationCard() {
     const result = pendingResult.current;
     if (!result) return;
     pendingResult.current = null;
-    setPrizeResult({ label: result.prizeLabel, points: result.prizePoints });
+    setPrizeResult({ label: result.prizeLabel, summary: result.prizeSummary });
     setProfile((prev) => (prev ? { ...prev, points: result.points, level: result.level, canSpin: false } : prev));
     setSpinning(false);
   };
@@ -146,7 +153,7 @@ export function GamificationCard() {
             <ConfettiBurst />
             <Sparkles size={32} className="mx-auto text-primary mb-3" />
             <p className="text-lg font-bold text-foreground">{prizeResult.label}</p>
-            <p className="text-sm text-muted-foreground mt-1">+{prizeResult.points} pontos! Volta semana que vem pra girar de novo.</p>
+            <p className="text-sm text-muted-foreground mt-1">{prizeResult.summary}! Volta semana que vem pra girar de novo.</p>
             <button
               onClick={() => setPrizeResult(null)}
               className="mt-5 w-full rounded-xl bg-primary text-primary-foreground text-sm font-medium py-2.5 hover:opacity-90 transition-opacity"

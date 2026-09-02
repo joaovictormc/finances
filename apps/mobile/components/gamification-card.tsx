@@ -29,7 +29,14 @@ function progressToNextLevel(points: number, level: number): number {
   return Math.min(Math.max((points - floor) / (ceil - floor), 0), 1);
 }
 
-type SpinApiResult = { prizeLabel: string; prizePoints: number; points: number; level: number };
+type SpinApiResult = {
+  prizeLabel: string;
+  /** Frase pronta vinda da API: "+30 dias de Pro" ou "+50 pontos". */
+  prizeSummary: string;
+  prizePoints: number;
+  points: number;
+  level: number;
+};
 
 export function GamificationCard() {
   const { colors } = useTheme();
@@ -37,7 +44,7 @@ export function GamificationCard() {
   const [spinning, setSpinning] = useState(false);
   const [wheelTargetIndex, setWheelTargetIndex] = useState<number | null>(null);
   const [spinToken, setSpinToken] = useState(0);
-  const [prize, setPrize] = useState<{ label: string; points: number } | null>(null);
+  const [prize, setPrize] = useState<{ label: string; summary: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Guarda o resultado já confirmado pelo servidor enquanto a roleta ainda está
   // girando visualmente — só aplica no state (pontos/nível/modal) quando a
@@ -83,7 +90,7 @@ export function GamificationCard() {
     const result = pendingResult.current;
     if (!result) return;
     pendingResult.current = null;
-    setPrize({ label: result.prizeLabel, points: result.prizePoints });
+    setPrize({ label: result.prizeLabel, summary: result.prizeSummary });
     setProfile((prev) => (prev ? { ...prev, points: result.points, level: result.level, canSpin: false } : prev));
     setSpinning(false);
   };
@@ -160,7 +167,7 @@ export function GamificationCard() {
               {prize?.label}
             </Text>
             <Text className="mt-1 text-center text-sm text-muted-foreground dark:text-muted-foreground-dark">
-              +{prize?.points} pontos! Volta semana que vem pra girar de novo.
+              {prize?.summary}! Volta semana que vem pra girar de novo.
             </Text>
             <Pressable
               onPress={() => setPrize(null)}

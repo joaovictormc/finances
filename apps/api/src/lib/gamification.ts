@@ -1,5 +1,9 @@
 import { db } from "@finances/db";
 import { getGamificationSettings, DEFAULT_SPIN_PRIZES, type SpinPrize } from "./gamification-settings";
+import { grantPlanDays, type PlanGrantDecision } from "./plan-grant";
+import { PLANS } from "./plans";
+import { sendNotification } from "./notifications";
+import { describePrize } from "./prize-description";
 
 /**
  * Sorteia um prêmio ponderado pelo `weight` de cada um (não confia em RNG do
@@ -140,8 +144,24 @@ export async function awardDailyPoints(userId: string, transactionDate: Date): P
   }
 }
 
+
+/** Campos comuns ao giro grátis e ao comprado. */
+type SpinAward = {
+  prizeLabel: string;
+  prizeType: "points" | "plan_days";
+  /** Pontos somados — sempre 0 num prêmio de dias de plano. */
+  prizePoints: number;
+  /** Dias de plano concedidos — sempre 0 num prêmio de pontos. */
+  prizeDays: number;
+  /** Frase pronta: "+30 dias de Pro" ou "+50 pontos". */
+  prizeSummary: string;
+  /** Saldo e nível já atualizados. */
+  points: number;
+  level: number;
+};
+
 type SpinResult =
-  | { ok: true; prizeLabel: string; prizePoints: number; points: number; level: number }
+  | ({ ok: true } & SpinAward)
   | { ok: false; reason: "streak_insufficiente" | "ja_girou_essa_semana" | "perfil_nao_encontrado" };
 
 function startOfIsoWeekUTC(date: Date): Date {
@@ -170,7 +190,10 @@ export async function rollWeeklySpin(userId: string): Promise<SpinResult> {
   const settings = await getGamificationSettings();
   const spinPrizes = settings.spinPrizes.length > 0 ? settings.spinPrizes : DEFAULT_SPIN_PRIZES;
   const prize = pickWeightedPrize(spinPrizes);
-  const points = profile.points + prize.points;
+  await applyPlanDaysPrize(userId, prize);
+
+  const prizePoints = prize.type === "points" ? prize.points : 0;
+  const points = profile.points + prizePoints;
 
   const updated = await db.gamificationProfile.update({
     where: { userId },
@@ -179,14 +202,59 @@ export async function rollWeeklySpin(userId: string): Promise<SpinResult> {
 
   await logSpin(userId, prize, "weekly");
 
-  return { ok: true, prizeLabel: prize.label, prizePoints: prize.points, points: updated.points, level: updated.level };
+  return {
+    ok: true,
+    prizeLabel: prize.label,
+    prizeType: prize.type,
+    prizePoints,
+    prizeDays: prize.days,
+    prizeSummary: describePrize(prize),
+    points: updated.points,
+    level: updated.level,
+  };
+}
+
+/**
+ * Aplica a parte de plano do prêmio, quando houver.
+ *
+ * Chamada ANTES de marcar o giro como usado: se a concessão falhar, o usuário
+ * não perde o giro da semana nem os pontos gastos, e pode tentar de novo. Na
+ * ordem inversa ele veria o confete e não receberia nada — exatamente o que o
+ * tipo de prêmio existe pra impedir.
+ */
+async function applyPlanDaysPrize(userId: string, prize: SpinPrize): Promise<PlanGrantDecision | null> {
+  if (prize.type !== "plan_days") return null;
+
+  const decision = await grantPlanDays(userId, { days: prize.days, plan: prize.plan });
+  if (decision.action !== "grant") return decision;
+
+  try {
+    await sendNotification(userId, {
+      type: "spin_plan_days",
+      link: "/settings/billing",
+      title: `Você ganhou ${prize.days} dias de ${PLANS[decision.plan].name}! 🎉`,
+      body: `Seu acesso ao plano ${PLANS[decision.plan].name} vale até ${decision.currentPeriodEnd.toLocaleDateString("pt-BR")}.`,
+    });
+  } catch (err) {
+    // O prêmio já está concedido; falhar o giro por causa do aviso seria pior.
+    console.error("[gamification] falha ao avisar sobre dias de plano do prêmio:", err);
+  }
+
+  return decision;
 }
 
 /** Registra o resultado de um giro real (grátis ou comprado) — nunca deixa o giro falhar por causa do log. */
 async function logSpin(userId: string, prize: SpinPrize, source: "weekly" | "purchased"): Promise<void> {
   try {
     await db.gamificationSpinLog.create({
-      data: { userId, prizeLabel: prize.label, prizePoints: prize.points, source },
+      data: {
+        userId,
+        prizeLabel: prize.label,
+        prizePoints: prize.points,
+        prizeType: prize.type,
+        prizeDays: prize.days,
+        source,
+      },
     });
   } catch (err) {
     console.error("[gamification] falha ao registrar log de giro:", err);
@@ -199,7 +267,7 @@ async function logSpin(userId: string, prize: SpinPrize, source: "weekly" | "pur
 export const EXTRA_SPIN_COST = 50;
 
 type BuySpinResult =
-  | { ok: true; prizeLabel: string; prizePoints: number; points: number; level: number }
+  | ({ ok: true } & SpinAward)
   | { ok: false; reason: "pontos_insuficientes" | "perfil_nao_encontrado" };
 
 /** Compra um giro avulso com pontos — não mexe em streak/lastSpinAt (giro grátis semanal continua intacto). */
@@ -211,7 +279,10 @@ export async function buyExtraSpin(userId: string): Promise<BuySpinResult> {
   const settings = await getGamificationSettings();
   const spinPrizes = settings.spinPrizes.length > 0 ? settings.spinPrizes : DEFAULT_SPIN_PRIZES;
   const prize = pickWeightedPrize(spinPrizes);
-  const points = profile.points - EXTRA_SPIN_COST + prize.points;
+  await applyPlanDaysPrize(userId, prize);
+
+  const prizePoints = prize.type === "points" ? prize.points : 0;
+  const points = profile.points - EXTRA_SPIN_COST + prizePoints;
 
   const updated = await db.gamificationProfile.update({
     where: { userId },
@@ -220,17 +291,42 @@ export async function buyExtraSpin(userId: string): Promise<BuySpinResult> {
 
   await logSpin(userId, prize, "purchased");
 
-  return { ok: true, prizeLabel: prize.label, prizePoints: prize.points, points: updated.points, level: updated.level };
+  return {
+    ok: true,
+    prizeLabel: prize.label,
+    prizeType: prize.type,
+    prizePoints,
+    prizeDays: prize.days,
+    prizeSummary: describePrize(prize),
+    points: updated.points,
+    level: updated.level,
+  };
 }
 
 /** Últimos N giros reais do usuário (para exibir em /rewards). */
 export async function getSpinHistory(userId: string, limit = 10) {
-  return db.gamificationSpinLog.findMany({
+  const entries = await db.gamificationSpinLog.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
     take: limit,
-    select: { prizeLabel: true, prizePoints: true, source: true, createdAt: true },
+    select: {
+      prizeLabel: true,
+      prizePoints: true,
+      prizeType: true,
+      prizeDays: true,
+      source: true,
+      createdAt: true,
+    },
   });
+
+  return entries.map((entry) => ({
+    ...entry,
+    summary: describePrize({
+      type: entry.prizeType,
+      points: entry.prizePoints,
+      days: entry.prizeDays,
+    }),
+  }));
 }
 
 // ── Estatísticas reais de uso (admin) ─────────────────────────────────────────

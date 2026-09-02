@@ -195,6 +195,7 @@ GET   /api/admin/payment-methods                    lista Mercado Pago/Pix com s
 PATCH /api/admin/payment-methods/:id   { enabled?, config? }
 
 GET   /api/admin/plan-prices                        preço de cada plano × período (a tabela se preenche sozinha na 1ª leitura)
+PATCH /api/admin/gamification/settings   { spinPrizes: [{ label, type: "points"|"plan_days", points, days, plan, weight }] }   `days` limitado a 365
 PATCH /api/admin/plan-prices   { prices: [{ plan, interval, priceCents, active }] }   não altera quem já assina
 
 GET   /api/admin/ai/settings

@@ -27,9 +27,22 @@ const LEVEL_THRESHOLDS = [0, 50, 150, 300, 500, 800, 1200, 1700, 2300, 3000];
 type BadgeInfo = { slug: string; label: string; icon: string; cost: number };
 type BadgesResponse = { catalog: BadgeInfo[]; unlockedBadges: string[]; activeBadge: string | null; points: number };
 
-type SpinApiResult = { prizeLabel: string; prizePoints: number; points: number; level: number };
+type SpinApiResult = {
+  prizeLabel: string;
+  /** Frase pronta vinda da API: "+30 dias de Pro" ou "+50 pontos". */
+  prizeSummary: string;
+  prizePoints: number;
+  points: number;
+  level: number;
+};
 
-type SpinHistoryEntry = { prizeLabel: string; prizePoints: number; source: "weekly" | "purchased"; createdAt: string };
+type SpinHistoryEntry = {
+  prizeLabel: string;
+  /** Frase pronta do que aquele giro entregou. */
+  summary: string;
+  source: "weekly" | "purchased";
+  createdAt: string;
+};
 
 const SOURCE_LABELS: Record<SpinHistoryEntry["source"], string> = {
   weekly: "Giro grátis",
@@ -45,7 +58,7 @@ export default function RewardsPage() {
   const [buying, setBuying] = useState(false);
   const [wheelTargetIndex, setWheelTargetIndex] = useState<number | null>(null);
   const [spinToken, setSpinToken] = useState(0);
-  const [prizeResult, setPrizeResult] = useState<{ label: string; points: number } | null>(null);
+  const [prizeResult, setPrizeResult] = useState<{ label: string; summary: string } | null>(null);
   const pendingResult = useRef<SpinApiResult | null>(null);
 
   const [redeemingSlug, setRedeemingSlug] = useState<string | null>(null);
@@ -99,7 +112,7 @@ export default function RewardsPage() {
     const result = pendingResult.current;
     if (!result) return;
     pendingResult.current = null;
-    setPrizeResult({ label: result.prizeLabel, points: result.prizePoints });
+    setPrizeResult({ label: result.prizeLabel, summary: result.prizeSummary });
     setProfile((prev) => (prev ? { ...prev, points: result.points } : prev));
     setBadgesData((prev) => (prev ? { ...prev, points: result.points } : prev));
     setBuying(false);
@@ -262,7 +275,7 @@ export default function RewardsPage() {
                     {SOURCE_LABELS[h.source]} · {new Date(h.createdAt).toLocaleDateString("pt-BR")}
                   </p>
                 </div>
-                <span className="shrink-0 ml-2 font-medium text-foreground">+{h.prizePoints}</span>
+                <span className="shrink-0 ml-2 font-medium text-foreground">{h.summary}</span>
               </div>
             ))}
           </div>
@@ -281,7 +294,7 @@ export default function RewardsPage() {
             <ConfettiBurst />
             <Sparkles size={32} className="mx-auto text-primary mb-3" />
             <p className="text-lg font-bold text-foreground">{prizeResult.label}</p>
-            <p className="text-sm text-muted-foreground mt-1">+{prizeResult.points} pontos!</p>
+            <p className="text-sm text-muted-foreground mt-1">{prizeResult.summary}!</p>
             <button
               onClick={() => setPrizeResult(null)}
               className="mt-5 w-full rounded-xl bg-primary text-primary-foreground text-sm font-medium py-2.5 hover:opacity-90 transition-opacity"

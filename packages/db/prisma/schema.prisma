@@ -509,6 +509,12 @@ model GamificationSpinLog {
 
   prizeLabel  String
   prizePoints Int
+
+  /// O que o prêmio entregou: points | plan_days. Sem isso o histórico de um
+  /// prêmio "30 dias de Pro" apareceria como 0 pontos, sem dizer o que foi dado.
+  prizeType String @default("points")
+  prizeDays Int    @default(0)
+
   source      String // "weekly" (giro grátis semanal) | "purchased" (giro avulso comprado com pontos)
 
   createdAt DateTime @default(now())
@@ -616,9 +622,13 @@ model AiSettings {
 model GamificationSettings {
   id String @id @default("singleton") // linha única de configuração global
 
-  /// Array de { label: string; points: number; weight: number } — cada entrada é um
-  /// prêmio sorteável na Roleta Semanal, com rótulo livre (ex: "Cupom de desconto"),
-  /// os pontos aplicados, e o peso relativo no sorteio (chance = weight / soma dos weights).
+  /// Array de { label, type, points, days, plan, weight } — cada entrada é um prêmio
+  /// sorteável na Roleta Semanal, com o peso relativo no sorteio (chance = weight /
+  /// soma dos weights).
+  ///
+  /// `type` decide o que é entregue: "points" soma `points` no perfil; "plan_days"
+  /// soma `days` de assinatura do `plan` indicado. Os dois são aplicados na hora,
+  /// sem fila de resgate — o rótulo não pode prometer o que o sistema não entrega.
   spinPrizes Json @default("[{\"label\":\"10 pontos\",\"points\":10,\"weight\":1},{\"label\":\"20 pontos\",\"points\":20,\"weight\":1},{\"label\":\"30 pontos\",\"points\":30,\"weight\":1},{\"label\":\"50 pontos\",\"points\":50,\"weight\":1},{\"label\":\"100 pontos\",\"points\":100,\"weight\":1}]")
 
   updatedAt DateTime @updatedAt

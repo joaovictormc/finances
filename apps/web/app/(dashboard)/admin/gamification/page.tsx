@@ -5,14 +5,35 @@ import { Plus, X, FlaskConical, Sparkles, BarChart3 } from "lucide-react";
 import { BackButton } from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { SpinWheel } from "@/components/ui/spin-wheel";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 
-type SpinPrize = { label: string; points: number; weight: number };
+type SpinPrizeType = "points" | "plan_days";
+type PrizePlan = "pro" | "familia";
+
+type SpinPrize = {
+  label: string;
+  type: SpinPrizeType;
+  points: number;
+  days: number;
+  plan: PrizePlan;
+  weight: number;
+};
 type GamificationSettings = { spinPrizes: SpinPrize[] };
+
+const TYPE_OPTIONS = [
+  { value: "points", label: "Pontos" },
+  { value: "plan_days", label: "Dias de plano" },
+];
+
+const PLAN_OPTIONS = [
+  { value: "pro", label: "Pro" },
+  { value: "familia", label: "Família" },
+];
 
 type SimulationResult = {
   label: string;
@@ -23,9 +44,27 @@ type SimulationResult = {
   observedProbability: number;
 };
 
-// Estado do formulário mantém `points`/`weight` como string pra digitação livre
+// Estado do formulário mantém os números como string pra digitação livre
 // (apagar, colar, redigitar) — só vira número na hora de salvar.
-type PrizeDraft = { label: string; points: string; weight: string };
+type PrizeDraft = {
+  label: string;
+  type: SpinPrizeType;
+  points: string;
+  days: string;
+  plan: PrizePlan;
+  weight: string;
+};
+
+function toDraft(prize: SpinPrize): PrizeDraft {
+  return {
+    label: prize.label,
+    type: prize.type,
+    points: String(prize.points),
+    days: String(prize.days),
+    plan: prize.plan,
+    weight: String(prize.weight),
+  };
+}
 
 type GamificationStats = {
   activeUsers: number;
@@ -37,6 +76,13 @@ type GamificationStats = {
 };
 
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
+
+/** O que o prêmio entrega, em uma linha — usado no resultado do teste da roleta. */
+function prizeSummary(prize: SpinPrize): string {
+  if (prize.type !== "plan_days") return `+${prize.points} pontos`;
+  const planName = prize.plan === "familia" ? "Família" : "Pro";
+  return `+${prize.days} ${prize.days === 1 ? "dia" : "dias"} de ${planName}`;
+}
 
 export default function AdminGamificationPage() {
   const { toast } = useToast();
@@ -63,7 +109,7 @@ export default function AdminGamificationPage() {
     setIsLoading(true);
     try {
       const settings = await api.get<GamificationSettings>("/api/admin/gamification/settings");
-      setPrizes(settings.spinPrizes.map((p) => ({ label: p.label, points: String(p.points), weight: String(p.weight) })));
+      setPrizes(settings.spinPrizes.map(toDraft));
       setSavedPrizes(settings.spinPrizes);
     } catch {
       toast({ title: "Erro ao carregar prêmios da roleta", variant: "error" });
@@ -112,6 +158,18 @@ export default function AdminGamificationPage() {
     clearInvalid(index);
   }
 
+  function updateField(index: number, patch: Partial<PrizeDraft>) {
+    if (!prizes) return;
+    const next = [...prizes];
+    next[index] = { ...next[index]!, ...patch };
+    setPrizes(next);
+    clearInvalid(index);
+  }
+
+  function updateDays(index: number, value: string) {
+    updateField(index, { days: value.replace(/D/g, "") });
+  }
+
   function updateWeight(index: number, value: string) {
     if (!prizes) return;
     const digitsOnly = value.replace(/\D/g, "");
@@ -129,7 +187,7 @@ export default function AdminGamificationPage() {
   function addPrize() {
     if (!prizes) return;
     if (prizes.length >= 10) return;
-    setPrizes([...prizes, { label: "", points: "10", weight: "1" }]);
+    setPrizes([...prizes, { label: "", type: "points", points: "10", days: "30", plan: "pro", weight: "1" }]);
   }
 
   // Probabilidade configurada calculada ao vivo, só pra dar feedback visual
@@ -150,18 +208,31 @@ export default function AdminGamificationPage() {
     const invalid = new Set<number>();
     const parsed: SpinPrize[] = prizes.map((p, i) => {
       const label = p.label.trim();
-      const points = Number(p.points.trim());
       const weight = Number(p.weight.trim());
-      if (!label || !Number.isFinite(points) || points <= 0 || !Number.isFinite(weight) || weight <= 0) {
+      const isPlanDays = p.type === "plan_days";
+      // O campo cobrado é o do tipo escolhido: prêmio de dias não precisa de
+      // pontos, e vice-versa.
+      const points = isPlanDays ? 0 : Number(p.points.trim());
+      const days = isPlanDays ? Number(p.days.trim()) : 0;
+      const amount = isPlanDays ? days : points;
+
+      if (
+        !label ||
+        !Number.isFinite(amount) ||
+        amount <= 0 ||
+        (isPlanDays && days > 365) ||
+        !Number.isFinite(weight) ||
+        weight <= 0
+      ) {
         invalid.add(i);
       }
-      return { label, points, weight };
+      return { label, type: p.type, points, days, plan: p.plan, weight };
     });
     setInvalidIndexes(invalid);
     if (invalid.size > 0) {
       const positions = [...invalid].map((i) => i + 1).join(", ");
       toast({
-        title: `Prêmio inválido na posição ${positions} — preencha rótulo, pontos e peso (números maiores que zero)`,
+        title: `Prêmio inválido na posição ${positions} — preencha rótulo, peso e o valor do tipo escolhido (pontos, ou dias entre 1 e 365)`,
         variant: "error",
       });
       return;
@@ -172,7 +243,7 @@ export default function AdminGamificationPage() {
       const settings = await api.patch<GamificationSettings>("/api/admin/gamification/settings", {
         spinPrizes: parsed,
       });
-      setPrizes(settings.spinPrizes.map((p) => ({ label: p.label, points: String(p.points), weight: String(p.weight) })));
+      setPrizes(settings.spinPrizes.map(toDraft));
       setSavedPrizes(settings.spinPrizes);
       setSimulation(null); // resultados antigos não refletem mais a config atual
       setWheelResult(null);
@@ -256,10 +327,15 @@ export default function AdminGamificationPage() {
       <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
         <h2 className="text-base font-semibold mb-1">Prêmios</h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Cada usuário elegível (streak ≥ 7 dias) sorteia um destes prêmios por semana — o rótulo é
-          o que aparece pro usuário, os pontos são aplicados ao perfil, e o peso define a chance de
-          cair (não precisa somar 100 — é relativo aos outros pesos). O sorteio é sempre feito no
-          servidor.
+          Cada usuário elegível (streak ≥ 7 dias) sorteia um destes prêmios por semana. O rótulo é o
+          que aparece pro usuário e o peso define a chance de cair (não precisa somar 100 — é
+          relativo aos outros pesos). O sorteio é sempre feito no servidor.
+        </p>
+        <p className="text-sm text-muted-foreground mb-4">
+          O <strong className="text-foreground">tipo</strong> decide o que é entregue de verdade:
+          <em> Pontos</em> soma no perfil; <em>Dias de plano</em> soma dias de assinatura na hora,
+          sem resgate manual. Quem já tem um plano melhor recebe os dias no plano que já tem, e não
+          é rebaixado.
         </p>
 
         {/* Mesma estrutura aninhada (label + grupo) das linhas de dados abaixo —
@@ -267,15 +343,19 @@ export default function AdminGamificationPage() {
         <div className="hidden sm:flex items-center gap-2 mb-1.5 px-0.5">
           <span className="flex-[2] text-xs font-medium text-muted-foreground">Rótulo</span>
           <div className="flex items-center gap-2">
-            <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">Pontos</span>
-            <span className="w-20 shrink-0 text-xs font-medium text-muted-foreground">Peso</span>
+            <span className="w-32 shrink-0 text-xs font-medium text-muted-foreground">Tipo</span>
+            <span className="w-20 shrink-0 text-xs font-medium text-muted-foreground">Valor</span>
+            <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">Plano</span>
+            <span className="w-16 shrink-0 text-xs font-medium text-muted-foreground">Peso</span>
             <span className="w-12 shrink-0 text-xs font-medium text-muted-foreground text-right">Chance</span>
             <span className="w-9 shrink-0" />
           </div>
         </div>
 
         <div className="space-y-2">
-          {prizes.map((prize, i) => (
+          {prizes.map((prize, i) => {
+            const isPlanDays = prize.type === "plan_days";
+            return (
             <div
               key={i}
               className="flex flex-col gap-2 rounded-lg border border-border/40 p-2 sm:flex-row sm:items-center sm:border-0 sm:p-0"
@@ -283,24 +363,47 @@ export default function AdminGamificationPage() {
               <div className="sm:flex-[2]">
                 <Input
                   type="text"
-                  placeholder="ex: Cupom de desconto"
+                  placeholder="ex: 30 dias de Pro"
                   value={prize.label}
                   onChange={(e) => updateLabel(i, e.target.value)}
                   className={cn(invalidIndexes.has(i) && "border-destructive")}
                 />
               </div>
               <div className="flex items-center gap-2">
-                <div className="flex-1 sm:w-24 sm:shrink-0">
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="Pontos"
-                    value={prize.points}
-                    onChange={(e) => updatePoints(i, e.target.value)}
-                    className={cn(invalidIndexes.has(i) && "border-destructive")}
+                <div className="flex-1 sm:w-32 sm:shrink-0">
+                  <Select
+                    options={TYPE_OPTIONS}
+                    value={prize.type}
+                    onChange={(e) =>
+                      updateField(i, { type: e.target.value as SpinPrizeType })
+                    }
+                    className="w-full"
                   />
                 </div>
                 <div className="flex-1 sm:w-20 sm:shrink-0">
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder={isPlanDays ? "Dias" : "Pontos"}
+                    value={isPlanDays ? prize.days : prize.points}
+                    onChange={(e) =>
+                      isPlanDays ? updateDays(i, e.target.value) : updatePoints(i, e.target.value)
+                    }
+                    className={cn(invalidIndexes.has(i) && "border-destructive")}
+                  />
+                </div>
+                <div className="flex-1 sm:w-24 sm:shrink-0">
+                  {/* Só faz sentido num prêmio de dias — mantido no lugar (desabilitado)
+                      pra as colunas não dançarem ao trocar o tipo de uma linha. */}
+                  <Select
+                    options={PLAN_OPTIONS}
+                    value={prize.plan}
+                    disabled={!isPlanDays}
+                    onChange={(e) => updateField(i, { plan: e.target.value as PrizePlan })}
+                    className="w-full"
+                  />
+                </div>
+                <div className="flex-1 sm:w-16 sm:shrink-0">
                   <Input
                     type="text"
                     inputMode="numeric"
@@ -324,7 +427,8 @@ export default function AdminGamificationPage() {
                 </button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <button
@@ -366,7 +470,7 @@ export default function AdminGamificationPage() {
             </Button>
             {wheelResult && (
               <p className="text-sm text-foreground">
-                Caiu em <span className="font-semibold">{wheelResult.label}</span> (+{wheelResult.points} pontos)
+                Caiu em <span className="font-semibold">{wheelResult.label}</span> ({prizeSummary(wheelResult)})
               </p>
             )}
           </div>

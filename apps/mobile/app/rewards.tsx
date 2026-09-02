@@ -16,9 +16,22 @@ type Profile = {
 type BadgeInfo = { slug: string; label: string; icon: string; cost: number };
 type BadgesResponse = { catalog: BadgeInfo[]; unlockedBadges: string[]; activeBadge: string | null; points: number };
 
-type SpinApiResult = { prizeLabel: string; prizePoints: number; points: number; level: number };
+type SpinApiResult = {
+  prizeLabel: string;
+  /** Frase pronta vinda da API: "+30 dias de Pro" ou "+50 pontos". */
+  prizeSummary: string;
+  prizePoints: number;
+  points: number;
+  level: number;
+};
 
-type SpinHistoryEntry = { prizeLabel: string; prizePoints: number; source: "weekly" | "purchased"; createdAt: string };
+type SpinHistoryEntry = {
+  prizeLabel: string;
+  /** Frase pronta do que aquele giro entregou. */
+  summary: string;
+  source: "weekly" | "purchased";
+  createdAt: string;
+};
 
 const SOURCE_LABELS: Record<SpinHistoryEntry["source"], string> = {
   weekly: "Giro grátis",
@@ -34,7 +47,7 @@ export default function RewardsScreen() {
   const [buying, setBuying] = useState(false);
   const [wheelTargetIndex, setWheelTargetIndex] = useState<number | null>(null);
   const [spinToken, setSpinToken] = useState(0);
-  const [prizeResult, setPrizeResult] = useState<{ label: string; points: number } | null>(null);
+  const [prizeResult, setPrizeResult] = useState<{ label: string; summary: string } | null>(null);
   const pendingResult = useRef<SpinApiResult | null>(null);
   const [redeemingSlug, setRedeemingSlug] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +95,7 @@ export default function RewardsScreen() {
     const result = pendingResult.current;
     if (!result) return;
     pendingResult.current = null;
-    setPrizeResult({ label: result.prizeLabel, points: result.prizePoints });
+    setPrizeResult({ label: result.prizeLabel, summary: result.prizeSummary });
     setProfile((prev) => (prev ? { ...prev, points: result.points } : prev));
     setBadgesData((prev) => (prev ? { ...prev, points: result.points } : prev));
     setBuying(false);
@@ -248,7 +261,7 @@ export default function RewardsScreen() {
                   {SOURCE_LABELS[h.source]} · {new Date(h.createdAt).toLocaleDateString("pt-BR")}
                 </Text>
               </View>
-              <Text className="font-medium text-foreground dark:text-foreground-dark">+{h.prizePoints}</Text>
+              <Text className="font-medium text-foreground dark:text-foreground-dark">{h.summary}</Text>
             </View>
           ))}
         </View>
@@ -265,7 +278,7 @@ export default function RewardsScreen() {
               {prizeResult?.label}
             </Text>
             <Text className="mt-1 text-center text-sm text-muted-foreground dark:text-muted-foreground-dark">
-              +{prizeResult?.points} pontos!
+              {prizeResult?.summary}!
             </Text>
             <Pressable onPress={() => setPrizeResult(null)} className="mt-5 w-full rounded-xl bg-primary py-2.5">
               <Text className="text-center text-sm font-medium text-primary-foreground dark:text-primary-foreground-dark">

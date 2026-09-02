@@ -106,6 +106,7 @@ Legenda: ✅ Feito | 🔄 Em progresso | 📋 Planejado
 | Confirmação manual de Pix | ✅ | Botão "Confirmar pagamento" ativa o plano do usuário |
 | Configuração de métodos de pagamento | ✅ | `/admin/payment-methods` — grid Mercado Pago/Pix, segredos mascarados, auto-ativação ao completar campos |
 | Precificação dos planos (admin) | ✅ | `/admin/pricing` — preço de cada plano nos períodos mensal/semestral/anual, com desconto calculado; `PlanPrice` no banco, não mais fixo em código |
+| Prêmios da roleta com entrega real | ✅ | `SpinPrize.type`: `points` soma no perfil, `plan_days` soma dias de assinatura na hora (`grantPlanDays`). Sem fila de resgate — o rótulo não pode prometer o que o sistema não entrega. Nunca rebaixa quem já tem plano melhor, e não data acesso sem prazo |
 | Períodos de cobrança | ✅ | Mensal, semestral e anual — seletor na tela de planos (web e mobile); o período vira a recorrência do preapproval no Mercado Pago e o tamanho do ciclo no Pix |
 | Configuração de IA | ✅ | `/admin/ai` — modelo de texto/voz, kill-switches por feature, limite mensal de tokens, painel de uso |
 

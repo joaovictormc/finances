@@ -429,11 +429,35 @@ app.get("/gamification/settings", async (c) => {
 const GamificationSettingsSchema = z.object({
   spinPrizes: z
     .array(
-      z.object({
-        label: z.string().trim().min(1).max(60),
-        points: z.number().int().positive(),
-        weight: z.number().int().positive(),
-      })
+      z
+        .object({
+          label: z.string().trim().min(1).max(60),
+          type: z.enum(["points", "plan_days"]).default("points"),
+          // Zero é válido no campo que o tipo escolhido não usa; o refine
+          // abaixo é que cobra um valor útil no campo que importa.
+          points: z.number().int().min(0).default(0),
+          // Teto de um ano: prêmio de roleta que dá mais que isso quase sempre
+          // é erro de digitação, e sai caro de descobrir depois.
+          days: z.number().int().min(0).max(365).default(0),
+          plan: z.enum(["pro", "familia"]).default("pro"),
+          weight: z.number().int().positive(),
+        })
+        .superRefine((prize, ctx) => {
+          if (prize.type === "points" && prize.points <= 0) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["points"],
+              message: "Prêmio de pontos precisa de pontos maiores que zero",
+            });
+          }
+          if (prize.type === "plan_days" && prize.days <= 0) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["days"],
+              message: "Prêmio de dias de plano precisa de pelo menos 1 dia",
+            });
+          }
+        }),
     )
     .min(1)
     .max(10),
