@@ -1,5 +1,7 @@
 import { db } from "@finances/db";
 import { sendNotification } from "./notifications";
+import { decidePlanGrant } from "./plan-grant";
+import type { PlanId } from "./plans";
 
 const REFERRAL_REWARD_DAYS = 30;
 
@@ -35,14 +37,32 @@ export async function grantReferralReward(referredUserId: string) {
   });
   if (!referrerSubscription || referrerSubscription.status !== "active") return;
 
-  const base = referrerSubscription.currentPeriodEnd ?? new Date();
-  const extended = new Date(base);
-  extended.setDate(extended.getDate() + REFERRAL_REWARD_DAYS);
+  // Mesma regra do prêmio de dias da roleta. Antes a conta era
+  // `currentPeriodEnd ?? new Date()` mais 30 dias, e errava nas duas pontas:
+  // período já vencido somava sobre uma data no passado (bônus que não valia
+  // nada), e período nulo — acesso sem prazo de uma concessão manual do admin —
+  // virava uma assinatura de 30 dias, rebaixando quem indicou.
+  //
+  // O plano é o do próprio indicador: a recompensa dá tempo, não upgrade.
+  const decision = decidePlanGrant({
+    days: REFERRAL_REWARD_DAYS,
+    plan: referrerSubscription.plan as PlanId,
+    now: new Date(),
+    subscription: referrerSubscription,
+  });
+
+  if (decision.action !== "grant") {
+    // Acesso sem prazo não ganha data. A indicação é consumida mesmo assim,
+    // senão ficaria pendente pra sempre — esta função só roda uma vez, na
+    // primeira assinatura de quem foi indicado.
+    await db.referral.update({ where: { id: referral.id }, data: { rewardGranted: true } });
+    return;
+  }
 
   await db.$transaction([
     db.subscription.update({
       where: { userId: referral.referrerId },
-      data: { currentPeriodEnd: extended },
+      data: { currentPeriodEnd: decision.currentPeriodEnd },
     }),
     db.referral.update({
       where: { id: referral.id },
