@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { MercadoPagoConfig, PreApproval, Invoice } from "mercadopago";
 import { getPlan, type PlanId } from "./plans";
+import { INTERVAL_LABELS, intervalRecurrence, type BillingInterval } from "./billing-interval";
 import { readPaymentMethodConfig } from "./payment-methods";
 
 // Access token e webhook secret ficam criptografados no banco; ler por aqui
@@ -21,23 +22,36 @@ interface CreateSubscriptionInput {
   userId: string;
   email: string;
   plan: PlanId;
+  interval: BillingInterval;
+  /** Total do período, já resolvido pela rota a partir de `PlanPrice`. */
+  priceCents: number;
 }
 
-export async function createSubscriptionCheckout({ userId, email, plan }: CreateSubscriptionInput) {
+export async function createSubscriptionCheckout({
+  userId,
+  email,
+  plan,
+  interval,
+  priceCents,
+}: CreateSubscriptionInput) {
   const planDef = getPlan(plan);
-  if (planDef.priceCents <= 0) throw new Error("Plano gratuito não requer checkout");
+  if (priceCents <= 0) throw new Error("Plano gratuito não requer checkout");
+
+  // A recorrência do preapproval é o que o Mercado Pago vai cobrar de fato, e
+  // é dela que o webhook tira o tamanho do período na renovação.
+  const recurrence = intervalRecurrence(interval);
 
   const preapproval = new PreApproval(await getClient());
   const result = await preapproval.create({
     body: {
-      reason: `ControlAI — Plano ${planDef.name}`,
+      reason: `ControlAI — Plano ${planDef.name} (${INTERVAL_LABELS[interval]})`,
       external_reference: userId,
       payer_email: email,
       back_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/billing`,
       auto_recurring: {
-        frequency: 1,
-        frequency_type: "months",
-        transaction_amount: planDef.priceCents / 100,
+        frequency: recurrence.frequency,
+        frequency_type: recurrence.unit,
+        transaction_amount: priceCents / 100,
         currency_id: "BRL",
       },
       status: "pending",

@@ -124,10 +124,24 @@ export type DailyReport = {
 
 export type PlanId = "free" | "pro" | "familia";
 
+export type BillingInterval = "monthly" | "semiannual" | "annual";
+
+export type PlanPrice = {
+  interval: BillingInterval;
+  /** Rótulo em PT-BR vindo da API, pra web e mobile não duplicarem a tradução. */
+  label: string;
+  months: number;
+  /** Total do período inteiro. */
+  priceCents: number;
+  monthlyEquivalentCents: number;
+};
+
 export type PlanDefinition = {
   id: PlanId;
   name: string;
   priceCents: number;
+  /** Um item por período habilitado no admin; vazio no plano Free. */
+  prices: PlanPrice[];
   maxBankConnections: number | null;
   historyMonths: number | null;
   aiInsights: boolean;

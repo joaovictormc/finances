@@ -4,7 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { db } from "@finances/db";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
-import { PLANS, getPlan } from "../lib/plans";
+import { PLANS } from "../lib/plans";
 import { createSubscriptionCheckout, cancelSubscriptionAtMercadoPago } from "../lib/mercadopago";
 import {
   getEffectivePlan,
@@ -15,12 +15,48 @@ import {
 import { checkRateLimit } from "../lib/rate-limit";
 import { getPaymentMethodConfig, readPaymentMethodConfig } from "../lib/payment-methods";
 import { buildPixPayload, pixTxidFromId } from "../lib/pix";
+import {
+  BILLING_INTERVALS,
+  INTERVAL_LABELS,
+  INTERVAL_MONTHS,
+  type BillingInterval,
+} from "../lib/billing-interval";
+import { getCheckoutPriceCents, listPlanPrices } from "../lib/plan-prices";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
 app.use("*", requireAuth);
 
-app.get("/plans", (c) => c.json(Object.values(PLANS)));
+/**
+ * Catálogo de planos: features vêm do código, preços vêm do banco.
+ *
+ * `priceCents` continua sendo o mensal — é o preço de vitrine, o que a tela
+ * mostra antes do usuário escolher período. Os demais vêm em `prices`.
+ */
+app.get("/plans", async (c) => {
+  const prices = await listPlanPrices();
+
+  return c.json(
+    Object.values(PLANS).map((plan) => {
+      const available = prices.filter((price) => price.plan === plan.id && price.active);
+      const monthly = available.find((price) => price.interval === "monthly");
+
+      return {
+        ...plan,
+        priceCents: monthly?.priceCents ?? plan.priceCents,
+        prices: available.map((price) => ({
+          interval: price.interval,
+          label: INTERVAL_LABELS[price.interval],
+          months: INTERVAL_MONTHS[price.interval],
+          priceCents: price.priceCents,
+          // Quanto sai por mês no período — deixa o desconto do anual visível
+          // sem cada tela ter que refazer a conta.
+          monthlyEquivalentCents: Math.round(price.priceCents / INTERVAL_MONTHS[price.interval]),
+        })),
+      };
+    }),
+  );
+});
 
 app.get("/payment-methods", async (c) => {
   const [mercadopago, pix] = await Promise.all([
@@ -53,11 +89,23 @@ app.get("/subscription", async (c) => {
   });
 });
 
-const CheckoutSchema = z.object({ plan: z.enum(["pro", "familia"]) });
+const CheckoutSchema = z.object({
+  plan: z.enum(["pro", "familia"]),
+  // Default mensal: é o que todo checkout criava antes dos períodos existirem,
+  // então cliente antigo que não manda o campo continua funcionando.
+  interval: z.enum(BILLING_INTERVALS).default("monthly"),
+});
+
+/** Preço vigente, ou `null` quando o admin desativou o período. */
+async function resolveCheckoutPrice(plan: "pro" | "familia", interval: BillingInterval) {
+  const priceCents = await getCheckoutPriceCents(plan, interval);
+  if (priceCents === null || priceCents <= 0) return null;
+  return priceCents;
+}
 
 app.post("/checkout", zValidator("json", CheckoutSchema), async (c) => {
   const userId = c.get("userId");
-  const { plan } = c.req.valid("json");
+  const { plan, interval } = c.req.valid("json");
 
   // Cada checkout cria um preapproval no Mercado Pago (chamada externa) e uma
   // linha em PaymentEvent. Sem limite, um laço de script enche a mesma lista
@@ -69,7 +117,18 @@ app.post("/checkout", zValidator("json", CheckoutSchema), async (c) => {
   const user = await db.user.findUnique({ where: { id: userId }, select: { email: true } });
   if (!user) return c.json({ error: "Usuário não encontrado" }, 404);
 
-  const { preapprovalId, checkoutUrl } = await createSubscriptionCheckout({ userId, email: user.email, plan });
+  const priceCents = await resolveCheckoutPrice(plan, interval);
+  if (priceCents === null) {
+    return c.json({ error: "Este período não está disponível para contratação" }, 400);
+  }
+
+  const { preapprovalId, checkoutUrl } = await createSubscriptionCheckout({
+    userId,
+    email: user.email,
+    plan,
+    interval,
+    priceCents,
+  });
 
   // Só grava "pending" na assinatura se não houver uma assinatura ATIVA hoje —
   // sobrescrever plan/status aqui derrubaria o plano pago atual (getEffectivePlan
@@ -80,8 +139,8 @@ app.post("/checkout", zValidator("json", CheckoutSchema), async (c) => {
   if (existing?.status !== "active") {
     await db.subscription.upsert({
       where: { userId },
-      update: { plan, status: "pending", mpPreapprovalId: preapprovalId },
-      create: { userId, plan, status: "pending", mpPreapprovalId: preapprovalId },
+      update: { plan, interval, status: "pending", mpPreapprovalId: preapprovalId },
+      create: { userId, plan, interval, status: "pending", mpPreapprovalId: preapprovalId },
     });
   }
 
@@ -89,7 +148,9 @@ app.post("/checkout", zValidator("json", CheckoutSchema), async (c) => {
     data: {
       mpEventId: `checkout_created:${preapprovalId}`,
       type: "checkout_created",
-      rawPayload: { userId, plan, preapprovalId },
+      // `interval` aqui é a fonte da verdade do período pro webhook — mesmo
+      // papel que `plan` já cumpria pra não depender do valor pago.
+      rawPayload: { userId, plan, interval, preapprovalId, priceCents },
     },
   });
 
@@ -98,7 +159,7 @@ app.post("/checkout", zValidator("json", CheckoutSchema), async (c) => {
 
 app.post("/checkout-pix", zValidator("json", CheckoutSchema), async (c) => {
   const userId = c.get("userId");
-  const { plan } = c.req.valid("json");
+  const { plan, interval } = c.req.valid("json");
 
   if (!(await checkRateLimit({ key: "checkout-pix", userId, max: 10, windowSeconds: 15 * 60 }))) {
     return c.json({ error: "Muitas tentativas de checkout. Tente novamente em alguns minutos." }, 429);
@@ -109,14 +170,18 @@ app.post("/checkout-pix", zValidator("json", CheckoutSchema), async (c) => {
     return c.json({ error: "Pagamento via Pix não está disponível no momento" }, 503);
   }
 
-  const planDef = getPlan(plan);
+  const priceCents = await resolveCheckoutPrice(plan, interval);
+  if (priceCents === null) {
+    return c.json({ error: "Este período não está disponível para contratação" }, 400);
+  }
+
   const txid = pixTxidFromId(randomUUID());
 
   const payload = buildPixPayload({
     key: config.key,
     receiverName: config.receiverName || "ControlAI",
     receiverCity: config.receiverCity || "Sao Paulo",
-    amount: planDef.priceCents / 100,
+    amount: priceCents / 100,
     txid,
   });
 
@@ -126,8 +191,8 @@ app.post("/checkout-pix", zValidator("json", CheckoutSchema), async (c) => {
   if (existingSubscription?.status !== "active") {
     await db.subscription.upsert({
       where: { userId },
-      update: { plan, status: "pending", mpPreapprovalId: `pix:${txid}` },
-      create: { userId, plan, status: "pending", mpPreapprovalId: `pix:${txid}` },
+      update: { plan, interval, status: "pending", mpPreapprovalId: `pix:${txid}` },
+      create: { userId, plan, interval, status: "pending", mpPreapprovalId: `pix:${txid}` },
     });
   }
 
@@ -135,11 +200,13 @@ app.post("/checkout-pix", zValidator("json", CheckoutSchema), async (c) => {
     data: {
       mpEventId: `pix_checkout_created:${txid}`,
       type: "pix_checkout_created",
-      rawPayload: { userId, plan, txid, amount: planDef.priceCents / 100 },
+      // O admin confirma esse Pix à mão depois; `interval` é o que diz a ele
+      // quantos meses liberar.
+      rawPayload: { userId, plan, interval, txid, amount: priceCents / 100 },
     },
   });
 
-  return c.json({ payload, txid, amount: planDef.priceCents / 100 });
+  return c.json({ payload, txid, amount: priceCents / 100 });
 });
 
 app.post("/cancel", async (c) => {

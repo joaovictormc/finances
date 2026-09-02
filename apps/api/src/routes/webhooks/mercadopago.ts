@@ -6,7 +6,8 @@ import {
   getMercadoPagoInvoice,
 } from "../../lib/mercadopago";
 import { grantReferralReward } from "../../lib/referrals";
-import { PLANS, type PlanId } from "../../lib/plans";
+import { findPlanByPriceCents, isPaidPlan, type PaidPlanId } from "../../lib/plan-prices";
+import { isBillingInterval, type BillingInterval } from "../../lib/billing-interval";
 import { isUniqueViolation } from "../../lib/prisma-errors";
 import { addRecurrence, nextPeriodEnd, parseRecurrence } from "../../lib/subscription-period";
 
@@ -17,7 +18,7 @@ type MercadoPagoWebhookPayload = {
 };
 
 /**
- * Qual plano o usuário comprou. A fonte da verdade é o evento
+ * Qual plano e período o usuário comprou. A fonte da verdade é o evento
  * `checkout_created:{preapprovalId}` que a própria API grava em `POST /checkout`;
  * o valor pago é só o segundo caminho, para assinatura criada antes disso existir.
  *
@@ -25,20 +26,26 @@ type MercadoPagoWebhookPayload = {
  * fallback silencioso pra "pro": qualquer mudança de preço, cupom ou proração do
  * Mercado Pago rebaixava quem pagou `familia`, sem erro nenhum.
  */
-async function resolvePlan(
+async function resolveCheckout(
   preapprovalId: string,
   amount: number | undefined
-): Promise<PlanId | null> {
+): Promise<{ plan: PaidPlanId; interval: BillingInterval } | null> {
   const checkout = await db.paymentEvent.findUnique({
     where: { mpEventId: `checkout_created:${preapprovalId}` },
   });
-  const declared = (checkout?.rawPayload as { plan?: string } | null)?.plan;
-  if (declared === "pro" || declared === "familia") return declared;
+  const declared = checkout?.rawPayload as { plan?: string; interval?: string } | null;
 
+  if (declared?.plan && isPaidPlan(declared.plan)) {
+    // Checkout anterior aos períodos existirem não gravou `interval`; era mensal.
+    const interval =
+      declared.interval && isBillingInterval(declared.interval) ? declared.interval : "monthly";
+    return { plan: declared.plan, interval };
+  }
+
+  // Sem o evento de checkout, o valor pago é a única pista. Preço que bate com
+  // mais de um plano ou período é ambíguo, e aí não se ativa nada.
   if (amount !== undefined) {
-    const cents = Math.round(amount * 100);
-    const match = Object.values(PLANS).find((plan) => plan.priceCents === cents);
-    if (match && match.id !== "free") return match.id;
+    return findPlanByPriceCents(Math.round(amount * 100));
   }
 
   return null;
@@ -90,8 +97,11 @@ app.post("/", async (c) => {
     const previous = await db.subscription.findUnique({ where: { userId } });
 
     if (status === "active") {
-      const plan = await resolvePlan(dataId, preapproval.auto_recurring?.transaction_amount);
-      if (!plan) {
+      const checkout = await resolveCheckout(
+        dataId,
+        preapproval.auto_recurring?.transaction_amount
+      );
+      if (!checkout) {
         // Nunca conceder um plano que não dá pra justificar: sem o evento de
         // checkout e sem bater com o preço de nenhum plano, o certo é registrar
         // e deixar o admin liberar à mão, não chutar o mais barato.
@@ -104,12 +114,14 @@ app.post("/", async (c) => {
       // O período sai da recorrência que o próprio preapproval declara, não de
       // um mês fixo: é o que faz um plano semestral ou anual valer o tempo certo.
       const periodEnd = addRecurrence(new Date(), parseRecurrence(preapproval.auto_recurring));
+      const { plan, interval } = checkout;
 
       await db.subscription.upsert({
         where: { userId },
         update: {
           status,
           plan,
+          interval,
           mpPreapprovalId: dataId,
           currentPeriodEnd: periodEnd,
           canceledAt: null,
@@ -117,6 +129,7 @@ app.post("/", async (c) => {
         create: {
           userId,
           plan,
+          interval,
           status,
           mpPreapprovalId: dataId,
           currentPeriodEnd: periodEnd,

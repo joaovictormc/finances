@@ -530,6 +530,10 @@ model Subscription {
   plan   String @default("free") // free | pro | familia
   status String @default("active") // active | past_due | canceled
 
+  /// Período de cobrança contratado: monthly | semiannual | annual. Define o tamanho
+  /// do ciclo tanto na renovação do Mercado Pago quanto na confirmação manual de Pix.
+  interval String @default("monthly")
+
   mpPreapprovalId String? @unique // id da assinatura recorrente no Mercado Pago
 
   currentPeriodEnd DateTime?
@@ -620,6 +624,29 @@ model GamificationSettings {
   updatedAt DateTime @updatedAt
 
   @@map("gamification_settings")
+}
+
+/**
+ * Preço de cada combinação plano × período, editável em /admin/pricing.
+ *
+ * Antes o preço vivia em `apps/api/src/lib/plans.ts` e mudá-lo exigia deploy. As
+ * features do plano continuam em código — só o preço é dado. Linha ausente cai no
+ * padrão calculado a partir do preço mensal do plano.
+ */
+model PlanPrice {
+  id String @id @default(cuid())
+
+  plan     String // pro | familia
+  interval String // monthly | semiannual | annual
+
+  priceCents Int // total cobrado no período inteiro, não por mês
+  active     Boolean @default(true) // false esconde o período do checkout sem apagar o preço
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([plan, interval])
+  @@map("plan_prices")
 }
 
 /** Configuração de cada método de pagamento disponível (id = "mercadopago" | "pix"). */

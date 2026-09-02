@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, Receipt, Bot, CreditCard, ArrowRight, Sparkles } from "lucide-react";
+import { Users, Receipt, Bot, CreditCard, ArrowRight, Sparkles, Tag } from "lucide-react";
 
 const sections = [
   {
@@ -13,6 +13,12 @@ const sections = [
     title: "Métodos de Pagamento",
     description: "Configure Mercado Pago, Pix e outros checkouts disponíveis",
     icon: CreditCard,
+  },
+  {
+    href: "/admin/pricing",
+    title: "Precificação",
+    description: "Defina o valor de cada plano nos períodos mensal, semestral e anual",
+    icon: Tag,
   },
   {
     href: "/admin/checkouts",

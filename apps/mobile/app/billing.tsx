@@ -7,7 +7,32 @@ import * as Clipboard from "expo-clipboard";
 import { api } from "@/lib/api-client";
 import { useTheme } from "@/lib/theme";
 import { formatBRL } from "@/lib/format";
-import type { AvailablePaymentMethods, PixCheckout, PlanDefinition, PlanId, Subscription } from "@/lib/types";
+import type {
+  AvailablePaymentMethods,
+  BillingInterval,
+  PixCheckout,
+  PlanDefinition,
+  PlanId,
+  PlanPrice,
+  Subscription,
+} from "@/lib/types";
+
+/** Como o valor é escrito no card. "/mensal" soaria errado. */
+const PERIOD_SUFFIX: Record<BillingInterval, string> = {
+  monthly: "/mês",
+  semiannual: "/semestre",
+  annual: "/ano",
+};
+
+const INTERVAL_ORDER: BillingInterval[] = ["monthly", "semiannual", "annual"];
+
+/** Economia do período em relação a pagar o mensal N vezes. */
+function discountPercent(price: PlanPrice, monthlyCents: number | undefined): number | null {
+  if (price.months <= 1 || !monthlyCents) return null;
+  const full = monthlyCents * price.months;
+  if (price.priceCents >= full) return null;
+  return Math.round((1 - price.priceCents / full) * 100);
+}
 
 function planFeatures(plan: PlanDefinition): string[] {
   return [
@@ -28,6 +53,7 @@ export default function BillingScreen() {
   const [actionPlan, setActionPlan] = useState<PlanId | null>(null);
   const [pixCheckout, setPixCheckout] = useState<PixCheckout | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedInterval, setSelectedInterval] = useState<BillingInterval>("monthly");
 
   const load = useCallback(() => {
     Promise.all([
@@ -37,6 +63,11 @@ export default function BillingScreen() {
     ])
       .then(([p, s, pm]) => {
         setPlans(p);
+        // Abrir no mensal quando o admin o desativou mostraria tudo indisponível.
+        const available = p.flatMap((plan) => plan.prices).map((price) => price.interval);
+        if (available.length > 0 && !available.includes("monthly")) {
+          setSelectedInterval(available[0]!);
+        }
         setSubscription(s);
         setPaymentMethods(pm);
       })
@@ -50,7 +81,10 @@ export default function BillingScreen() {
     setError(null);
     setActionPlan(plan);
     try {
-      const { checkoutUrl } = await api.post<{ checkoutUrl: string }>("/api/billing/checkout", { plan });
+      const { checkoutUrl } = await api.post<{ checkoutUrl: string }>("/api/billing/checkout", {
+        plan,
+        interval: selectedInterval,
+      });
       await WebBrowser.openBrowserAsync(checkoutUrl);
       load();
     } catch (err) {
@@ -64,7 +98,10 @@ export default function BillingScreen() {
     setError(null);
     setActionPlan(plan);
     try {
-      const data = await api.post<PixCheckout>("/api/billing/checkout-pix", { plan });
+      const data = await api.post<PixCheckout>("/api/billing/checkout-pix", {
+        plan,
+        interval: selectedInterval,
+      });
       setPixCheckout(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao gerar Pix.");
@@ -107,6 +144,12 @@ export default function BillingScreen() {
     );
   }
 
+  // Só períodos que ao menos um plano pago oferece — desativado no admin some daqui.
+  const intervalOptions = INTERVAL_ORDER.map((value) => {
+    const match = plans.flatMap((plan) => plan.prices).find((price) => price.interval === value);
+    return match ? { interval: value, label: match.label } : null;
+  }).filter((option): option is { interval: BillingInterval; label: string } => option !== null);
+
   return (
     <ScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16, gap: 12 }}>
       {pixCheckout && (
@@ -137,8 +180,39 @@ export default function BillingScreen() {
         </View>
       )}
 
+      {intervalOptions.length > 1 && (
+        <View className="mb-1 flex-row rounded-xl border border-border bg-muted p-1 dark:border-border-dark dark:bg-muted-dark">
+          {intervalOptions.map((option) => {
+            const active = selectedInterval === option.interval;
+            return (
+              <Pressable
+                key={option.interval}
+                onPress={() => setSelectedInterval(option.interval)}
+                className={`flex-1 items-center rounded-lg py-2 ${active ? "bg-card dark:bg-card-dark" : ""}`}
+              >
+                <Text
+                  className={`text-sm font-medium ${
+                    active
+                      ? "text-foreground dark:text-foreground-dark"
+                      : "text-muted-foreground dark:text-muted-foreground-dark"
+                  }`}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+
       {plans.map((plan) => {
         const isCurrent = subscription?.plan === plan.id;
+        const price = plan.prices.find((entry) => entry.interval === selectedInterval);
+        const monthlyCents = plan.prices.find((entry) => entry.interval === "monthly")?.priceCents;
+        const discount = price ? discountPercent(price, monthlyCents) : null;
+        // Plano pago sem preço no período: o admin desativou esse período. Some
+        // com o botão, mas mantém o card — esconder o plano confundiria mais.
+        const unavailable = plan.id !== "free" && !price;
         return (
           <View
             key={plan.id}
@@ -154,12 +228,34 @@ export default function BillingScreen() {
                 </View>
               )}
             </View>
-            <Text className="mb-4 text-2xl font-bold text-foreground dark:text-foreground-dark">
-              {plan.priceCents === 0 ? "Grátis" : formatBRL(plan.priceCents / 100)}
-              {plan.priceCents > 0 && (
-                <Text className="text-sm font-normal text-muted-foreground dark:text-muted-foreground-dark">/mês</Text>
+            <View className="mb-4">
+              {plan.id === "free" ? (
+                <Text className="text-2xl font-bold text-foreground dark:text-foreground-dark">Grátis</Text>
+              ) : price ? (
+                <>
+                  <Text className="text-2xl font-bold text-foreground dark:text-foreground-dark">
+                    {formatBRL(price.priceCents / 100)}
+                    <Text className="text-sm font-normal text-muted-foreground dark:text-muted-foreground-dark">
+                      {PERIOD_SUFFIX[price.interval]}
+                    </Text>
+                  </Text>
+                  {price.months > 1 && (
+                    <Text className="mt-1 text-xs text-muted-foreground dark:text-muted-foreground-dark">
+                      {formatBRL(price.monthlyEquivalentCents / 100)} por mês
+                      {discount !== null && (
+                        <Text className="font-medium text-primary dark:text-primary-dark">
+                          {` — economize ${discount}%`}
+                        </Text>
+                      )}
+                    </Text>
+                  )}
+                </>
+              ) : (
+                <Text className="text-sm text-muted-foreground dark:text-muted-foreground-dark">
+                  Indisponível neste período
+                </Text>
               )}
-            </Text>
+            </View>
 
             <View className="mb-4 gap-2">
               {planFeatures(plan).map((feature) => (
@@ -200,7 +296,7 @@ export default function BillingScreen() {
               </View>
             ) : (
               <View className="gap-2">
-                {paymentMethods.mercadopago && (
+                {paymentMethods.mercadopago && !unavailable && (
                   <Pressable
                     onPress={() => handleUpgrade(plan.id)}
                     disabled={actionPlan === plan.id}
@@ -215,7 +311,7 @@ export default function BillingScreen() {
                     )}
                   </Pressable>
                 )}
-                {paymentMethods.pix && (
+                {paymentMethods.pix && !unavailable && (
                   <Pressable
                     onPress={() => handlePix(plan.id)}
                     disabled={actionPlan === plan.id}
@@ -224,10 +320,10 @@ export default function BillingScreen() {
                     <Text className="text-sm font-medium text-primary dark:text-primary-dark">Pagar com Pix</Text>
                   </Pressable>
                 )}
-                {!paymentMethods.mercadopago && !paymentMethods.pix && (
+                {(unavailable || (!paymentMethods.mercadopago && !paymentMethods.pix)) && (
                   <View className="items-center rounded-md border border-border py-3 dark:border-border-dark">
                     <Text className="text-sm text-muted-foreground dark:text-muted-foreground-dark">
-                      Checkout indisponível
+                      {unavailable ? "Escolha outro período" : "Checkout indisponível"}
                     </Text>
                   </View>
                 )}

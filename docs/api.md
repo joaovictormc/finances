@@ -143,11 +143,11 @@ GET  /api/referrals           → { total, rewardsGranted, referrals[] }
 ## Billing — Assinaturas/Pix (Fase 6)
 
 ```
-GET  /api/billing/plans              → PlanDefinition[] (free/pro/familia)
+GET  /api/billing/plans              → PlanDefinition[] (free/pro/familia); `priceCents` é o mensal (vitrine) e `prices[]` traz um item por período ativo com { interval, label, months, priceCents, monthlyEquivalentCents }
 GET  /api/billing/payment-methods    → { mercadopago: boolean, pix: boolean } (habilitados)
 GET  /api/billing/subscription       → { plan, status, currentPeriodEnd, canceledAt, hasIntegrationsModule, hasFamilyModule }
-POST /api/billing/checkout           { plan: "pro"|"familia" } → { checkoutUrl } (Mercado Pago)
-POST /api/billing/checkout-pix       { plan: "pro"|"familia" } → { payload, txid, amount } (BR Code Pix)
+POST /api/billing/checkout           { plan: "pro"|"familia", interval?: "monthly"|"semiannual"|"annual" } → { checkoutUrl } (Mercado Pago). `interval` default "monthly"; 400 se o período estiver desativado no admin
+POST /api/billing/checkout-pix       { plan: "pro"|"familia", interval? } → { payload, txid, amount } (BR Code Pix)
 POST /api/billing/cancel             → { success: true }
 ```
 
@@ -193,6 +193,9 @@ POST  /api/admin/payment-events/:id/confirm-pix    confirma Pix pendente e ativa
 
 GET   /api/admin/payment-methods                    lista Mercado Pago/Pix com segredos mascarados
 PATCH /api/admin/payment-methods/:id   { enabled?, config? }
+
+GET   /api/admin/plan-prices                        preço de cada plano × período (a tabela se preenche sozinha na 1ª leitura)
+PATCH /api/admin/plan-prices   { prices: [{ plan, interval, priceCents, active }] }   não altera quem já assina
 
 GET   /api/admin/ai/settings
 PATCH /api/admin/ai/settings   { textModel?, audioModel?, expenseParsingEnabled?, monthlyInsightsEnabled?, nlQueryEnabled?, monthlyTokenLimit? }

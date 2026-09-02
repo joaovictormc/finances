@@ -14,11 +14,29 @@ import { api } from "@/lib/api-client";
 import { formatBRL } from "@/lib/utils";
 
 type PlanId = "free" | "pro" | "familia";
+type Interval = "monthly" | "semiannual" | "annual";
+
+/** Como o valor é escrito no card. "/mensal" soaria errado. */
+const PERIOD_SUFFIX: Record<Interval, string> = {
+  monthly: "/mês",
+  semiannual: "/semestre",
+  annual: "/ano",
+};
+
+interface PlanPrice {
+  interval: Interval;
+  label: string;
+  months: number;
+  priceCents: number;
+  monthlyEquivalentCents: number;
+}
 
 interface PlanDefinition {
   id: PlanId;
   name: string;
   priceCents: number;
+  /** Um item por período habilitado no admin; vazio no plano Free. */
+  prices: PlanPrice[];
   maxBankConnections: number | null;
   historyMonths: number | null;
   aiInsights: boolean;
@@ -44,6 +62,14 @@ interface PixCheckout {
   amount: number;
 }
 
+/** Economia do período em relação a pagar o mensal N vezes. */
+function discountPercent(price: PlanPrice, monthlyCents: number | undefined): number | null {
+  if (price.months <= 1 || !monthlyCents) return null;
+  const full = monthlyCents * price.months;
+  if (price.priceCents >= full) return null;
+  return Math.round((1 - price.priceCents / full) * 100);
+}
+
 function planFeatures(plan: PlanDefinition): string[] {
   return [
     plan.maxBankConnections === null ? "Conexões bancárias ilimitadas" : `${plan.maxBankConnections} conexão bancária`,
@@ -63,6 +89,7 @@ export default function BillingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [actionPlan, setActionPlan] = useState<PlanId | null>(null);
   const [pixCheckout, setPixCheckout] = useState<PixCheckout | null>(null);
+  const [selectedInterval, setSelectedInterval] = useState<Interval>("monthly");
 
   useEffect(() => {
     Promise.all([
@@ -72,6 +99,10 @@ export default function BillingPage() {
     ])
       .then(([p, s, pm]) => {
         setPlans(p);
+        const available = p.flatMap((plan) => plan.prices).map((price) => price.interval);
+        if (available.length > 0 && !available.includes("monthly")) {
+          setSelectedInterval(available[0]!);
+        }
         setSubscription(s);
         setPaymentMethods(pm);
       })
@@ -82,7 +113,10 @@ export default function BillingPage() {
     if (plan === "free") return;
     setActionPlan(plan);
     try {
-      const { checkoutUrl } = await api.post<{ checkoutUrl: string }>("/api/billing/checkout", { plan });
+      const { checkoutUrl } = await api.post<{ checkoutUrl: string }>("/api/billing/checkout", {
+        plan,
+        interval: selectedInterval,
+      });
       window.location.href = checkoutUrl;
     } catch {
       toast({ title: "Erro ao iniciar checkout", variant: "error" });
@@ -94,7 +128,7 @@ export default function BillingPage() {
     if (plan === "free") return;
     setActionPlan(plan);
     try {
-      const data = await api.post<PixCheckout>("/api/billing/checkout-pix", { plan });
+      const data = await api.post<PixCheckout>("/api/billing/checkout-pix", { plan, interval: selectedInterval });
       setPixCheckout(data);
     } catch (err) {
       toast({ title: (err as Error).message || "Erro ao gerar Pix", variant: "error" });
@@ -126,6 +160,13 @@ export default function BillingPage() {
     );
   }
 
+  const intervalOptions = (["monthly", "semiannual", "annual"] as Interval[])
+    .map((value) => {
+      const match = plans.flatMap((plan) => plan.prices).find((price) => price.interval === value);
+      return match ? { interval: value, label: match.label } : null;
+    })
+    .filter((option): option is { interval: Interval; label: string } => option !== null);
+
   return (
     <div>
       <BackButton href="/settings" label="Configurações" />
@@ -136,9 +177,35 @@ export default function BillingPage() {
         </p>
       </div>
 
+      {intervalOptions.length > 1 && (
+        <div className="mb-6 inline-flex rounded-xl border border-border/60 bg-muted/40 p-1">
+          {intervalOptions.map((option) => (
+            <button
+              key={option.interval}
+              type="button"
+              onClick={() => setSelectedInterval(option.interval)}
+              className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+                selectedInterval === option.interval
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-3">
         {plans.map((plan) => {
           const isCurrent = subscription?.plan === plan.id;
+          const price = plan.prices.find((entry) => entry.interval === selectedInterval);
+          const monthlyCents = plan.prices.find((entry) => entry.interval === "monthly")?.priceCents;
+          const discount = price ? discountPercent(price, monthlyCents) : null;
+          // Plano pago sem preço no período escolhido: o admin desativou esse
+          // período. Mostrar o card sem poder assinar é mais honesto do que
+          // sumir com o plano da lista.
+          const unavailable = plan.id !== "free" && !price;
           return (
             <div
               key={plan.id}
@@ -150,10 +217,32 @@ export default function BillingPage() {
                 <h2 className="text-base font-semibold">{plan.name}</h2>
                 {isCurrent && <Badge variant="success">Atual</Badge>}
               </div>
-              <p className="text-2xl font-bold mb-4">
-                {plan.priceCents === 0 ? "Grátis" : formatBRL(plan.priceCents / 100)}
-                {plan.priceCents > 0 && <span className="text-sm font-normal text-muted-foreground">/mês</span>}
-              </p>
+              <div className="mb-4">
+                {plan.id === "free" ? (
+                  <p className="text-2xl font-bold">Grátis</p>
+                ) : price ? (
+                  <>
+                    <p className="text-2xl font-bold">
+                      {formatBRL(price.priceCents / 100)}
+                      <span className="text-sm font-normal text-muted-foreground">
+                        {PERIOD_SUFFIX[price.interval]}
+                      </span>
+                    </p>
+                    {price.months > 1 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatBRL(price.monthlyEquivalentCents / 100)} por mês
+                        {discount !== null && (
+                          <span className="ml-1 font-medium text-primary">
+                            — economize {discount}%
+                          </span>
+                        )}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Indisponível neste período</p>
+                )}
+              </div>
               <ul className="space-y-2 mb-6 flex-1">
                 {planFeatures(plan).map((feature) => (
                   <li key={feature} className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -184,7 +273,12 @@ export default function BillingPage() {
               ) : (
                 <div className="flex flex-col gap-2">
                   {paymentMethods.mercadopago && (
-                    <Button size="sm" onClick={() => handleUpgrade(plan.id)} loading={actionPlan === plan.id}>
+                    <Button
+                      size="sm"
+                      onClick={() => handleUpgrade(plan.id)}
+                      loading={actionPlan === plan.id}
+                      disabled={unavailable}
+                    >
                       Assinar {plan.name}
                     </Button>
                   )}
@@ -194,6 +288,7 @@ export default function BillingPage() {
                       variant="outline"
                       onClick={() => handlePix(plan.id)}
                       loading={actionPlan === plan.id}
+                      disabled={unavailable}
                     >
                       Pagar com Pix
                     </Button>

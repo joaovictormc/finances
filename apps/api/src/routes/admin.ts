@@ -18,6 +18,15 @@ import {
   type PaymentMethodId,
 } from "../lib/payment-methods";
 import { isPixCheckoutExpired, pixCheckoutExpiresAt, pixCheckoutStage } from "../lib/pix-checkout";
+import {
+  BILLING_INTERVALS,
+  INTERVAL_LABELS,
+  INTERVAL_MONTHS,
+  intervalRecurrence,
+  isBillingInterval,
+} from "../lib/billing-interval";
+import { addRecurrence } from "../lib/subscription-period";
+import { PAID_PLANS, listPlanPrices, updatePlanPrices } from "../lib/plan-prices";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -192,6 +201,7 @@ app.post("/payment-events/:id/confirm-pix", async (c) => {
   const payload = event.rawPayload as {
     userId?: string;
     plan?: string;
+    interval?: string;
     txid?: string;
     amount?: number;
   };
@@ -204,13 +214,29 @@ app.post("/payment-events/:id/confirm-pix", async (c) => {
     return c.json(existing);
   }
 
-  const currentPeriodEnd = new Date();
-  currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
+  // Quanto liberar sai do período que o usuário escolheu no checkout. Checkout
+  // gerado antes dos períodos existirem não tem o campo, e era mensal.
+  const interval =
+    payload.interval && isBillingInterval(payload.interval) ? payload.interval : "monthly";
+  const currentPeriodEnd = addRecurrence(new Date(), intervalRecurrence(interval));
 
   const subscription = await db.subscription.upsert({
     where: { userId: payload.userId },
-    update: { plan: payload.plan, status: "active", currentPeriodEnd, mpPreapprovalId: `pix:${payload.txid}` },
-    create: { userId: payload.userId, plan: payload.plan, status: "active", currentPeriodEnd, mpPreapprovalId: `pix:${payload.txid}` },
+    update: {
+      plan: payload.plan,
+      interval,
+      status: "active",
+      currentPeriodEnd,
+      mpPreapprovalId: `pix:${payload.txid}`,
+    },
+    create: {
+      userId: payload.userId,
+      plan: payload.plan,
+      interval,
+      status: "active",
+      currentPeriodEnd,
+      mpPreapprovalId: `pix:${payload.txid}`,
+    },
   });
 
   await db.paymentEvent.create({
@@ -437,6 +463,54 @@ app.post("/gamification/simulate", zValidator("json", GamificationSimulateSchema
 app.get("/gamification/stats", async (c) => {
   const stats = await getGamificationStats();
   return c.json(stats);
+});
+
+// ── Precificação ──────────────────────────────────────────────────────────────
+
+/**
+ * Preço de cada plano × período.
+ *
+ * A resposta traz rótulo e meses junto pra tela não recriar essa tabela, e o
+ * equivalente mensal pra o admin enxergar o desconto que está dando sem calcular.
+ */
+app.get("/plan-prices", async (c) => {
+  const prices = await listPlanPrices();
+  return c.json(
+    prices.map((price) => ({
+      ...price,
+      label: INTERVAL_LABELS[price.interval],
+      months: INTERVAL_MONTHS[price.interval],
+      monthlyEquivalentCents: Math.round(price.priceCents / INTERVAL_MONTHS[price.interval]),
+    })),
+  );
+});
+
+const PlanPricesSchema = z.object({
+  prices: z
+    .array(
+      z.object({
+        plan: z.enum(PAID_PLANS),
+        interval: z.enum(BILLING_INTERVALS),
+        // Teto alto e não-negativo: erro de digitação em centavos vira cobrança
+        // real, então vale barrar aqui em vez de descobrir no extrato.
+        priceCents: z.number().int().min(0).max(10_000_00),
+        active: z.boolean(),
+      }),
+    )
+    .min(1),
+});
+
+/**
+ * Grava os preços editados.
+ *
+ * Não mexe em quem já assina: o valor de um preapproval do Mercado Pago é
+ * fixado na criação, então assinatura em andamento continua no preço que
+ * contratou. O preço novo vale para checkouts a partir daqui.
+ */
+app.patch("/plan-prices", zValidator("json", PlanPricesSchema), async (c) => {
+  const { prices } = c.req.valid("json");
+  const updated = await updatePlanPrices(prices);
+  return c.json(updated);
 });
 
 export default app;

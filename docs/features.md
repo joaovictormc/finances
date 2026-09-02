@@ -105,6 +105,8 @@ Legenda: ✅ Feito | 🔄 Em progresso | 📋 Planejado
 | Histórico de checkouts | ✅ | `/admin/checkouts` — eventos do Mercado Pago + Pix, filtro por tipo |
 | Confirmação manual de Pix | ✅ | Botão "Confirmar pagamento" ativa o plano do usuário |
 | Configuração de métodos de pagamento | ✅ | `/admin/payment-methods` — grid Mercado Pago/Pix, segredos mascarados, auto-ativação ao completar campos |
+| Precificação dos planos (admin) | ✅ | `/admin/pricing` — preço de cada plano nos períodos mensal/semestral/anual, com desconto calculado; `PlanPrice` no banco, não mais fixo em código |
+| Períodos de cobrança | ✅ | Mensal, semestral e anual — seletor na tela de planos (web e mobile); o período vira a recorrência do preapproval no Mercado Pago e o tamanho do ciclo no Pix |
 | Configuração de IA | ✅ | `/admin/ai` — modelo de texto/voz, kill-switches por feature, limite mensal de tokens, painel de uso |
 
 ## Fase 8 — Refinamentos de contas e transações 🔄
