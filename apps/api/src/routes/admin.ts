@@ -473,16 +473,30 @@ app.get("/gamification/stats", async (c) => {
  * A resposta traz rótulo e meses junto pra tela não recriar essa tabela, e o
  * equivalente mensal pra o admin enxergar o desconto que está dando sem calcular.
  */
+/**
+ * Forma única da resposta de preço.
+ *
+ * Compartilhada pelo GET e pelo PATCH de propósito: quando só o GET
+ * acrescentava `months`, a tela ficava sem esse campo depois de salvar e
+ * exibia o valor por mês como R$ 0,00 e o desconto como NaN.
+ */
+function toPlanPriceResponse(price: {
+  plan: string;
+  interval: keyof typeof INTERVAL_MONTHS;
+  priceCents: number;
+  active: boolean;
+}) {
+  return {
+    ...price,
+    label: INTERVAL_LABELS[price.interval],
+    months: INTERVAL_MONTHS[price.interval],
+    monthlyEquivalentCents: Math.round(price.priceCents / INTERVAL_MONTHS[price.interval]),
+  };
+}
+
 app.get("/plan-prices", async (c) => {
   const prices = await listPlanPrices();
-  return c.json(
-    prices.map((price) => ({
-      ...price,
-      label: INTERVAL_LABELS[price.interval],
-      months: INTERVAL_MONTHS[price.interval],
-      monthlyEquivalentCents: Math.round(price.priceCents / INTERVAL_MONTHS[price.interval]),
-    })),
-  );
+  return c.json(prices.map(toPlanPriceResponse));
 });
 
 const PlanPricesSchema = z.object({
@@ -510,7 +524,7 @@ const PlanPricesSchema = z.object({
 app.patch("/plan-prices", zValidator("json", PlanPricesSchema), async (c) => {
   const { prices } = c.req.valid("json");
   const updated = await updatePlanPrices(prices);
-  return c.json(updated);
+  return c.json(updated.map(toPlanPriceResponse));
 });
 
 export default app;

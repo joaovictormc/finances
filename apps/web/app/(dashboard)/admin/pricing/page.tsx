@@ -17,11 +17,19 @@ type PlanPriceRow = {
   priceCents: number;
   active: boolean;
   label: string;
-  months: number;
 };
 
 const PLAN_NAMES: Record<PlanId, string> = { pro: "Pro", familia: "Família" };
 const PLAN_ORDER: PlanId[] = ["pro", "familia"];
+
+/**
+ * Quantos meses cada período cobre.
+ *
+ * Local de propósito: é definição, não política de preço, e não pode divergir.
+ * Depender do campo que a API manda já custou um bug — a resposta do salvar não
+ * o trazia, e a tela passou a mostrar R$ 0,00 por mês e NaN de desconto.
+ */
+const INTERVAL_MONTHS: Record<Interval, number> = { monthly: 1, semiannual: 6, annual: 12 };
 
 function formatBRL(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -32,8 +40,9 @@ function formatBRL(cents: number): string {
  * responde "vale a pena pro cliente?" sem o admin abrir a calculadora.
  */
 function discountPercent(row: PlanPriceRow, monthlyCents: number): number | null {
-  if (row.months <= 1 || monthlyCents <= 0) return null;
-  const full = monthlyCents * row.months;
+  const months = INTERVAL_MONTHS[row.interval];
+  if (months <= 1 || monthlyCents <= 0) return null;
+  const full = monthlyCents * months;
   if (row.priceCents >= full) return null;
   return Math.round((1 - row.priceCents / full) * 100);
 }
@@ -129,7 +138,8 @@ export default function AdminPricingPage() {
               <div className="space-y-4">
                 {planRows.map((row) => {
                   const discount = discountPercent(row, monthlyCents);
-                  const perMonth = row.months > 0 ? Math.round(row.priceCents / row.months) : 0;
+                  const months = INTERVAL_MONTHS[row.interval];
+                  const perMonth = Math.round(row.priceCents / months);
 
                   return (
                     <div
@@ -139,7 +149,7 @@ export default function AdminPricingPage() {
                       <div className="w-40 shrink-0">
                         <p className="text-sm font-medium text-foreground">{row.label}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {row.months} {row.months === 1 ? "mês" : "meses"}
+                          {months} {months === 1 ? "mês" : "meses"}
                         </p>
                       </div>
 
