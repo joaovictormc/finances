@@ -1,9 +1,14 @@
 import { Hono } from "hono";
 import { db } from "@finances/db";
-import { verifyMercadoPagoSignature, getMercadoPagoPreapproval } from "../../lib/mercadopago";
+import {
+  verifyMercadoPagoSignature,
+  getMercadoPagoPreapproval,
+  getMercadoPagoInvoice,
+} from "../../lib/mercadopago";
 import { grantReferralReward } from "../../lib/referrals";
 import { PLANS, type PlanId } from "../../lib/plans";
 import { isUniqueViolation } from "../../lib/prisma-errors";
+import { addRecurrence, nextPeriodEnd, parseRecurrence } from "../../lib/subscription-period";
 
 type MercadoPagoWebhookPayload = {
   type?: string; // "subscription_preapproval" | "payment" | ...
@@ -96,13 +101,17 @@ app.post("/", async (c) => {
         return c.json({ ok: true });
       }
 
+      // O período sai da recorrência que o próprio preapproval declara, não de
+      // um mês fixo: é o que faz um plano semestral ou anual valer o tempo certo.
+      const periodEnd = addRecurrence(new Date(), parseRecurrence(preapproval.auto_recurring));
+
       await db.subscription.upsert({
         where: { userId },
         update: {
           status,
           plan,
           mpPreapprovalId: dataId,
-          currentPeriodEnd: addOneMonth(new Date()),
+          currentPeriodEnd: periodEnd,
           canceledAt: null,
         },
         create: {
@@ -110,7 +119,7 @@ app.post("/", async (c) => {
           plan,
           status,
           mpPreapprovalId: dataId,
-          currentPeriodEnd: addOneMonth(new Date()),
+          currentPeriodEnd: periodEnd,
         },
       });
 
@@ -130,13 +139,66 @@ app.post("/", async (c) => {
     }
   }
 
+  if (payload.type === "subscription_authorized_payment") {
+    await applyRecurringPayment(dataId);
+  }
+
   return c.json({ ok: true });
 });
 
-function addOneMonth(date: Date) {
-  const result = new Date(date);
-  result.setMonth(result.getMonth() + 1);
-  return result;
+/**
+ * Cobrança recorrente da assinatura.
+ *
+ * O Mercado Pago não reemite `subscription_preapproval` a cada renovação — o
+ * preapproval segue `authorized` e o que chega é este evento. Enquanto ele não
+ * era tratado, `currentPeriodEnd` era gravado uma única vez na autorização e
+ * nunca mais avançava: quem continuava pagando perdia o plano assim que o
+ * primeiro período vencia.
+ */
+async function applyRecurringPayment(invoiceId: string): Promise<void> {
+  const invoice = await getMercadoPagoInvoice(invoiceId);
+
+  // Só renova o que foi de fato pago. Tentativa recusada não mexe no período:
+  // o Mercado Pago ainda vai retentar, e encurtar o acesso aqui tiraria dias já
+  // pagos. Desistência de vez muda o status do preapproval, que cai no branch
+  // de cima.
+  if (invoice.payment?.status !== "approved") return;
+
+  const preapprovalId = invoice.preapproval_id;
+  if (!preapprovalId) return;
+
+  const subscription = await db.subscription.findUnique({
+    where: { mpPreapprovalId: preapprovalId },
+  });
+  if (!subscription) {
+    console.error(
+      `[mercadopago-webhook] cobrança ${invoiceId} do preapproval ${preapprovalId} sem assinatura correspondente — renovação NÃO aplicada`
+    );
+    return;
+  }
+
+  const preapproval = await getMercadoPagoPreapproval(preapprovalId);
+
+  await db.subscription.update({
+    where: { id: subscription.id },
+    data: {
+      // Pagamento aprovado tira a assinatura de past_due sem precisar de outro evento.
+      status: "active",
+      canceledAt: null,
+      // Concessão sem prazo (currentPeriodEnd nulo, como o admin grava numa
+      // liberação manual) continua sem prazo: datar por causa de uma cobrança
+      // tiraria acesso em vez de dar.
+      ...(subscription.currentPeriodEnd
+        ? {
+            currentPeriodEnd: nextPeriodEnd({
+              currentPeriodEnd: subscription.currentPeriodEnd,
+              now: new Date(),
+              recurrence: parseRecurrence(preapproval.auto_recurring),
+            }),
+          }
+        : {}),
+    },
+  });
 }
 
 export default app;

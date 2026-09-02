@@ -87,6 +87,8 @@ Cada chamada passa por `getAiSettings()` (kill-switch + modelo) e grava uso em `
 - **Pix direto:** alternativa sem gateway — `buildPixPayload()` gera um BR Code (EMV QR Code) estático a partir da chave Pix cadastrada pelo admin; o pagamento é confirmado **manualmente** pelo admin em `/admin/checkouts` (`POST /api/admin/payment-events/:id/confirm-pix`), sem callback automático.
 - **Configuração:** ambos os métodos (chaves, tokens, segredos) são guardados em `PaymentMethodConfig` (banco), editáveis em `/admin/payment-methods` — não mais só via `.env`. As variáveis `MERCADOPAGO_*` no `.env` funcionam como fallback.
 - **Webhook idempotente:** todo evento recebido é gravado em `PaymentEvent` (`mpEventId` único) antes de processar, evitando duplicação.
+- **Renovação:** o Mercado Pago **não** reemite `subscription_preapproval` a cada cobrança recorrente — o preapproval segue `authorized` e o que chega é `subscription_authorized_payment`. O webhook trata esse evento (`applyRecurringPayment`), consulta a invoice, e só avança `currentPeriodEnd` se `payment.status === "approved"`. O tamanho do período sai do `auto_recurring` do próprio preapproval, então plano semestral ou anual já vale o tempo certo.
+  - ⚠️ **Exige que o evento esteja marcado no painel do Mercado Pago** (Suas integrações → Webhooks → *Pagamentos de assinatura*). Sem essa assinatura o evento nunca chega e o período para de avançar: quem continua pagando perde o plano no primeiro vencimento.
 - **Cancelamento:** `cancelSubscriptionAtMercadoPago()` é pulado quando `mpPreapprovalId` começa com `pix:` (assinatura paga via Pix não existe no Mercado Pago).
 - Env vars: `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_PUBLIC_KEY`, `MERCADOPAGO_WEBHOOK_SECRET`
 

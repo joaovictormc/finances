@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { MercadoPagoConfig, PreApproval } from "mercadopago";
+import { MercadoPagoConfig, PreApproval, Invoice } from "mercadopago";
 import { getPlan, type PlanId } from "./plans";
 import { readPaymentMethodConfig } from "./payment-methods";
 
@@ -58,6 +58,16 @@ export async function cancelSubscriptionAtMercadoPago(preapprovalId: string) {
 export async function getMercadoPagoPreapproval(preapprovalId: string) {
   const preapproval = new PreApproval(await getClient());
   return preapproval.get({ id: preapprovalId });
+}
+
+/**
+ * Uma cobrança recorrente da assinatura ("authorized payment", que o Mercado
+ * Pago chama de invoice). É o que o evento `subscription_authorized_payment`
+ * referencia — traz o preapproval de origem e o status do pagamento.
+ */
+export async function getMercadoPagoInvoice(invoiceId: string) {
+  const invoice = new Invoice(await getClient());
+  return invoice.get({ id: invoiceId });
 }
 
 /**
