@@ -5,17 +5,25 @@ import "../global.css";
 // o Blob global aqui, uma vez, na inicialização — daí todo `fetch(...).blob()`
 // existente no app (import de extrato, leitura de cupom fiscal) já se beneficia
 // sem precisar mudar cada chamada.
-import { Blob as ExpoBlob } from "expo-blob";
-// @ts-expect-error -- expo-blob substitui o Blob nativo do RN globalmente.
-globalThis.Blob = ExpoBlob;
+//
+// Protegido porque `expo-blob` resolve o módulo nativo já no import: onde ele
+// não existe — Expo Go, por exemplo — isso derruba o app no boot, antes de
+// qualquer tela. Sem a troca o Blob do React Native segue valendo: mais lento,
+// e nada além disso muda.
+try {
+  const ExpoBlob = (require("expo-blob") as typeof import("expo-blob")).Blob;
+  // @ts-expect-error -- expo-blob substitui o Blob nativo do RN globalmente.
+  globalThis.Blob = ExpoBlob;
+} catch {
+  // Segue com o Blob do React Native.
+}
 import { useEffect } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { View, ActivityIndicator } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import * as Notifications from "expo-notifications";
 import { useSession } from "@/lib/auth-client";
 import { ThemeProvider, useTheme } from "@/lib/theme";
-import { registerPushToken } from "@/lib/push";
+import { registerPushToken, subscribeToNotificationTaps } from "@/lib/push";
 import { routeFromPushData } from "@/lib/notification-links";
 
 function RootNavigator() {
@@ -43,11 +51,10 @@ function RootNavigator() {
     void registerPushToken();
 
     // Tocar no aviso abre a tela do assunto, não só o app.
-    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      const route = routeFromPushData(response.notification.request.content.data);
+    return subscribeToNotificationTaps((data) => {
+      const route = routeFromPushData(data);
       if (route) router.push(route as never);
     });
-    return () => subscription.remove();
   }, [session, router]);
 
   if (isPending) {
