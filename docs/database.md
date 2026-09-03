@@ -1,6 +1,6 @@
 # Banco de Dados
 
-Schema em: `packages/db/prisma/schema.prisma` (26 models).
+Schema em: `packages/db/prisma/schema.prisma` (33 models).
 
 ## Grupos de Tabelas
 
@@ -11,7 +11,7 @@ Schema em: `packages/db/prisma/schema.prisma` (26 models).
 - `Verification` — tokens de verificação de email
 
 ### Perfil Estendido
-- `UserProfile` — `telegramChatId` (BigInt unique), `whatsappPhone` (unique), `timezone` ("America/Sao_Paulo")
+- `UserProfile` — `cpf` (nenhuma rota grava hoje; quando gravar, usar `encryptField`), `phoneE164`, `defaultCurrency`, `timezone` ("America/Sao_Paulo"), `aiInsightsEnabled`, `notifyEmail`, `onboardingCompletedAt`
 
 ### Grupos Familiares
 - `Group` — name, ownerId, inviteCode
@@ -29,18 +29,31 @@ Schema em: `packages/db/prisma/schema.prisma` (26 models).
 - `OpenFinanceConsent` — consentId (unique), status, expiresAt, accessTokenEnc (criptografado), syncCursor
 - `OpenFinanceAccount` — accountId externo, consentId, FinancialAccount linkado
 
-### Bots
-- `BotConversation` — unique (platform, platformChatId); state (idle/awaiting_amount/awaiting_confirmation/nl_query)
-- `BotMessage` — direction (inbound/outbound), parsedIntent, parsedData (JSON), aiConfidence, resultedInTransactionId
+### Notificações
+- `Notification` — `type` (bill_reminder, budget_alert, overdraft_warning, sync_complete, new_transaction, insight_ready, goal_milestone, pix_checkout_pending, referral_reward, spin_plan_days), `channel`, `title`, `body`, `metadata` (JSON — guarda o `link` da rota de destino), `status`, `sentAt`, `readAt`, `error`
+  - `channel`: `inapp` é o registro que a central de notificações lê, gravado sempre; `email` é tentativa de entrega adicional. Linhas antigas ainda trazem `telegram`/`whatsapp`, canais removidos.
+- `PushToken` — `token` (unique, formato `ExponentPushToken[...]`), `platform` (ios/android), `deviceName`, `lastUsedAt`
+  - O unique é o **token**, não o usuário: reinstalar reaproveita a linha, e trocar de conta no mesmo aparelho move o token de dono — sem isso o dono antigo continuaria recebendo aviso do novo usuário.
 
-### Notificações e IA
-- `Notification` — channel (email/telegram/whatsapp/push), status, sentAt
+### IA
 - `AiInsight` — type (monthly_summary/spending_anomaly/overdraft_risk/budget_forecast/recurring_detected), content JSON
-- `AiSettings` — singleton (`id: "singleton"`): `textModel`, `audioModel`, kill-switches por feature (`expenseParsingEnabled`, `monthlyInsightsEnabled`, `nlQueryEnabled`, `categorySuggestionEnabled`), `monthlyTokenLimit`
+- `AiSettings` — singleton (`id: "singleton"`): `textModel`, `visionModel`, `assistantModel`, kill-switches por feature (`monthlyInsightsEnabled`, `assistantEnabled`, `nlQueryEnabled`, `categorySuggestionEnabled`, `receiptScanEnabled`), `monthlyTokenLimit`
 - `AiUsageLog` — userId opcional, feature, model, promptTokens/completionTokens, createdAt (indexado por feature/data)
+  - Guarda linhas históricas de features removidas (`expense_parsing`, `voice_transcription`); o medidor em `/admin/ai` mantém rótulo pra elas.
+- `AssistantAgent` — agente personalizado do usuário: `name`, `icon`, `instructions`, `enabledTools` (vazio = todas)
+- `AssistantConversation` / `AssistantMessage` — conversa multi-turno do assistente, com `role`, `content` e `toolCalls`
+
+### Gamificação
+- `GamificationProfile` — `points`, `level`, `currentStreak`, `longestStreak`, `lastSpinAt`
+- `GamificationSettings` — singleton; `spinPrizes` (JSON) com `{ label, type, points, days, plan, weight }` por prêmio
+  - `type` decide o que é entregue: `points` soma no perfil; `plan_days` soma dias de assinatura na hora. Prêmio gravado antes desse campo normaliza como `points`.
+- `GamificationSpinLog` — auditoria de cada giro real: `prizeLabel`, `prizePoints`, `prizeType`, `prizeDays`, `source` (weekly/purchased)
 
 ### Monetização
-- `Subscription` — userId (unique), plan (free/pro/familia), status (active/past_due/canceled), `mpPreapprovalId` (prefixo `pix:` quando pago via Pix), currentPeriodEnd, canceledAt
+- `Subscription` — userId (unique), plan (free/pro/familia), status (active/past_due/canceled), `interval` (monthly/semiannual/annual), `mpPreapprovalId` (prefixo `pix:` quando pago via Pix), currentPeriodEnd, canceledAt
+  - `currentPeriodEnd` **nulo significa acesso sem prazo** — é como a concessão manual do admin é gravada. Toda rotina que soma dias (renovação, prêmio da roleta, indicação) precisa respeitar isso: datar essa linha tiraria acesso em vez de dar.
+- `PlanPrice` — unique (`plan`, `interval`); `priceCents` é o total do período inteiro, não o valor por mês; `active` esconde o período do checkout sem apagar o preço
+  - Editável em `/admin/pricing`. A tabela se preenche sozinha na primeira leitura, com o mensal vezes os meses e sem desconto — política de preço é decisão do admin, não do código.
 - `PaymentEvent` — `mpEventId` (unique, idempotência de webhook), type, rawPayload (JSON) — usado tanto pra eventos do Mercado Pago quanto pra ações manuais do admin (`admin_plan_override`, `pix_checkout_created`, `pix_payment_confirmed` etc.)
 - `PaymentMethodConfig` — singleton por método (`id: "mercadopago" | "pix"`), `enabled`, `config` (JSON com chaves/tokens — segredos mascarados na API)
 - `ReferralCode` — código único por usuário

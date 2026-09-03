@@ -73,6 +73,10 @@ Legenda: ✅ Feito | 🔄 Em progresso | 📋 Planejado
 | Alertas preditivos / forecast | ✅ | `lib/ai/budget-forecast.ts` |
 | NL queries no bot/web | ✅ | `POST /api/ai/query` — tool calling (Groq), caixa de pergunta na Visão Geral |
 | Configuração de modelo/limites (admin) | ✅ | `AiSettings`, `AiUsageLog`, página `/admin/ai` |
+| Central de notificações (web) | ✅ | Sino na linha dos créditos; painel via portal (`createPortal` + `position: fixed`) pra escapar do `overflow-hidden` da sidebar; notificação clicável leva à página do assunto; marcar lida, marcar todas e limpar tudo |
+| Central de notificações (mobile) | ✅ | Sino com contador na Home e tela `/notifications`; `lib/notification-links.ts` traduz a rota web guardada em `metadata.link` pra árvore do app |
+| Push no celular | ✅ | `PushToken` + Expo Push Service (`apps/api/src/lib/push.ts`). Exige development build e credenciais EAS — não funciona no Expo Go (Android, SDK 53+) nem em emulador |
+| Aviso de Pix vencendo (admin) | ✅ | Job diário `scan-pix-checkouts` (`billing.worker.ts`) avisa todos os admins quando um checkout Pix está perto de expirar ou já expirou |
 
 ## Fase 5 — Família/Grupo ✅
 

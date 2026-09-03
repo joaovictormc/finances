@@ -151,6 +151,21 @@ POST /api/billing/checkout-pix       { plan: "pro"|"familia", interval? } → { 
 POST /api/billing/cancel             → { success: true }
 ```
 
+## Notificações (`/api/notifications`)
+
+```
+GET    /api/notifications                   → { notifications: [30 mais recentes], unreadCount }
+POST   /api/notifications/:id/read          marca uma como lida
+POST   /api/notifications/read-all          marca todas como lidas
+DELETE /api/notifications                   limpa todas (lidas e não lidas)
+POST   /api/notifications/push-token        { token, platform, deviceName? }  registra o aparelho (upsert pelo token)
+POST   /api/notifications/push-token/remove { token }                         usado no logout
+```
+
+- `metadata.link` guarda a rota **da web** (`/overview`, `/groups/{id}`). O mobile traduz pra própria árvore em `apps/mobile/lib/notification-links.ts`; o que só existe na web (`/admin/*`) vira notificação não clicável, em vez de abrir tela em branco.
+- `POST /:id/read` usa `updateMany` com o `userId` no `where` — sem isso um id de outra pessoa seria marcado como lido.
+- O push sai pelo **Expo Push Service**: a API guarda o `ExponentPushToken` e posta em `exp.host`; quem fala com FCM/APNs é a Expo, então a API não tem credencial de push. Ticket com `DeviceNotRegistered` apaga o token na hora.
+
 ## IA (`/api/ai`, Fase 4)
 
 ```

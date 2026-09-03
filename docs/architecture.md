@@ -44,16 +44,24 @@ finances/
 │   │       │   ├── pdf/           annual-report
 │   │       │   ├── pluggy/        client.ts
 │   │       │   ├── auth.ts, bootstrap-admin.ts, groups.ts, redis.ts,
-│   │       │   ├── mercadopago.ts, pix.ts, payment-methods.ts,
-│   │       │   ├── plans.ts, plan-limits.ts, referrals.ts, notifications.ts
+│   │       │   ├── mercadopago.ts, pix.ts, pix-checkout.ts, payment-methods.ts,
+│   │       │   ├── plans.ts, plan-limits.ts, plan-prices.ts, plan-grant.ts,
+│   │       │   ├── billing-interval.ts, subscription-period.ts,
+│   │       │   ├── referrals.ts, notifications.ts, push.ts,
+│   │       │   ├── gamification.ts, gamification-settings.ts, prize-description.ts
 │   │       ├── middleware/        auth.ts (requireAuth), admin.ts (requireAdmin)
 │   │       └── emails/            Templates React Email
 │   ├── web/                       Next.js (App Router)
 │   │   └── app/
 │   │       ├── (auth)/            login, registro
 │   │       └── (dashboard)/       overview, transactions, accounts, budgets,
-│   │                              goals, bills, groups, bot, settings, admin/
-│   └── mobile/                    Expo SDK 54 — só `(tabs)/index.tsx`
+│   │                              goals, bills, groups, rewards, assistant,
+│   │                              settings/billing, admin/ (users, pricing,
+│   │                              payment-methods, checkouts, ai, gamification)
+│   └── mobile/                    Expo SDK 57 + expo-router — abas (index,
+│                                  transactions, budgets, accounts, assistant,
+│                                  more) mais telas de notificações, recompensas,
+│                                  grupos, metas, contas a pagar e planos
 ├── packages/
 │   ├── db/                        Prisma schema + client + seed
 │   ├── validations/                Zod schemas compartilhados
