@@ -1,5 +1,10 @@
 FROM node:20-slim AS base
-RUN corepack enable
+# O corepack que vem no node:20-slim é bem mais antigo que o pnpm pedido em
+# `packageManager` (10.34.5) e não conhece as chaves usadas pra assinar os
+# lançamentos novos — a primeira chamada a `pnpm` falha com erro de integridade
+# ("Cannot find matching keyid"). Atualizar o corepack antes de habilitá-lo
+# mantém o `packageManager` como fonte única da versão.
+RUN npm install -g corepack@latest && corepack enable
 RUN apt-get update && apt-get install -y --no-install-recommends openssl \
   && rm -rf /var/lib/apt/lists/*
 
