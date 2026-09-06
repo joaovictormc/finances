@@ -41,7 +41,8 @@
         "expo-build-properties",
         {
           "android": {
-            "enableMinifyInReleaseBuilds": false
+            "enableMinifyInReleaseBuilds": false,
+            "usesCleartextTraffic": true
           }
         }
       ],
