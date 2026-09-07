@@ -4,6 +4,10 @@ FROM node:20-slim AS base
 # lançamentos novos — a primeira chamada a `pnpm` falha com erro de integridade
 # ("Cannot find matching keyid"). Atualizar o corepack antes de habilitá-lo
 # mantém o `packageManager` como fonte única da versão.
+# Sem isto o corepack pergunta "Do you want to continue? [Y/n]" antes de baixar o
+# pnpm. Onde não há TTY — CI, qualquer automação — não há quem responda, e o
+# comando morre.
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN npm install -g corepack@latest && corepack enable
 RUN apt-get update && apt-get install -y --no-install-recommends openssl \
   && rm -rf /var/lib/apt/lists/*
