@@ -17,7 +17,12 @@ RUN turbo prune @finances/web --docker
 FROM base AS installer
 WORKDIR /app
 COPY --from=pruner /app/out/json/ .
-RUN pnpm install --frozen-lockfile
+# `--ignore-scripts` é obrigatório aqui: `out/json/` traz só os package.json, sem
+# o código. O postinstall de packages/db é `prisma generate`, que não encontra
+# `prisma/schema.prisma` neste estágio, sai 1 e derruba o install inteiro.
+# O schema só chega no estágio seguinte (out/full/), onde o generate é executado
+# explicitamente. Mesma flag que o CI já usa (.github/workflows/ci.yml).
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 FROM base AS builder
 WORKDIR /app
