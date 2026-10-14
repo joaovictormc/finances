@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight, CreditCard } from "lucide-react";
 import { ProfileSection } from "@/components/settings/profile-section";
 import { ThemeSection } from "@/components/settings/theme-section";
+import { CategoriesSection } from "@/components/settings/categories-section";
 import { AnnualReportSection } from "@/components/settings/annual-report-section";
 import { NotificationsSection } from "@/components/settings/notifications-section";
 import { DataExportSection } from "@/components/settings/data-export-section";
@@ -49,6 +50,14 @@ export default function SettingsPage() {
               <TwoFactorSection />
             </div>
           </div>
+        </section>
+
+        <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
+          <h2 className="text-base font-semibold mb-1">Minhas categorias</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Crie categorias além das padrão — principais ou como subcategoria de uma existente
+          </p>
+          <CategoriesSection />
         </section>
 
         <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">

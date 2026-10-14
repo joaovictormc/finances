@@ -29,6 +29,9 @@ export type Category = {
   iconUrl?: string | null;
   color: string | null;
   type: string;
+  /** false = criada pelo usuário (pode editar/excluir). */
+  isSystem?: boolean;
+  parentId?: string | null;
   children: Category[];
 };
 

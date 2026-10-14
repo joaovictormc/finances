@@ -8,6 +8,7 @@ import { DateField } from "@/components/date-field";
 import { formatBRL } from "@/lib/format";
 import { useTheme } from "@/lib/theme";
 import { BASE_PAYMENT_METHOD_TABS, type PaymentMethod } from "@/lib/payment-methods";
+import { NewCategoryChip } from "@/components/new-category-chip";
 import type { Category, FinancialAccount } from "@/lib/types";
 
 type ParsedReceipt = {
@@ -357,6 +358,15 @@ export default function NewTransactionScreen() {
                 </Text>
               </Pressable>
             ))}
+            {type !== "transfer" && (
+              <NewCategoryChip
+                type={type}
+                onCreated={(category) => {
+                  setCategories((prev) => [...prev, category]);
+                  setCategoryId(category.id);
+                }}
+              />
+            )}
           </View>
         </>
       )}

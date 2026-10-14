@@ -13,6 +13,8 @@ import type { Category, FinancialAccount, Group } from "@/lib/types";
  */
 export const queryKeys = {
   groups: ["groups"] as const,
+  /** Prefixo de todas as listas de categoria — invalidar isto atualiza todas. */
+  allCategories: ["categories"] as const,
   categories: (type?: "income" | "expense") => ["categories", type ?? "all"] as const,
   accounts: ["accounts"] as const,
   subscription: ["subscription"] as const,

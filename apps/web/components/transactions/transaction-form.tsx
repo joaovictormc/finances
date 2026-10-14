@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-client";
 import { useToast } from "@/components/ui/toast-provider";
+import { CategoryCreator } from "@/components/categories/category-creator";
 import type { Category, FinancialAccount, Group, Transaction } from "@/lib/types";
 import { BASE_PAYMENT_METHOD_OPTIONS, type PaymentMethod } from "@finances/validations";
 
@@ -53,10 +54,17 @@ export function TransactionForm({ transaction, categories, accounts, groups, onS
   const [notes, setNotes] = useState(transaction?.notes ?? "");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [creatingCategory, setCreatingCategory] = useState(false);
 
-  useEffect(() => {
+  // Categoria de um tipo não vale no outro. Limpa no clique da aba, não num
+  // useEffect em `type`: o efeito também rodava na montagem e apagava a
+  // categoria de quem abria uma transação pra editar.
+  function changeType(next: TransactionType) {
+    if (next === type) return;
+    setType(next);
     setCategoryId("");
-  }, [type]);
+    setCreatingCategory(false);
+  }
 
   const filteredCategories = flattenCategories(categories, type);
   const availableAccounts = accounts.filter((a) => (groupId ? a.groupId === groupId : !a.groupId));
@@ -119,7 +127,7 @@ export function TransactionForm({ transaction, categories, accounts, groups, onS
           <button
             key={tab.value}
             type="button"
-            onClick={() => setType(tab.value)}
+            onClick={() => changeType(tab.value)}
             className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${
               type === tab.value
                 ? tab.activeClass
@@ -170,16 +178,39 @@ export function TransactionForm({ transaction, categories, accounts, groups, onS
         options={paymentMethodOptions}
       />
 
-      <Select
-        label="Categoria"
-        value={categoryId}
-        onChange={(e) => setCategoryId(e.target.value)}
-        placeholder="Sem categoria"
-        options={filteredCategories.map((c) => ({
-          value: c.id,
-          label: `${c.icon ?? ""} ${c.name}`.trim(),
-        }))}
-      />
+      <div className="space-y-2">
+        <Select
+          label="Categoria"
+          value={categoryId}
+          onChange={(e) => setCategoryId(e.target.value)}
+          placeholder="Sem categoria"
+          options={filteredCategories.map((c) => ({
+            value: c.id,
+            label: `${c.icon ?? ""} ${c.name}`.trim(),
+          }))}
+        />
+        {/* Transferência usa as categorias de sistema próprias; não tem personalizada. */}
+        {type !== "transfer" &&
+          (creatingCategory ? (
+            <CategoryCreator
+              type={type}
+              categories={categories}
+              onCreated={(category) => {
+                setCategoryId(category.id);
+                setCreatingCategory(false);
+              }}
+              onCancel={() => setCreatingCategory(false)}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCreatingCategory(true)}
+              className="text-xs font-medium text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            >
+              + Nova categoria
+            </button>
+          ))}
+      </div>
 
       <DateInput
         label="Data"

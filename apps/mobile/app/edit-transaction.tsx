@@ -5,6 +5,7 @@ import { api } from "@/lib/api-client";
 import { DateField } from "@/components/date-field";
 import { useTheme } from "@/lib/theme";
 import { BASE_PAYMENT_METHOD_TABS, type PaymentMethod } from "@/lib/payment-methods";
+import { NewCategoryChip } from "@/components/new-category-chip";
 import type { Category, FinancialAccount, Transaction } from "@/lib/types";
 
 type TxType = "expense" | "income" | "transfer";
@@ -220,6 +221,15 @@ export default function EditTransactionScreen() {
             </Text>
           </Pressable>
         ))}
+        {type !== "transfer" && (
+          <NewCategoryChip
+            type={type}
+            onCreated={(category) => {
+              setCategories((prev) => [...prev, category]);
+              setCategoryId(category.id);
+            }}
+          />
+        )}
       </View>
 
       <DateField label="Data" value={date} onChange={setDate} />

@@ -90,10 +90,14 @@ Tipos: `checking` | `savings` | `credit_card` | `investment` | `wallet`
 ```
 GET /api/categories?type=expense   → categorias hierárquicas com children[]
 GET /api/categories?type=income    → categorias de receita
-POST   /api/categories   { name, type, icon?, color?, parentId? }
-PATCH  /api/categories/:id
-DELETE /api/categories/:id         (somente categorias do usuário, não sistema)
+POST   /api/categories   { name, type: "income"|"expense", icon?, color?, parentId? }   409 se o nome já existe no mesmo nível
+PATCH  /api/categories/:id   { name?, icon?, color? }    tipo e categoria-mãe não mudam depois de criada
+DELETE /api/categories/:id   → { uncategorizedTransactions }
 ```
+Só categorias do próprio usuário podem ser editadas/excluídas; as de sistema nunca.
+- `parentId` aceita uma categoria principal (de sistema ou do usuário) do mesmo tipo — no máximo dois níveis.
+- Nome único sem diferenciar maiúsculas, contando as de sistema, no mesmo tipo e nível.
+- Excluir deixa transações e contas recorrentes como "Sem categoria". É recusado (409) se a categoria tiver subcategorias ou estiver em algum orçamento — sem ela o orçamento passaria a somar todos os gastos.
 
 ## Orçamentos
 
