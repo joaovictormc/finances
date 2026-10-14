@@ -21,9 +21,25 @@ type Filters = {
   startDate: string;
   endDate: string;
   groupId: string;
+  categoryId: string;
 };
 
-const defaultFilters: Filters = { search: "", type: "", startDate: "", endDate: "", groupId: "" };
+const defaultFilters: Filters = { search: "", type: "", startDate: "", endDate: "", groupId: "", categoryId: "" };
+
+const URL_FILTER_KEYS = ["type", "startDate", "endDate", "groupId", "categoryId"] as const;
+
+/**
+ * Filtros que chegam pela URL — o clique numa fatia do gráfico de gastos da
+ * Visão Geral abre /transactions?categoryId=...&type=expense&startDate=...
+ */
+function filtersFromUrl(params: URLSearchParams): Filters {
+  const filters = { ...defaultFilters };
+  for (const key of URL_FILTER_KEYS) {
+    const value = params.get(key);
+    if (value) filters[key] = value;
+  }
+  return filters;
+}
 
 // Referências estáveis pro "ainda carregando" — um [] novo a cada render
 // invalidaria os useMemo que dependem dessas listas.
@@ -39,7 +55,7 @@ export default function TransactionsPage() {
   const searchParams = useSearchParams();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filters, setFilters] = useState<Filters>(defaultFilters);
+  const [filters, setFilters] = useState<Filters>(() => filtersFromUrl(new URLSearchParams(searchParams)));
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
   const { data: categories = NO_CATEGORIES } = useCategories();
@@ -64,6 +80,7 @@ export default function TransactionsPage() {
         ...(f.startDate && { startDate: f.startDate }),
         ...(f.endDate && { endDate: f.endDate }),
         ...(f.groupId && { groupId: f.groupId }),
+        ...(f.categoryId && { categoryId: f.categoryId }),
         page,
         limit: 20,
       });
@@ -86,9 +103,13 @@ export default function TransactionsPage() {
 
   // Atalho da grid de ações rápidas da Visão Geral (?new=1) — abre o modal de
   // criação direto e limpa o parâmetro da URL pra não reabrir num refresh.
+  // Filtros vindos da URL já foram pro estado no useState acima; limpa também,
+  // senão um refresh depois de mexer nos filtros voltaria aos da URL.
   useEffect(() => {
     if (searchParams.get("new") === "1") {
       openNew();
+      router.replace(pathname);
+    } else if (URL_FILTER_KEYS.some((key) => searchParams.has(key))) {
       router.replace(pathname);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -238,7 +259,13 @@ export default function TransactionsPage() {
       </div>
 
       <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-4 mb-4">
-        <TransactionFilters filters={filters} groups={groups} onChange={setFilters} onNew={openNew} />
+        <TransactionFilters
+          filters={filters}
+          groups={groups}
+          categories={categories}
+          onChange={setFilters}
+          onNew={openNew}
+        />
       </div>
 
       {selectedIds.size > 0 && (

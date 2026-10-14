@@ -153,7 +153,14 @@ export default function GroupDetailPage() {
 
   const pieData = (dashboard?.byCategory ?? [])
     .filter((row) => row.total > 0)
-    .map((row) => ({ name: row.category?.name ?? "Sem categoria", icon: row.category?.icon ?? null, total: row.total }));
+    .map((row) => ({
+      categoryId: row.category?.id ?? null,
+      name: row.category?.name ?? "Sem categoria",
+      icon: row.category?.icon ?? null,
+      total: row.total,
+    }));
+  // O dashboard do grupo é sempre o mês corrente (a API não recebe período daqui).
+  const now = new Date();
 
   return (
     <div>
@@ -206,7 +213,11 @@ export default function GroupDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
           <h2 className="font-semibold mb-4 text-foreground">Gastos por Categoria</h2>
-          <SpendingPieChart data={pieData} totalExpense={dashboard?.expense ?? 0} />
+          <SpendingPieChart
+            data={pieData}
+            totalExpense={dashboard?.expense ?? 0}
+            drilldown={{ year: now.getFullYear(), month: now.getMonth() + 1, groupId: id }}
+          />
         </div>
         <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
           <h2 className="font-semibold mb-4 text-foreground">Receitas vs Gastos</h2>

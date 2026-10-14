@@ -62,10 +62,17 @@ app.get("/", zValidator("query", TransactionFiltersSchema), async (c) => {
 
   const where = {
     AND: [ownershipFilter, scopeFilter],
-    ...(effectiveStart && { date: { gte: effectiveStart } }),
-    ...(endDate && { date: { lte: new Date(endDate) } }),
+    // Um objeto `date` só: com dois spreads separados, o `lte` substituía o
+    // `gte` e um filtro de mês virava "tudo até o fim do mês".
+    ...((effectiveStart || endDate) && {
+      date: {
+        ...(effectiveStart && { gte: effectiveStart }),
+        ...(endDate && { lte: new Date(endDate) }),
+      },
+    }),
     ...(type && { type }),
-    ...(categoryId && { categoryId }),
+    // "none" = sem categoria (fatia "Sem categoria" do gráfico de gastos).
+    ...(categoryId && { categoryId: categoryId === "none" ? null : categoryId }),
     ...(accountId && { accountId }),
     ...(search && {
       description: { contains: search, mode: "insensitive" as const },

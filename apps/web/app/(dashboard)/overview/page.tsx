@@ -99,6 +99,7 @@ export default async function OverviewPage({
   const pieData = (currentReport?.byCategory ?? [])
     .filter((row) => row.total > 0)
     .map((row) => ({
+      categoryId: row.category?.id ?? null,
       name: row.category?.name ?? "Sem categoria",
       icon: row.category?.icon ?? null,
       total: row.total,
@@ -154,7 +155,7 @@ export default async function OverviewPage({
           {/* Pie chart */}
           <div className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
             <h2 className="font-semibold mb-4 text-foreground">Gastos por Categoria</h2>
-            <SpendingPieChart data={pieData} totalExpense={currentReport.expense} />
+            <SpendingPieChart data={pieData} totalExpense={currentReport.expense} drilldown={{ year, month }} />
           </div>
 
           {/* Bar chart */}
