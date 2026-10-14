@@ -7,6 +7,7 @@ import { useTheme } from "@/lib/theme";
 import { ProgressRing } from "@/components/progress-ring";
 import { SpinWheel } from "@/components/spin-wheel";
 import { ConfettiBurst } from "@/components/confetti-burst";
+import { DailyCheckin, type CheckinStatus } from "@/components/daily-checkin";
 
 type GamificationProfile = {
   points: number;
@@ -16,6 +17,7 @@ type GamificationProfile = {
   spinUnlockStreak: number;
   canSpin: boolean;
   prizes: { label: string; points: number }[];
+  checkin: CheckinStatus;
 };
 
 // Mesma tabela de LEVEL_THRESHOLDS de apps/api/src/lib/gamification.ts — só pra
@@ -120,6 +122,26 @@ export function GamificationCard() {
           </Text>
         </View>
       </View>
+
+      {profile.checkin.enabled && (
+        <View className="mt-4 border-t border-border pt-4 dark:border-border-dark">
+          <DailyCheckin
+            status={profile.checkin}
+            onCheckedIn={(result) =>
+              setProfile((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      points: result.points,
+                      level: result.level,
+                      checkin: { ...prev.checkin, streak: result.streak, checkedInToday: true },
+                    }
+                  : prev,
+              )
+            }
+          />
+        </View>
+      )}
 
       <View className="mt-4 border-t border-border pt-4 dark:border-border-dark">
         {profile.canSpin ? (

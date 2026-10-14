@@ -57,26 +57,61 @@ function normalizePrizes(raw: unknown): SpinPrize[] {
   });
 }
 
-export async function getGamificationSettings(): Promise<{ spinPrizes: SpinPrize[]; updatedAt: Date }> {
+/** Recompensa do check-in diário: `rewardPoints` a cada `rewardDays` check-ins seguidos. */
+export type CheckinSettings = {
+  enabled: boolean;
+  rewardDays: number;
+  rewardPoints: number;
+};
+
+export type GamificationSettingsData = {
+  spinPrizes: SpinPrize[];
+  checkin: CheckinSettings;
+  updatedAt: Date;
+};
+
+type SettingsRow = Awaited<ReturnType<typeof db.gamificationSettings.upsert>>;
+
+function toSettingsData(row: SettingsRow): GamificationSettingsData {
+  return {
+    spinPrizes: normalizePrizes(row.spinPrizes),
+    checkin: {
+      enabled: row.checkinEnabled,
+      rewardDays: row.checkinRewardDays,
+      rewardPoints: row.checkinRewardPoints,
+    },
+    updatedAt: row.updatedAt,
+  };
+}
+
+export async function getGamificationSettings(): Promise<GamificationSettingsData> {
   const settings = await db.gamificationSettings.upsert({
     where: { id: SINGLETON_ID },
     update: {},
     create: { id: SINGLETON_ID },
   });
-  return { spinPrizes: normalizePrizes(settings.spinPrizes), updatedAt: settings.updatedAt };
+  return toSettingsData(settings);
 }
 
+/** Atualiza só o que veio: a tela salva prêmios e check-in em botões separados. */
 export async function updateGamificationSettings(data: {
   spinPrizes?: SpinPrize[];
-}): Promise<{ spinPrizes: SpinPrize[]; updatedAt: Date }> {
-  const payload: Prisma.GamificationSettingsUpsertArgs["create"] = {
-    id: SINGLETON_ID,
+  checkin?: CheckinSettings;
+}): Promise<GamificationSettingsData> {
+  const changes: Prisma.GamificationSettingsUpdateInput = {
     ...(data.spinPrizes ? { spinPrizes: data.spinPrizes as unknown as Prisma.InputJsonValue } : {}),
+    ...(data.checkin
+      ? {
+          checkinEnabled: data.checkin.enabled,
+          checkinRewardDays: data.checkin.rewardDays,
+          checkinRewardPoints: data.checkin.rewardPoints,
+        }
+      : {}),
   };
   const settings = await db.gamificationSettings.upsert({
     where: { id: SINGLETON_ID },
-    update: data.spinPrizes ? { spinPrizes: data.spinPrizes as unknown as Prisma.InputJsonValue } : {},
-    create: payload,
+    update: changes,
+    create: { id: SINGLETON_ID, ...(changes as Omit<Prisma.GamificationSettingsCreateInput, "id">) },
   });
-  return { spinPrizes: normalizePrizes(settings.spinPrizes), updatedAt: settings.updatedAt };
+  return toSettingsData(settings);
 }

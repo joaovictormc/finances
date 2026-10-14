@@ -9,11 +9,14 @@ import {
   redeemBadge,
   setActiveBadge,
   getSpinHistory,
+  dailyCheckin,
+  visibleCheckinStreak,
   SPIN_UNLOCK_STREAK,
   EXTRA_SPIN_COST,
   BADGE_CATALOG,
 } from "../lib/gamification";
 import { getGamificationSettings } from "../lib/gamification-settings";
+import { todayInReportTimeZone } from "../lib/report-period";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -29,6 +32,15 @@ app.get("/profile", async (c) => {
 
   const profile = await db.gamificationProfile.findUnique({ where: { userId } });
 
+  const today = todayInReportTimeZone();
+  const checkin = {
+    enabled: settings.checkin.enabled,
+    rewardDays: settings.checkin.rewardDays,
+    rewardPoints: settings.checkin.rewardPoints,
+    streak: profile ? visibleCheckinStreak(profile, today) : 0,
+    checkedInToday: profile?.lastCheckinDate?.getTime() === today.getTime(),
+  };
+
   if (!profile) {
     return c.json({
       points: 0,
@@ -43,6 +55,7 @@ app.get("/profile", async (c) => {
       extraSpinCost: EXTRA_SPIN_COST,
       unlockedBadges: [],
       activeBadge: null,
+      checkin,
     });
   }
 
@@ -56,7 +69,23 @@ app.get("/profile", async (c) => {
     canSpin,
     prizes,
     extraSpinCost: EXTRA_SPIN_COST,
+    checkin,
   });
+});
+
+app.post("/checkin", async (c) => {
+  const userId = c.get("userId");
+  const result = await dailyCheckin(userId);
+
+  if (!result.ok) {
+    const messages: Record<string, string> = {
+      desativado: "O check-in diário está desativado no momento.",
+      ja_fez_checkin: "Você já fez o check-in de hoje. Volte amanhã!",
+    };
+    return c.json({ error: messages[result.reason] }, 400);
+  }
+
+  return c.json(result);
 });
 
 app.post("/spin", async (c) => {

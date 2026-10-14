@@ -34,8 +34,8 @@ const sections = [
   },
   {
     href: "/admin/gamification",
-    title: "Roleta Semanal",
-    description: "Defina os prêmios sorteáveis na Roleta Semanal da gamificação",
+    title: "Gamificação",
+    description: "Prêmios da Roleta Semanal e recompensa do check-in diário",
     icon: Sparkles,
   },
 ];

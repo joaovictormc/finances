@@ -45,7 +45,10 @@ Schema em: `packages/db/prisma/schema.prisma` (33 models).
 
 ### Gamificação
 - `GamificationProfile` — `points`, `level`, `currentStreak`, `longestStreak`, `lastSpinAt`
+  - `currentStreak` conta dias seguidos **registrando transações** (libera a Roleta Semanal).
+  - `checkinStreak` / `lastCheckinDate` são a sequência do **check-in diário** (botão), independente da anterior. O dia é o de São Paulo; pular um dia volta a sequência a 1 no próximo check-in.
 - `GamificationSettings` — singleton; `spinPrizes` (JSON) com `{ label, type, points, days, plan, weight }` por prêmio
+  - `checkinEnabled`, `checkinRewardDays` (padrão 7), `checkinRewardPoints` (padrão 50): o check-in paga os pontos a cada `checkinRewardDays` check-ins seguidos (7º, 14º, 21º…). Editável em `/admin/gamification`.
   - `type` decide o que é entregue: `points` soma no perfil; `plan_days` soma dias de assinatura na hora. Prêmio gravado antes desse campo normaliza como `points`.
 - `GamificationSpinLog` — auditoria de cada giro real: `prizeLabel`, `prizePoints`, `prizeType`, `prizeDays`, `source` (weekly/purchased)
 

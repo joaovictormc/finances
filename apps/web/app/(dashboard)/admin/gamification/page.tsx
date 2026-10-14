@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, X, FlaskConical, Sparkles, BarChart3 } from "lucide-react";
+import { Plus, X, FlaskConical, Sparkles, BarChart3, CalendarCheck } from "lucide-react";
 import { BackButton } from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +23,15 @@ type SpinPrize = {
   plan: PrizePlan;
   weight: number;
 };
-type GamificationSettings = { spinPrizes: SpinPrize[] };
+type CheckinSettings = { enabled: boolean; rewardDays: number; rewardPoints: number };
+type GamificationSettings = { spinPrizes: SpinPrize[]; checkin: CheckinSettings };
+
+// Números como string pelo mesmo motivo do PrizeDraft: digitação livre.
+type CheckinDraft = { enabled: boolean; rewardDays: string; rewardPoints: string };
+
+function toCheckinDraft(c: CheckinSettings): CheckinDraft {
+  return { enabled: c.enabled, rewardDays: String(c.rewardDays), rewardPoints: String(c.rewardPoints) };
+}
 
 const TYPE_OPTIONS = [
   { value: "points", label: "Pontos" },
@@ -105,14 +113,18 @@ export default function AdminGamificationPage() {
 
   const [stats, setStats] = useState<GamificationStats | null>(null);
 
+  const [checkin, setCheckin] = useState<CheckinDraft | null>(null);
+  const [savingCheckin, setSavingCheckin] = useState(false);
+
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
       const settings = await api.get<GamificationSettings>("/api/admin/gamification/settings");
       setPrizes(settings.spinPrizes.map(toDraft));
       setSavedPrizes(settings.spinPrizes);
+      setCheckin(toCheckinDraft(settings.checkin));
     } catch {
-      toast({ title: "Erro ao carregar prêmios da roleta", variant: "error" });
+      toast({ title: "Erro ao carregar configurações da gamificação", variant: "error" });
     } finally {
       setIsLoading(false);
     }
@@ -255,6 +267,33 @@ export default function AdminGamificationPage() {
     }
   }
 
+  async function handleSaveCheckin() {
+    if (!checkin) return;
+    const rewardDays = Number(checkin.rewardDays.trim());
+    const rewardPoints = Number(checkin.rewardPoints.trim());
+    if (!Number.isInteger(rewardDays) || rewardDays < 1 || rewardDays > 60) {
+      toast({ title: "Dias seguidos precisa ser um número inteiro entre 1 e 60", variant: "error" });
+      return;
+    }
+    if (!Number.isInteger(rewardPoints) || rewardPoints < 1 || rewardPoints > 10_000) {
+      toast({ title: "Pontos precisa ser um número inteiro entre 1 e 10.000", variant: "error" });
+      return;
+    }
+
+    setSavingCheckin(true);
+    try {
+      const settings = await api.patch<GamificationSettings>("/api/admin/gamification/settings", {
+        checkin: { enabled: checkin.enabled, rewardDays, rewardPoints },
+      });
+      setCheckin(toCheckinDraft(settings.checkin));
+      toast({ title: "Check-in diário salvo", variant: "success" });
+    } catch {
+      toast({ title: "Erro ao salvar check-in diário", variant: "error" });
+    } finally {
+      setSavingCheckin(false);
+    }
+  }
+
   async function handleSimulate() {
     const spins = Number(spinsInput);
     if (!Number.isFinite(spins) || spins < 1 || spins > 50000) {
@@ -318,11 +357,61 @@ export default function AdminGamificationPage() {
     <div className="max-w-6xl">
       <BackButton href="/admin" label="Administração" />
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Roleta Semanal</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Gamificação</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Defina os prêmios sorteáveis na Roleta Semanal da gamificação
+          Recompensa do check-in diário e prêmios sorteáveis na Roleta Semanal
         </p>
       </div>
+
+      {checkin && (
+        <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6 mb-6">
+          <h2 className="text-base font-semibold mb-1 flex items-center gap-2">
+            <CalendarCheck size={16} className="text-primary" /> Check-in diário
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            O usuário toca em &quot;Fazer check-in&quot; uma vez por dia. A cada sequência completa de dias
+            seguidos ele ganha os pontos abaixo (no 7º, 14º, 21º dia… com o padrão de 7). Se pular um dia,
+            a contagem volta a 1. Mudanças valem a partir do próximo check-in.
+          </p>
+
+          <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-4 cursor-pointer w-fit">
+            <input
+              type="checkbox"
+              checked={checkin.enabled}
+              onChange={(e) => setCheckin({ ...checkin, enabled: e.target.checked })}
+              className="h-4 w-4 accent-[var(--color-primary)]"
+            />
+            Check-in ativo
+          </label>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
+            <Input
+              label="Dias seguidos"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={60}
+              value={checkin.rewardDays}
+              onChange={(e) => setCheckin({ ...checkin, rewardDays: e.target.value })}
+              disabled={!checkin.enabled}
+            />
+            <Input
+              label="Pontos por sequência"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={10000}
+              value={checkin.rewardPoints}
+              onChange={(e) => setCheckin({ ...checkin, rewardPoints: e.target.value })}
+              disabled={!checkin.enabled}
+            />
+          </div>
+
+          <div className="mt-4">
+            <Button onClick={handleSaveCheckin} loading={savingCheckin}>Salvar check-in</Button>
+          </div>
+        </section>
+      )}
 
       <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
         <h2 className="text-base font-semibold mb-1">Prêmios</h2>

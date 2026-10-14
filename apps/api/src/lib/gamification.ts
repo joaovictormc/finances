@@ -4,6 +4,7 @@ import { grantPlanDays, type PlanGrantDecision } from "./plan-grant";
 import { PLANS } from "./plans";
 import { sendNotification } from "./notifications";
 import { describePrize } from "./prize-description";
+import { todayInReportTimeZone } from "./report-period";
 
 /**
  * Sorteia um prêmio ponderado pelo `weight` de cada um (não confia em RNG do
@@ -144,6 +145,88 @@ export async function awardDailyPoints(userId: string, transactionDate: Date): P
   }
 }
 
+// ── Check-in diário ───────────────────────────────────────────────────────────
+
+export type CheckinState = { checkinStreak: number; lastCheckinDate: Date | null };
+
+export type CheckinStep =
+  | { alreadyCheckedIn: true }
+  | { alreadyCheckedIn: false; streak: number; reward: number };
+
+/**
+ * Regra pura do check-in, separada do banco pra ser testável. Dia seguinte ao
+ * último check-in continua a sequência; qualquer hiato volta a 1. O prêmio sai
+ * a cada `rewardDays` check-ins seguidos (7º, 14º, 21º...), não só uma vez.
+ */
+export function computeCheckin(
+  state: CheckinState,
+  today: Date,
+  rewardDays: number,
+  rewardPoints: number
+): CheckinStep {
+  const gap = state.lastCheckinDate ? diffInDays(today, state.lastCheckinDate) : null;
+  if (gap === 0) return { alreadyCheckedIn: true };
+
+  const streak = gap === 1 ? state.checkinStreak + 1 : 1;
+  const reward = rewardDays > 0 && streak % rewardDays === 0 ? rewardPoints : 0;
+  return { alreadyCheckedIn: false, streak, reward };
+}
+
+/**
+ * Sequência como o usuário deve vê-la hoje: quem pulou um dia já perdeu a
+ * sequência, mesmo que o banco ainda guarde o número antigo (ele só é
+ * zerado no próximo check-in).
+ */
+export function visibleCheckinStreak(state: CheckinState, today: Date): number {
+  if (!state.lastCheckinDate) return 0;
+  return diffInDays(today, state.lastCheckinDate) <= 1 ? state.checkinStreak : 0;
+}
+
+export type CheckinResult =
+  | {
+      ok: true;
+      streak: number;
+      /** Pontos ganhos neste check-in — 0 fora do dia de prêmio. */
+      reward: number;
+      points: number;
+      level: number;
+    }
+  | { ok: false; reason: "desativado" | "ja_fez_checkin" };
+
+export async function dailyCheckin(userId: string, now = new Date()): Promise<CheckinResult> {
+  const settings = await getGamificationSettings();
+  if (!settings.checkin.enabled) return { ok: false, reason: "desativado" };
+
+  const today = todayInReportTimeZone(now);
+  // Quem nunca registrou transação ainda não tem perfil — o check-in cria.
+  const profile = await db.gamificationProfile.upsert({ where: { userId }, update: {}, create: { userId } });
+
+  const step = computeCheckin(profile, today, settings.checkin.rewardDays, settings.checkin.rewardPoints);
+  if (step.alreadyCheckedIn) return { ok: false, reason: "ja_fez_checkin" };
+
+  // Condicionado ao lastCheckinDate que foi lido: dois cliques simultâneos não
+  // contam dois check-ins nem pagam o prêmio duas vezes — o segundo não acha
+  // mais a linha nesse estado e cai em "já fez".
+  const { count } = await db.gamificationProfile.updateMany({
+    where: { userId, lastCheckinDate: profile.lastCheckinDate },
+    data: {
+      checkinStreak: step.streak,
+      lastCheckinDate: today,
+      ...(step.reward > 0 ? { points: { increment: step.reward } } : {}),
+    },
+  });
+  if (count === 0) return { ok: false, reason: "ja_fez_checkin" };
+
+  let { points, level } = profile;
+  if (step.reward > 0) {
+    const fresh = await db.gamificationProfile.findUniqueOrThrow({ where: { userId }, select: { points: true } });
+    points = fresh.points;
+    level = getLevelForPoints(points);
+    await db.gamificationProfile.update({ where: { userId }, data: { level } });
+  }
+
+  return { ok: true, streak: step.streak, reward: step.reward, points, level };
+}
 
 /** Campos comuns ao giro grátis e ao comprado. */
 type SpinAward = {

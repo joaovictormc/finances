@@ -62,6 +62,17 @@ export type GamificationProfile = {
   spinUnlockStreak: number;
   canSpin: boolean;
   prizes: { label: string; points: number }[];
+  checkin: CheckinStatus;
+};
+
+export type CheckinStatus = {
+  /** Desligado pelo admin: o botão some. */
+  enabled: boolean;
+  rewardDays: number;
+  rewardPoints: number;
+  /** Já zerada pela API se o usuário pulou um dia. */
+  streak: number;
+  checkedInToday: boolean;
 };
 
 export function useGamificationProfile() {

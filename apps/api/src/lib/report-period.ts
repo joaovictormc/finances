@@ -68,3 +68,19 @@ export function parseMonthlyReportPeriod(
 
   return { year, month, ...getMonthlyReportPeriod(year, month) };
 }
+
+/**
+ * "Hoje" no fuso dos relatórios, como data pura (meia-noite UTC daquele dia) —
+ * o formato de uma coluna @db.Date. Sem isso, um clique às 22h em São Paulo
+ * (01h UTC) contaria como o dia seguinte.
+ */
+export function todayInReportTimeZone(now = new Date()): Date {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: REPORT_TIME_ZONE,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(now);
+  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+  return new Date(Date.UTC(get("year"), get("month") - 1, get("day")));
+}

@@ -201,6 +201,22 @@ POST /api/webhooks/pluggy         valida IP de origem, enfileira open-finance-sy
 GET /api/reports/annual?year=2026   → PDF (Content-Type: application/pdf), relatório anual consolidado
 ```
 
+## Gamificação (`/api/gamification`)
+
+```
+GET   /api/gamification/profile      pontos, nível, streak de transações, roleta e
+                                     checkin: { enabled, rewardDays, rewardPoints, streak, checkedInToday }
+POST  /api/gamification/checkin      → { streak, reward, points, level }   400 se já fez hoje ou se está desativado
+POST  /api/gamification/spin         giro grátis semanal (exige 7 dias seguidos registrando transações)
+POST  /api/gamification/buy-spin     giro avulso pago com pontos
+GET   /api/gamification/badges
+POST  /api/gamification/badges/redeem   { slug }
+PATCH /api/gamification/badges/active   { slug | null }
+GET   /api/gamification/history
+```
+
+Check-in: um por dia (dia de São Paulo). A cada `rewardDays` check-ins seguidos (7º, 14º, 21º…) soma `rewardPoints`; pular um dia volta a sequência a 1. `checkin.streak` no perfil já vem zerado quando o usuário pulou um dia.
+
 ## Admin (`/api/admin/*`, requer `role: "admin"`)
 
 ```
@@ -217,7 +233,8 @@ GET   /api/admin/payment-methods                    lista Mercado Pago/Pix com s
 PATCH /api/admin/payment-methods/:id   { enabled?, config? }
 
 GET   /api/admin/plan-prices                        preço de cada plano × período (a tabela se preenche sozinha na 1ª leitura)
-PATCH /api/admin/gamification/settings   { spinPrizes: [{ label, type: "points"|"plan_days", points, days, plan, weight }] }   `days` limitado a 365
+PATCH /api/admin/gamification/settings   { spinPrizes?: [{ label, type: "points"|"plan_days", points, days, plan, weight }], checkin?: { enabled, rewardDays, rewardPoints } }
+                                         só atualiza o que vier; `days` até 365, `rewardDays` 1–60, `rewardPoints` 1–10.000
 PATCH /api/admin/plan-prices   { prices: [{ plan, interval, priceCents, active }] }   não altera quem já assina
 
 GET   /api/admin/ai/settings

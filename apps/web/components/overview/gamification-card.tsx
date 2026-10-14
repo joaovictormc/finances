@@ -10,6 +10,7 @@ import { SpinWheel } from "@/components/ui/spin-wheel";
 import { ConfettiBurst } from "@/components/ui/confetti-burst";
 import { cn } from "@/lib/utils";
 import { queryKeys, useGamificationProfile, type GamificationProfile } from "@/lib/queries";
+import { DailyCheckin } from "@/components/gamification/daily-checkin";
 
 // Mesma tabela de LEVEL_THRESHOLDS de apps/api/src/lib/gamification.ts — só pra
 // desenhar a barra de progresso até o próximo nível (a fonte da verdade do
@@ -95,6 +96,8 @@ export function GamificationCard() {
           <p className="text-xs text-muted-foreground">{profile.points} pontos acumulados</p>
         </div>
       </div>
+
+      <DailyCheckin className="mt-4 pt-4 border-t border-border/60" />
 
       <div className="mt-4 pt-4 border-t border-border/60">
         {profile.canSpin ? (

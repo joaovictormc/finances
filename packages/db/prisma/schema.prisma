@@ -507,6 +507,11 @@ model GamificationProfile {
   lastActivityDate DateTime? @db.Date
   lastSpinAt      DateTime?
 
+  // Check-in diário (botão), independente da streak de transações acima.
+  // Dia no fuso de São Paulo — clicar às 23h não pode contar como amanhã.
+  checkinStreak   Int       @default(0)
+  lastCheckinDate DateTime? @db.Date
+
   unlockedBadges String[] @default([]) // slugs do catálogo estático de emblemas resgatados com pontos
   activeBadge    String?                // slug do emblema em exibição (perto do nome) — precisa estar em unlockedBadges
 
@@ -643,6 +648,12 @@ model GamificationSettings {
   /// `type` decide o que é entregue: "points" soma `points` no perfil; "plan_days"
   /// soma `days` de assinatura do `plan` indicado. Os dois são aplicados na hora,
   /// sem fila de resgate — o rótulo não pode prometer o que o sistema não entrega.
+  /// Check-in diário: a cada `checkinRewardDays` check-ins seguidos o usuário
+  /// ganha `checkinRewardPoints` (no 7º, 14º, 21º... dia). Faltou um dia, volta a 1.
+  checkinEnabled      Boolean @default(true)
+  checkinRewardDays   Int     @default(7)
+  checkinRewardPoints Int     @default(50)
+
   spinPrizes Json @default("[{\"label\":\"10 pontos\",\"points\":10,\"weight\":1},{\"label\":\"20 pontos\",\"points\":20,\"weight\":1},{\"label\":\"30 pontos\",\"points\":30,\"weight\":1},{\"label\":\"50 pontos\",\"points\":50,\"weight\":1},{\"label\":\"100 pontos\",\"points\":100,\"weight\":1}]")
 
   updatedAt DateTime @updatedAt

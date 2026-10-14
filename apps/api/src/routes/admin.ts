@@ -460,7 +460,16 @@ const GamificationSettingsSchema = z.object({
         }),
     )
     .min(1)
-    .max(10),
+    .max(10)
+    .optional(),
+  checkin: z
+    .object({
+      enabled: z.boolean(),
+      // Teto de 60 dias: sequência mais longa que isso quase ninguém completa.
+      rewardDays: z.number().int().min(1).max(60),
+      rewardPoints: z.number().int().min(1).max(10_000),
+    })
+    .optional(),
 });
 
 app.patch("/gamification/settings", zValidator("json", GamificationSettingsSchema), async (c) => {

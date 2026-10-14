@@ -6,11 +6,13 @@ import { api } from "@/lib/api-client";
 import { useTheme } from "@/lib/theme";
 import { SpinWheel } from "@/components/spin-wheel";
 import { ConfettiBurst } from "@/components/confetti-burst";
+import { DailyCheckin, type CheckinStatus, type CheckinResult } from "@/components/daily-checkin";
 
 type Profile = {
   points: number;
   prizes: { label: string; points: number }[];
   extraSpinCost: number;
+  checkin: CheckinStatus;
 };
 
 type BadgeInfo = { slug: string; label: string; icon: string; cost: number };
@@ -72,6 +74,19 @@ export default function RewardsScreen() {
   }, []);
 
   useFocusEffect(load);
+
+  function handleCheckedIn(result: CheckinResult) {
+    setProfile((prev) =>
+      prev
+        ? {
+            ...prev,
+            points: result.points,
+            checkin: { ...prev.checkin, streak: result.streak, checkedInToday: true },
+          }
+        : prev,
+    );
+    setBadgesData((prev) => (prev ? { ...prev, points: result.points } : prev));
+  }
 
   const points = badgesData?.points ?? profile?.points ?? 0;
 
@@ -145,10 +160,16 @@ export default function RewardsScreen() {
         <View>
           <Text className="text-2xl font-bold text-foreground dark:text-foreground-dark">{points} pontos</Text>
           <Text className="text-xs text-muted-foreground dark:text-muted-foreground-dark">
-            Ganhe mais registrando transações e girando a Roleta Semanal
+            Ganhe mais registrando transações, fazendo check-in e girando a Roleta Semanal
           </Text>
         </View>
       </View>
+
+      {profile.checkin.enabled && (
+        <View className="rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
+          <DailyCheckin status={profile.checkin} onCheckedIn={handleCheckedIn} />
+        </View>
+      )}
 
       <View className="rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
         <Text className="mb-1 text-base font-semibold text-foreground dark:text-foreground-dark">Giro avulso</Text>

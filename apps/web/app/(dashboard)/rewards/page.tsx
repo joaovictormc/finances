@@ -10,6 +10,7 @@ import { ConfettiBurst } from "@/components/ui/confetti-burst";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
 import { queryKeys, type GamificationProfile } from "@/lib/queries";
+import { DailyCheckin, type CheckinResult } from "@/components/gamification/daily-checkin";
 import { cn } from "@/lib/utils";
 
 type Profile = {
@@ -119,6 +120,13 @@ export default function RewardsPage() {
     }
   }
 
+  // O check-in grava no cache compartilhado; aqui só acompanha os estados
+  // locais da página, que mostram pontos e nível.
+  function handleCheckin(result: CheckinResult) {
+    setProfile((prev) => (prev ? { ...prev, points: result.points, level: result.level } : prev));
+    setBadgesData((prev) => (prev ? { ...prev, points: result.points } : prev));
+  }
+
   function handleWheelSpinEnd() {
     const result = pendingResult.current;
     if (!result) return;
@@ -180,7 +188,7 @@ export default function RewardsPage() {
           </div>
           <div>
             <p className="text-2xl font-bold text-foreground">{points} pontos</p>
-            <p className="text-xs text-muted-foreground">Ganhe mais registrando transações e girando a Roleta Semanal</p>
+            <p className="text-xs text-muted-foreground">Ganhe mais registrando transações, fazendo check-in e girando a Roleta Semanal</p>
           </div>
         </div>
 
@@ -196,6 +204,11 @@ export default function RewardsPage() {
           Faltam <span className="font-medium text-foreground">{pointsToNext} pontos</span> pro nível {profile.level + 1}.
         </p>
       )}
+
+      <DailyCheckin
+        className="bg-card rounded-2xl border border-border/60 shadow-sm p-6 mb-6"
+        onCheckin={handleCheckin}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
