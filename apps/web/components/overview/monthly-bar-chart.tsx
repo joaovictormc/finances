@@ -66,8 +66,8 @@ export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
             formatter={(value) => (value === "income" ? "Receitas" : "Gastos")}
             wrapperStyle={{ fontSize: "12px" }}
           />
-          <Bar dataKey="income" fill="#22c55e" radius={[3, 3, 0, 0]} />
-          <Bar dataKey="expense" fill="#ef4444" radius={[3, 3, 0, 0]} />
+          <Bar dataKey="income" fill="#22c55e" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+          <Bar dataKey="expense" fill="#ef4444" radius={[3, 3, 0, 0]} isAnimationActive={false} />
         </BarChart>
       </ResponsiveContainer>
     </div>

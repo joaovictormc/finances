@@ -1,6 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, Bell, CheckCheck, Trash2 } from "lucide-react";
@@ -111,16 +120,26 @@ function panelStyle(anchor: DOMRect): CSSProperties {
       };
 }
 
-export function NotificationBell({ collapsed = false }: { collapsed?: boolean }) {
+type NotificationsState = {
+  items: Notification[];
+  unread: number;
+  markRead: (id: string) => Promise<void>;
+  markAll: () => Promise<void>;
+  clearAll: () => Promise<void>;
+};
+
+const NotificationsContext = createContext<NotificationsState | null>(null);
+
+/**
+ * Dono único da lista e do polling. A campainha aparece em dois lugares (sidebar
+ * desktop e cabeçalho mobile, ambos montados — o CSS só esconde um), e quando
+ * cada uma buscava sozinha o polling rodava em dobro e todo aviso novo virava
+ * dois pop-ups.
+ */
+export function NotificationsProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
-  const confirm = useConfirm();
-  const router = useRouter();
   const [items, setItems] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
-  const [open, setOpen] = useState(false);
-  const [anchor, setAnchor] = useState<DOMRect | null>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
   // null enquanto não houve a primeira carga — ver comentário dentro do load.
   const seenIds = useRef<Set<string> | null>(null);
 
@@ -156,18 +175,94 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
   }, [toast]);
 
   useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (timer === null) timer = setInterval(() => void load(), POLL_MS);
+    };
+    const stop = () => {
+      if (timer !== null) clearInterval(timer);
+      timer = null;
+    };
+
     void load();
-    const timer = setInterval(() => void load(), POLL_MS);
-    // Aba em segundo plano não precisa consultar; ao voltar, atualiza na hora.
+    if (document.visibilityState === "visible") start();
+    // Aba em segundo plano não consulta (o timer para de verdade); ao voltar,
+    // atualiza na hora e retoma o ciclo.
     const onVisibility = () => {
-      if (document.visibilityState === "visible") void load();
+      if (document.visibilityState === "visible") {
+        void load();
+        start();
+      } else {
+        stop();
+      }
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
-      clearInterval(timer);
+      stop();
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [load]);
+
+  const markRead = useCallback(
+    async (id: string) => {
+      // Otimista: a lista responde na hora, e um erro só recarrega o estado real.
+      setItems((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, readAt: new Date().toISOString() } : item))
+      );
+      setUnread((prev) => Math.max(0, prev - 1));
+      try {
+        await api.post(`/api/notifications/${id}/read`, {});
+      } catch {
+        void load();
+      }
+    },
+    [load]
+  );
+
+  const markAll = useCallback(async () => {
+    setItems((prev) => prev.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })));
+    setUnread(0);
+    try {
+      await api.post("/api/notifications/read-all", {});
+    } catch {
+      void load();
+    }
+  }, [load]);
+
+  const clearAll = useCallback(async () => {
+    setItems([]);
+    setUnread(0);
+    // `seenIds` fica como está de propósito: zerar faria o próximo ciclo tratar
+    // como novidade tudo que voltasse caso a exclusão falhasse no servidor.
+    try {
+      await api.delete<{ count: number }>("/api/notifications");
+    } catch {
+      void load();
+    }
+  }, [load]);
+
+  const value = useMemo(
+    () => ({ items, unread, markRead, markAll, clearAll }),
+    [items, unread, markRead, markAll, clearAll]
+  );
+
+  return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;
+}
+
+function useNotifications(): NotificationsState {
+  const ctx = useContext(NotificationsContext);
+  if (!ctx) throw new Error("NotificationBell precisa estar dentro de <NotificationsProvider>");
+  return ctx;
+}
+
+export function NotificationBell({ collapsed = false }: { collapsed?: boolean }) {
+  const confirm = useConfirm();
+  const router = useRouter();
+  const { items, unread, markRead, markAll, clearAll: clearAllNotifications } = useNotifications();
+  const [open, setOpen] = useState(false);
+  const [anchor, setAnchor] = useState<DOMRect | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const updateAnchor = useCallback(() => {
     const button = buttonRef.current;
@@ -208,19 +303,6 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
     };
   }, [open]);
 
-  async function markRead(id: string) {
-    // Otimista: a lista responde na hora, e um erro só recarrega o estado real.
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, readAt: new Date().toISOString() } : item))
-    );
-    setUnread((prev) => Math.max(0, prev - 1));
-    try {
-      await api.post(`/api/notifications/${id}/read`, {});
-    } catch {
-      void load();
-    }
-  }
-
   async function clearAll() {
     // Fecha o painel antes de perguntar: o diálogo fica fora dele, e o
     // clique-fora fecharia o painel no meio da pergunta de qualquer jeito.
@@ -234,15 +316,7 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
     });
     if (!confirmed) return;
 
-    setItems([]);
-    setUnread(0);
-    // `seenIds` fica como está de propósito: zerar faria o próximo ciclo tratar
-    // como novidade tudo que voltasse caso a exclusão falhasse no servidor.
-    try {
-      await api.delete<{ count: number }>("/api/notifications");
-    } catch {
-      void load();
-    }
+    await clearAllNotifications();
   }
 
   function handleItemClick(item: Notification) {
@@ -252,16 +326,6 @@ export function NotificationBell({ collapsed = false }: { collapsed?: boolean })
     if (!link) return;
     setOpen(false);
     router.push(link);
-  }
-
-  async function markAll() {
-    setItems((prev) => prev.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })));
-    setUnread(0);
-    try {
-      await api.post("/api/notifications/read-all", {});
-    } catch {
-      void load();
-    }
   }
 
   const panel =

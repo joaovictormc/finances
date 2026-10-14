@@ -71,6 +71,7 @@ export function BalanceTrendChart({ data }: BalanceTrendChartProps) {
             fill="url(#balanceTrendFill)"
             dot={false}
             activeDot={{ r: 4 }}
+            isAnimationActive={false}
           />
         </AreaChart>
       </ResponsiveContainer>

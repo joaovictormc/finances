@@ -5,11 +5,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Formatador criado uma vez só: toLocaleString com opções monta um
+// Intl.NumberFormat novo a cada chamada, e isso roda em toda linha de tabela
+// e todo tick/tooltip de gráfico.
+const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+
 export function formatBRL(value: number | string): string {
-  return Number(value).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
+  return brl.format(Number(value));
 }
 
 export function formatDate(date: Date | string): string {

@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { api } from "@/lib/api-client";
 
-/** Badge compacto com o total de pontos de gamificação — sempre visível na navegação, leva pra /rewards. */
-export function PointsBadge() {
+const PointsContext = createContext<number | null>(null);
+
+/** Busca os pontos uma vez pro layout inteiro — o badge aparece nas duas sidebars. */
+export function PointsProvider({ children }: { children: React.ReactNode }) {
   const [points, setPoints] = useState<number | null>(null);
 
   useEffect(() => {
@@ -15,6 +17,13 @@ export function PointsBadge() {
       .then((p) => setPoints(p.points))
       .catch(() => setPoints(null));
   }, []);
+
+  return <PointsContext.Provider value={points}>{children}</PointsContext.Provider>;
+}
+
+/** Badge compacto com o total de pontos de gamificação — sempre visível na navegação, leva pra /rewards. */
+export function PointsBadge() {
+  const points = useContext(PointsContext);
 
   if (points === null) return null;
 

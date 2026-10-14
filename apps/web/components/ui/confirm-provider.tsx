@@ -53,7 +53,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
 
       <div
         className={cn(
-          "fixed inset-0 z-[60] bg-background/70 backdrop-blur-sm transition-opacity duration-200",
+          "fixed inset-0 z-[60] bg-background/80 transition-opacity duration-200",
           options ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onClick={() => settle(false)}

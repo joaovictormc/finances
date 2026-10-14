@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "sidebar-collapsed";
 
@@ -16,16 +16,18 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
     setCollapsed(localStorage.getItem(STORAGE_KEY) === "true");
   }, []);
 
-  const toggleCollapsed = () => {
+  const toggleCollapsed = useCallback(() => {
     setCollapsed((prev) => {
       const next = !prev;
       localStorage.setItem(STORAGE_KEY, String(next));
       return next;
     });
-  };
+  }, []);
+
+  const value = useMemo(() => ({ collapsed, toggleCollapsed }), [collapsed, toggleCollapsed]);
 
   return (
-    <SidebarContext.Provider value={{ collapsed, toggleCollapsed }}>
+    <SidebarContext.Provider value={value}>
       {children}
     </SidebarContext.Provider>
   );

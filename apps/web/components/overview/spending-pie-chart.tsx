@@ -56,6 +56,7 @@ export function SpendingPieChart({ data, totalExpense }: SpendingPieChartProps) 
               outerRadius={90}
               paddingAngle={2}
               dataKey="value"
+              isAnimationActive={false}
             >
               {chartData.map((_, i) => (
                 <Cell key={i} fill={SLICE_COLORS[i % SLICE_COLORS.length]} strokeWidth={0} />

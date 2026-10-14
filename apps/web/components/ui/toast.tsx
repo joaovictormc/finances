@@ -15,6 +15,8 @@ export interface ToastItem {
   variant: ToastVariant;
 }
 
+const TOAST_MS = 4000;
+
 const icons: Record<ToastVariant, React.ReactNode> = {
   success: <CheckCircle size={16} className="text-success" />,
   error: <AlertCircle size={16} className="text-destructive" />,
@@ -38,24 +40,11 @@ const barColors: Record<ToastVariant, string> = {
 
 export function Toast({ item, onRemove }: { item: ToastItem; onRemove: (id: string) => void }) {
   const [visible, setVisible] = useState(false);
-  const [progress, setProgress] = useState(100);
 
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true));
-    const interval = setInterval(() => {
-      setProgress((p) => {
-        if (p <= 0) {
-          clearInterval(interval);
-          return 0;
-        }
-        return p - 100 / 40;
-      });
-    }, 100);
-    const timer = setTimeout(() => onRemove(item.id), 4000);
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timer);
-    };
+    const timer = setTimeout(() => onRemove(item.id), TOAST_MS);
+    return () => clearTimeout(timer);
   }, [item.id, onRemove]);
 
   return (
@@ -82,9 +71,11 @@ export function Toast({ item, onRemove }: { item: ToastItem; onRemove: (id: stri
           <X size={14} />
         </button>
       </div>
+      {/* Barra de tempo em CSS puro (scaleX, só compositor): antes era um
+          setState a cada 100ms animando width, que forçava layout 40x por toast. */}
       <div
-        className={cn("absolute bottom-0 left-0 h-[3px] transition-all duration-100", barColors[item.variant])}
-        style={{ width: `${progress}%` }}
+        className={cn("absolute bottom-0 left-0 h-[3px] w-full origin-left", barColors[item.variant])}
+        style={{ animation: `toast-progress ${TOAST_MS}ms linear forwards` }}
       />
     </div>
   );

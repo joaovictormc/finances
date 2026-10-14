@@ -12,7 +12,7 @@ interface ModalProps {
   className?: string;
 }
 
-// Tela flutuante centralizada com fundo desfocado — substitui o Drawer lateral
+// Tela flutuante centralizada com fundo escurecido — substitui o Drawer lateral
 // nos fluxos de "nova/novo X" (ver docs/ajustes-pos-teste.md). Mesma API do
 // Drawer (open/onClose/title/children/className) pra troca direta nos callers.
 export function Modal({ open, onClose, title, children, className }: ModalProps) {
@@ -27,10 +27,11 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
 
   return (
     <>
-      {/* Backdrop desfocado */}
+      {/* Backdrop escurecido — sem backdrop-blur de propósito: o desfoque obriga
+          a GPU a reprocessar a tela inteira a cada quadro e pesa em máquina fraca. */}
       <div
         className={cn(
-          "fixed inset-0 z-40 bg-background/70 backdrop-blur-sm transition-opacity duration-200",
+          "fixed inset-0 z-40 bg-background/80 transition-opacity duration-200",
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onClick={onClose}

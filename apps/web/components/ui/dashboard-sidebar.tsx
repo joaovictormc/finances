@@ -19,7 +19,7 @@ export function DashboardSidebar() {
 
   return (
     <aside
-      className={`hidden lg:flex flex-col overflow-hidden border-r border-border/60 bg-card transition-all ${
+      className={`hidden lg:flex flex-col overflow-hidden border-r border-border/60 bg-card transition-[width] ${
         collapsed ? "w-16" : "w-60"
       }`}
     >
