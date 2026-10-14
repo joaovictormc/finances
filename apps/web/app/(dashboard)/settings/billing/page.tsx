@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Check } from "lucide-react";
 import QRCode from "react-qr-code";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
 import { useConfirm } from "@/components/ui/confirm-provider";
 import { api } from "@/lib/api-client";
+import { queryKeys } from "@/lib/queries";
 import { formatBRL } from "@/lib/utils";
 
 type PlanId = "free" | "pro" | "familia";
@@ -83,6 +85,7 @@ function planFeatures(plan: PlanDefinition): string[] {
 export default function BillingPage() {
   const { toast } = useToast();
   const confirm = useConfirm();
+  const queryClient = useQueryClient();
   const [plans, setPlans] = useState<PlanDefinition[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<AvailablePaymentMethods>({ mercadopago: false, pix: false });
@@ -145,6 +148,8 @@ export default function BillingPage() {
       toast({ title: "Assinatura cancelada", variant: "success" });
       const s = await api.get<Subscription>("/api/billing/subscription");
       setSubscription(s);
+      // Sidebar e telas bloqueadas por plano leem a assinatura do cache.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.subscription });
     } catch {
       toast({ title: "Erro ao cancelar assinatura", variant: "error" });
     } finally {

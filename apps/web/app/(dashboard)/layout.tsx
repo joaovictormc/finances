@@ -4,19 +4,17 @@ import { ToastProvider } from "@/components/ui/toast-provider";
 import { ConfirmProvider } from "@/components/ui/confirm-provider";
 import { DashboardSidebar } from "@/components/ui/dashboard-sidebar";
 import { SidebarProvider } from "@/app/providers/sidebar-provider";
-import { PlanAccessProvider } from "@/lib/use-plan-access";
-import { PointsProvider } from "@/components/ui/points-badge";
+import { QueryProvider } from "@/app/providers/query-provider";
 import { NotificationsProvider } from "@/components/ui/notification-bell";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
       <ConfirmProvider>
-        {/* Dados que as duas sidebars mostram (plano, pontos, notificações) são
-            buscados uma vez aqui — as duas ficam montadas, o CSS só esconde uma. */}
-        <PlanAccessProvider>
-          <PointsProvider>
-            <NotificationsProvider>
+        {/* As duas sidebars ficam montadas (o CSS só esconde uma): plano e
+            pontos vêm do cache do React Query, notificações de um provider só. */}
+        <QueryProvider>
+          <NotificationsProvider>
               <SidebarProvider>
                 <div className="flex h-screen overflow-hidden flex-col lg:flex-row">
                   <MobileSidebar />
@@ -31,9 +29,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <MobileBottomNav />
                 </div>
               </SidebarProvider>
-            </NotificationsProvider>
-          </PointsProvider>
-        </PlanAccessProvider>
+          </NotificationsProvider>
+        </QueryProvider>
       </ConfirmProvider>
     </ToastProvider>
   );

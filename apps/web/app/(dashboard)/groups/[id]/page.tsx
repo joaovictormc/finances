@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { Crown, Link2, Trash2, LogOut, Users, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +14,8 @@ import { useConfirm } from "@/components/ui/confirm-provider";
 import { useSession } from "@/lib/auth-client";
 import { api } from "@/lib/api-client";
 import { formatBRL } from "@/lib/utils";
-import { SpendingPieChart } from "@/components/overview/spending-pie-chart";
-import { MonthlyBarChart } from "@/components/overview/monthly-bar-chart";
+import { SpendingPieChart, MonthlyBarChart } from "@/components/overview/lazy-charts";
+import { queryKeys } from "@/lib/queries";
 import type { GroupDetail } from "@/lib/types";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -51,6 +52,7 @@ const BADGE_ICONS: Record<string, string> = {
 export default function GroupDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const confirm = useConfirm();
   const { data: session } = useSession();
@@ -110,6 +112,7 @@ export default function GroupDetailPage() {
     try {
       await api.delete(`/api/groups/${id}/members/${currentUserId}`);
       toast({ title: "Você saiu do grupo", variant: "success" });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.groups });
       router.push("/groups");
     } catch {
       toast({ title: "Erro ao saír do grupo", variant: "error" });
@@ -121,6 +124,7 @@ export default function GroupDetailPage() {
     try {
       await api.delete(`/api/groups/${id}`);
       toast({ title: "Grupo excluído", variant: "success" });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.groups });
       router.push("/groups");
     } catch {
       toast({ title: "Erro ao excluir grupo", variant: "error" });

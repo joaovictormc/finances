@@ -1,31 +1,15 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
-import { api } from "@/lib/api-client";
-
-const PointsContext = createContext<number | null>(null);
-
-/** Busca os pontos uma vez pro layout inteiro — o badge aparece nas duas sidebars. */
-export function PointsProvider({ children }: { children: React.ReactNode }) {
-  const [points, setPoints] = useState<number | null>(null);
-
-  useEffect(() => {
-    api
-      .get<{ points: number }>("/api/gamification/profile")
-      .then((p) => setPoints(p.points))
-      .catch(() => setPoints(null));
-  }, []);
-
-  return <PointsContext.Provider value={points}>{children}</PointsContext.Provider>;
-}
+import { useGamificationProfile } from "@/lib/queries";
 
 /** Badge compacto com o total de pontos de gamificação — sempre visível na navegação, leva pra /rewards. */
 export function PointsBadge() {
-  const points = useContext(PointsContext);
+  // Mesma chave do card de Progresso: um giro de roleta lá atualiza o badge aqui.
+  const { data } = useGamificationProfile();
 
-  if (points === null) return null;
+  if (!data) return null;
 
   return (
     <Link
@@ -34,7 +18,7 @@ export function PointsBadge() {
       title="Meus pontos e recompensas"
     >
       <Sparkles size={12} />
-      {points}
+      {data.points}
     </Link>
   );
 }

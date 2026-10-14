@@ -11,6 +11,7 @@ import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast-provider";
 import { useConfirm } from "@/components/ui/confirm-provider";
 import { api } from "@/lib/api-client";
+import { useAccounts, useCategories, useGroups } from "@/lib/queries";
 import type { Category, FinancialAccount, Group, PaginatedResponse, Transaction } from "@/lib/types";
 import type { CategorySuggestion } from "@finances/validations";
 
@@ -24,6 +25,12 @@ type Filters = {
 
 const defaultFilters: Filters = { search: "", type: "", startDate: "", endDate: "", groupId: "" };
 
+// Referências estáveis pro "ainda carregando" — um [] novo a cada render
+// invalidaria os useMemo que dependem dessas listas.
+const NO_CATEGORIES: Category[] = [];
+const NO_ACCOUNTS: FinancialAccount[] = [];
+const NO_GROUPS: Group[] = [];
+
 export default function TransactionsPage() {
   const { toast } = useToast();
   const confirm = useConfirm();
@@ -35,9 +42,9 @@ export default function TransactionsPage() {
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
+  const { data: categories = NO_CATEGORIES } = useCategories();
+  const { data: accounts = NO_ACCOUNTS } = useAccounts();
+  const { data: groups = NO_GROUPS } = useGroups();
   const [meta, setMeta] = useState({ page: 1, total: 0, totalPages: 1 });
   const [formKey, setFormKey] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -68,18 +75,6 @@ export default function TransactionsPage() {
       setIsLoading(false);
     }
   }, [toast]);
-
-  useEffect(() => {
-    Promise.all([
-      api.get<Category[]>("/api/categories"),
-      api.get<FinancialAccount[]>("/api/accounts"),
-      api.get<Group[]>("/api/groups"),
-    ]).then(([cats, accs, grps]) => {
-      setCategories(cats);
-      setAccounts(accs);
-      setGroups(grps);
-    });
-  }, []);
 
   useEffect(() => {
     loadTransactions(filters);

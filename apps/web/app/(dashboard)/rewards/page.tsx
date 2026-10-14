@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Sparkles, Check, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -8,6 +9,7 @@ import { SpinWheel } from "@/components/ui/spin-wheel";
 import { ConfettiBurst } from "@/components/ui/confetti-burst";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
+import { queryKeys, type GamificationProfile } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
 type Profile = {
@@ -51,6 +53,15 @@ const SOURCE_LABELS: Record<SpinHistoryEntry["source"], string> = {
 
 export default function RewardsPage() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  // Mantém o badge de pontos da sidebar (cache compartilhado) em dia com o que muda aqui.
+  const syncPoints = useCallback(
+    (points: number) =>
+      queryClient.setQueryData<GamificationProfile>(queryKeys.gamificationProfile, (prev) =>
+        prev ? { ...prev, points } : prev
+      ),
+    [queryClient]
+  );
   const [profile, setProfile] = useState<Profile | null>(null);
   const [badgesData, setBadgesData] = useState<BadgesResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -115,6 +126,7 @@ export default function RewardsPage() {
     setPrizeResult({ label: result.prizeLabel, summary: result.prizeSummary });
     setProfile((prev) => (prev ? { ...prev, points: result.points } : prev));
     setBadgesData((prev) => (prev ? { ...prev, points: result.points } : prev));
+    syncPoints(result.points);
     setBuying(false);
     loadHistory();
   }
@@ -124,6 +136,7 @@ export default function RewardsPage() {
     try {
       const result = await api.post<{ unlockedBadges: string[]; points: number }>("/api/gamification/badges/redeem", { slug });
       setBadgesData((prev) => (prev ? { ...prev, unlockedBadges: result.unlockedBadges, points: result.points } : prev));
+      syncPoints(result.points);
       toast({ title: "Emblema desbloqueado!", variant: "success" });
     } catch (err) {
       toast({ title: err instanceof Error ? err.message : "Não foi possível resgatar", variant: "error" });

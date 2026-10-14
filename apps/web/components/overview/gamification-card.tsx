@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { Flame, Sparkles } from "lucide-react";
 import { api } from "@/lib/api-client";
@@ -8,16 +9,7 @@ import { ProgressRing } from "@/components/ui/progress-ring";
 import { SpinWheel } from "@/components/ui/spin-wheel";
 import { ConfettiBurst } from "@/components/ui/confetti-burst";
 import { cn } from "@/lib/utils";
-
-type GamificationProfile = {
-  points: number;
-  level: number;
-  currentStreak: number;
-  longestStreak: number;
-  spinUnlockStreak: number;
-  canSpin: boolean;
-  prizes: { label: string; points: number }[];
-};
+import { queryKeys, useGamificationProfile, type GamificationProfile } from "@/lib/queries";
 
 // Mesma tabela de LEVEL_THRESHOLDS de apps/api/src/lib/gamification.ts — só pra
 // desenhar a barra de progresso até o próximo nível (a fonte da verdade do
@@ -41,7 +33,8 @@ type SpinApiResult = {
 };
 
 export function GamificationCard() {
-  const [profile, setProfile] = useState<GamificationProfile | null>(null);
+  const queryClient = useQueryClient();
+  const { data: profile } = useGamificationProfile();
   const [spinning, setSpinning] = useState(false);
   const [wheelTargetIndex, setWheelTargetIndex] = useState<number | null>(null);
   const [spinToken, setSpinToken] = useState(0);
@@ -51,13 +44,6 @@ export function GamificationCard() {
   // girando visualmente — só aplica no state (pontos/nível/modal) quando a
   // animação terminar, pra revelação bater com o desenho da roleta.
   const pendingResult = useRef<SpinApiResult | null>(null);
-
-  useEffect(() => {
-    api
-      .get<GamificationProfile>("/api/gamification/profile")
-      .then(setProfile)
-      .catch(() => setProfile(null));
-  }, []);
 
   if (!profile) return null;
 
@@ -81,7 +67,10 @@ export function GamificationCard() {
     if (!result) return;
     pendingResult.current = null;
     setPrizeResult({ label: result.prizeLabel, summary: result.prizeSummary });
-    setProfile((prev) => (prev ? { ...prev, points: result.points, level: result.level, canSpin: false } : prev));
+    // Grava no cache compartilhado: o badge de pontos da sidebar atualiza junto.
+    queryClient.setQueryData<GamificationProfile>(queryKeys.gamificationProfile, (prev) =>
+      prev ? { ...prev, points: result.points, level: result.level, canSpin: false } : prev
+    );
     setSpinning(false);
   };
 

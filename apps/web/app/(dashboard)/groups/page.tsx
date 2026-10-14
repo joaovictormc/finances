@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { Users, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
 import { formatDate } from "@/lib/utils";
 import { usePlanAccess } from "@/lib/use-plan-access";
+import { queryKeys } from "@/lib/queries";
 import type { Group } from "@/lib/types";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -24,24 +26,27 @@ const ROLE_LABELS: Record<string, string> = {
 export default function GroupsPage() {
   const { toast } = useToast();
   const { canCreateGroup } = usePlanAccess();
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
 
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const data = await api.get<Group[]>("/api/groups");
-      setGroups(data);
-    } catch {
-      toast({ title: "Erro ao carregar grupos", variant: "error" });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
+  // Mesma chave do useGroups (sidebar, selects de grupo), mas sempre busca ao
+  // abrir: é a tela dona da lista, e entrar por link de convite (rota de
+  // servidor) não passa por nenhuma invalidação do cache.
+  const { data: groups = [], isPending: isLoading, isError } = useQuery({
+    queryKey: queryKeys.groups,
+    queryFn: () => api.get<Group[]>("/api/groups"),
+    refetchOnMount: "always",
+  });
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (isError) toast({ title: "Erro ao carregar grupos", variant: "error" });
+  }, [isError, toast]);
+
+  const load = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: queryKeys.groups }),
+    [queryClient]
+  );
 
   return (
     <div>

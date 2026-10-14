@@ -16,8 +16,12 @@ import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
 import { useConfirm } from "@/components/ui/confirm-provider";
 import { api } from "@/lib/api-client";
+import { useCategories, useGroups } from "@/lib/queries";
 import { cn, formatBRL } from "@/lib/utils";
 import type { Budget, Category, Group } from "@/lib/types";
+
+const NO_CATEGORIES: Category[] = [];
+const NO_GROUPS: Group[] = [];
 
 export default function BudgetsPage() {
   const { toast } = useToast();
@@ -26,8 +30,8 @@ export default function BudgetsPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
+  const { data: categories = NO_CATEGORIES } = useCategories("expense");
+  const { data: groups = NO_GROUPS } = useGroups();
   const [isLoading, setIsLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Budget | null>(null);
@@ -40,14 +44,7 @@ export default function BudgetsPage() {
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [b, cats, grps] = await Promise.all([
-        api.get<Budget[]>("/api/budgets", { year, month }),
-        api.get<Category[]>("/api/categories", { type: "expense" }),
-        api.get<Group[]>("/api/groups"),
-      ]);
-      setBudgets(b);
-      setCategories(cats);
-      setGroups(grps);
+      setBudgets(await api.get<Budget[]>("/api/budgets", { year, month }));
     } catch {
       toast({ title: "Erro ao carregar orçamentos", variant: "error" });
     } finally {

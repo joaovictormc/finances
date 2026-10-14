@@ -16,8 +16,11 @@ import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
 import { useConfirm } from "@/components/ui/confirm-provider";
 import { api } from "@/lib/api-client";
+import { useGroups } from "@/lib/queries";
 import { cn, formatBRL, formatDate } from "@/lib/utils";
 import type { Goal, Group } from "@/lib/types";
+
+const NO_GROUPS: Group[] = [];
 
 export default function GoalsPage() {
   const { toast } = useToast();
@@ -26,7 +29,7 @@ export default function GoalsPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [goals, setGoals] = useState<Goal[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
+  const { data: groups = NO_GROUPS } = useGroups();
   const [isLoading, setIsLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Goal | null>(null);
@@ -35,12 +38,7 @@ export default function GoalsPage() {
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [data, grps] = await Promise.all([
-        api.get<Goal[]>("/api/goals"),
-        api.get<Group[]>("/api/groups"),
-      ]);
-      setGoals(data);
-      setGroups(grps);
+      setGoals(await api.get<Goal[]>("/api/goals"));
     } catch {
       toast({ title: "Erro ao carregar metas", variant: "error" });
     } finally {

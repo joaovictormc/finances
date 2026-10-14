@@ -13,6 +13,8 @@ import { CategoryIcon } from "@/components/ui/category-icon";
 import { useToast } from "@/components/ui/toast-provider";
 import { useConfirm } from "@/components/ui/confirm-provider";
 import { api } from "@/lib/api-client";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys, useGroups } from "@/lib/queries";
 import { ConnectBankButton } from "@/components/accounts/connect-bank-button";
 import { ImportForm } from "@/components/transactions/import-form";
 import type { FinancialAccount, Group } from "@/lib/types";
@@ -59,11 +61,14 @@ const accountTypeIcons: Record<string, string> = {
   wallet: "👛",
 };
 
+const NO_GROUPS: Group[] = [];
+
 export default function AccountsPage() {
   const { toast } = useToast();
   const confirm = useConfirm();
   const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
+  const queryClient = useQueryClient();
+  const { data: groups = NO_GROUPS } = useGroups();
   const [isLoading, setIsLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialAccount | null>(null);
@@ -74,18 +79,17 @@ export default function AccountsPage() {
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [data, grps] = await Promise.all([
-        api.get<FinancialAccount[]>("/api/accounts", { archived: showArchived }),
-        api.get<Group[]>("/api/groups"),
-      ]);
-      setAccounts(data);
-      setGroups(grps);
+      setAccounts(await api.get<FinancialAccount[]>("/api/accounts", { archived: showArchived }));
+      // Toda alteração de conta (criar, editar, arquivar, excluir, importar,
+      // conectar banco) termina recarregando aqui: marca o cache das outras
+      // telas (select de conta em Transações) como desatualizado.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
     } catch {
       toast({ title: "Erro ao carregar contas", variant: "error" });
     } finally {
       setIsLoading(false);
     }
-  }, [toast, showArchived]);
+  }, [toast, showArchived, queryClient]);
 
   useEffect(() => { load(); }, [load]);
 
