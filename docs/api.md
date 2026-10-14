@@ -66,6 +66,13 @@ GET /api/transactions/reports/monthly?year=2026&month=6
 → { year, month, income, expense, balance, byCategory: [{ category, total }] }
 ```
 
+### Série Mensal
+```
+GET /api/transactions/reports/monthly-series?year=2026&month=6&months=6
+→ { months: [{ year, month, income, expense }] }   (do mais antigo ao mês pedido)
+```
+Receita e gasto de `months` meses (padrão 6, máx. 24) terminando em `year`/`month`, numa query só. Usado no gráfico de barras da Visão Geral — antes a página chamava o relatório mensal uma vez por mês.
+
 ## Contas Financeiras
 
 ```

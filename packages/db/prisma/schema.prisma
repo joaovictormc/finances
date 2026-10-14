@@ -68,6 +68,7 @@ model Session {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("sessions")
 }
 
@@ -87,6 +88,7 @@ model Account {
   createdAt             DateTime
   updatedAt             DateTime
 
+  @@index([userId])
   @@map("accounts")
 }
 
@@ -165,6 +167,9 @@ model GroupMember {
   joinedAt DateTime @default(now())
 
   @@id([groupId, userId])
+  // A PK começa por groupId; "de quais grupos sou membro" (quase toda
+  // requisição, via getUserGroupIds) filtra só por userId.
+  @@index([userId])
   @@map("group_members")
 }
 
@@ -204,6 +209,7 @@ model FinancialAccount {
   goals             Goal[]
   openFinanceAccounts OpenFinanceAccount[]
 
+  @@index([userId])
   @@map("financial_accounts")
 }
 
@@ -227,6 +233,7 @@ model Category {
   budgets        Budget[]
   recurringBills RecurringBill[]
 
+  @@index([userId])
   @@map("categories")
 }
 
@@ -276,6 +283,8 @@ model Transaction {
   @@unique([externalId, accountId])
   @@index([userId, date])
   @@index([accountId, date])
+  // Lançamentos de grupo: listagem e orçamentos filtram por groupId + período.
+  @@index([groupId, date])
   @@map("transactions")
 }
 
@@ -297,6 +306,7 @@ model Budget {
 
   createdAt DateTime @default(now())
 
+  @@index([userId])
   @@map("budgets")
 }
 
@@ -323,6 +333,7 @@ model RecurringBill {
 
   transactions Transaction[]
 
+  @@index([userId])
   @@map("recurring_bills")
 }
 
@@ -346,6 +357,7 @@ model Goal {
 
   createdAt DateTime @default(now())
 
+  @@index([userId])
   @@map("goals")
 }
 
@@ -433,6 +445,8 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId, status])
+  // Polling da campainha: últimas 30 por usuário, ordenadas por data.
+  @@index([userId, createdAt])
   @@map("notifications")
 }
 

@@ -30,33 +30,40 @@ app.get("/", async (c) => {
     },
   });
 
-  // Calculate spent amount for each budget
-  const enriched = await Promise.all(
-    budgets.map(async (budget) => {
-      const spent = await db.transaction.aggregate({
-        where: {
-          ...(budget.groupId ? { groupId: budget.groupId } : { userId }),
-          type: "expense",
-          isIgnored: false,
-          date: { gte: startDate, lte: endDate },
-          ...(budget.categoryId && { categoryId: budget.categoryId }),
-        },
-        _sum: { amount: true },
-      });
+  // Gasto de todos os orçamentos num groupBy só (antes era um aggregate por
+  // orçamento). O escopo de cada um é o mesmo de antes: orçamento pessoal soma
+  // tudo que o usuário lançou; orçamento de grupo soma o que foi lançado no grupo.
+  const budgetGroupIds = [...new Set(budgets.map((b) => b.groupId).filter((id): id is string => !!id))];
+  const spentRows =
+    budgets.length === 0
+      ? []
+      : await db.transaction.groupBy({
+          by: ["userId", "groupId", "categoryId"],
+          where: {
+            OR: [{ userId }, ...(budgetGroupIds.length ? [{ groupId: { in: budgetGroupIds } }] : [])],
+            type: "expense",
+            isIgnored: false,
+            date: { gte: startDate, lte: endDate },
+          },
+          _sum: { amount: true },
+        });
 
-      const spentAmount = Number(spent._sum.amount ?? 0);
-      const budgetAmount = Number(budget.amount);
-      const percentage = budgetAmount > 0 ? spentAmount / budgetAmount : 0;
+  const enriched = budgets.map((budget) => {
+    const spentAmount = spentRows
+      .filter((row) => (budget.groupId ? row.groupId === budget.groupId : row.userId === userId))
+      .filter((row) => !budget.categoryId || row.categoryId === budget.categoryId)
+      .reduce((sum, row) => sum + Number(row._sum.amount ?? 0), 0);
+    const budgetAmount = Number(budget.amount);
+    const percentage = budgetAmount > 0 ? spentAmount / budgetAmount : 0;
 
-      return {
-        ...budget,
-        spentAmount,
-        percentage,
-        isOverBudget: spentAmount > budgetAmount,
-        isNearLimit: percentage >= Number(budget.alertThreshold),
-      };
-    })
-  );
+    return {
+      ...budget,
+      spentAmount,
+      percentage,
+      isOverBudget: spentAmount > budgetAmount,
+      isNearLimit: percentage >= Number(budget.alertThreshold),
+    };
+  });
 
   return c.json(enriched);
 });

@@ -32,6 +32,17 @@ async function fetchReport(year: number, month: number): Promise<MonthlyReport |
   return serverApiGet<MonthlyReport>("/api/transactions/reports/monthly", { year, month });
 }
 
+type MonthlySeries = { year: number; month: number; income: number; expense: number }[];
+
+async function fetchSeries(year: number, month: number): Promise<MonthlySeries> {
+  const res = await serverApiGet<{ months: MonthlySeries }>("/api/transactions/reports/monthly-series", {
+    year,
+    month,
+    months: 6,
+  });
+  return res.months;
+}
+
 type DailyReport = { day: number; balance: number }[];
 
 async function fetchDaily(year: number, month: number): Promise<DailyReport> {
@@ -68,34 +79,21 @@ export default async function OverviewPage({
   const year = parseInt(params.year ?? now.getFullYear().toString());
   const month = parseInt(params.month ?? (now.getMonth() + 1).toString());
 
-  // Fetch current month + 5 previous months in parallel
-  const sixMonths = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(year, month - 1 - (5 - i), 1);
-    return { year: d.getFullYear(), month: d.getMonth() + 1 };
-  });
-
-  const [currentReport, goals, bills, recentTransactions, dailyBalance, ...historyReports] = await Promise.all([
+  const [currentReport, goals, bills, recentTransactions, dailyBalance, series] = await Promise.all([
     fetchReport(year, month),
     fetchGoals(),
     fetchBills(),
     fetchRecentTransactions(),
     fetchDaily(year, month),
-    ...sixMonths.slice(0, 5).map((m) => fetchReport(m.year, m.month)),
+    fetchSeries(year, month),
   ]);
 
-  // Build bar chart data (5 history months + current)
-  const barData = [
-    ...sixMonths.slice(0, 5).map((m, i) => ({
-      label: SHORT_MONTHS[m.month - 1],
-      income: historyReports[i]?.income ?? 0,
-      expense: historyReports[i]?.expense ?? 0,
-    })),
-    {
-      label: SHORT_MONTHS[month - 1],
-      income: currentReport?.income ?? 0,
-      expense: currentReport?.expense ?? 0,
-    },
-  ];
+  // Barras: 5 meses anteriores + o atual, vindos de uma chamada só.
+  const barData = series.map((m) => ({
+    label: SHORT_MONTHS[m.month - 1],
+    income: m.income,
+    expense: m.expense,
+  }));
 
   // Pie chart data from byCategory
   const pieData = (currentReport?.byCategory ?? [])

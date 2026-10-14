@@ -17,7 +17,7 @@ import { parseCsvTransactions } from "../lib/import/csv-parser";
 import { parseOfxTransactions } from "../lib/import/ofx-parser";
 import { validateImportFileBatch } from "../lib/import/import-limits";
 import { validateReceiptImage, describeBytes } from "../lib/import/receipt-limits";
-import { parseMonthlyReportPeriod } from "../lib/report-period";
+import { getMonthlyReportPeriod, parseMonthlyReportPeriod } from "../lib/report-period";
 import { checkRateLimit } from "../lib/rate-limit";
 import { awardDailyPoints } from "../lib/gamification";
 
@@ -484,20 +484,13 @@ app.get("/reports/monthly", async (c) => {
     return c.json({ error: error instanceof Error ? error.message : "Período inválido" }, 400);
   }
 
-  const [income, expense, byCategory] = await Promise.all([
-    db.transaction.aggregate({
+  const [totals, byCategory] = await Promise.all([
+    // Receita e gasto numa query só (antes eram dois aggregate).
+    db.transaction.groupBy({
+      by: ["type"],
       where: {
         userId,
-        type: "income",
-        date: { gte: period.start, lt: period.endExclusive },
-        isIgnored: false,
-      },
-      _sum: { amount: true },
-    }),
-    db.transaction.aggregate({
-      where: {
-        userId,
-        type: "expense",
+        type: { in: ["income", "expense"] },
         date: { gte: period.start, lt: period.endExclusive },
         isIgnored: false,
       },
@@ -525,8 +518,9 @@ app.get("/reports/monthly", async (c) => {
   });
   const catMap = Object.fromEntries(categories.map((c) => [c.id, c]));
 
-  const incomeAmount = Number(income._sum.amount ?? 0);
-  const expenseAmount = Number(expense._sum.amount ?? 0);
+  const sumOf = (type: string) => Number(totals.find((t) => t.type === type)?._sum.amount ?? 0);
+  const incomeAmount = sumOf("income");
+  const expenseAmount = sumOf("expense");
 
   return c.json({
     year: period.year,
@@ -539,6 +533,54 @@ app.get("/reports/monthly", async (c) => {
       total: Number(r._sum.amount ?? 0),
     })),
   });
+});
+
+// Receita e gasto de N meses terminando em year/month (gráfico de barras da
+// Visão Geral). Um groupBy só pra janela inteira — antes a página chamava
+// /reports/monthly uma vez por mês, ~4 queries cada.
+app.get("/reports/monthly-series", async (c) => {
+  const userId = c.get("userId");
+  const { year, month, months } = c.req.query();
+
+  let period;
+  try {
+    period = parseMonthlyReportPeriod(year, month);
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : "Período inválido" }, 400);
+  }
+
+  const count = Math.min(Math.max(Number.parseInt(months ?? "6", 10) || 6, 1), 24);
+  const series = Array.from({ length: count }, (_, i) => {
+    const d = new Date(Date.UTC(period.year, period.month - 1 - (count - 1 - i), 1));
+    return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, income: 0, expense: 0 };
+  });
+  const oldest = series[0]!; // count >= 1
+  const first = getMonthlyReportPeriod(oldest.year, oldest.month);
+
+  const rows = await db.transaction.groupBy({
+    by: ["date", "type"],
+    where: {
+      userId,
+      date: { gte: first.start, lt: period.endExclusive },
+      isIgnored: false,
+      type: { in: ["income", "expense"] },
+    },
+    _sum: { amount: true },
+  });
+
+  // Mesma chave do /reports/daily: `date` é @db.Date, então o ISO já traz o dia certo.
+  const byMonth = new Map(
+    series.map((s) => [`${s.year}-${String(s.month).padStart(2, "0")}`, s])
+  );
+  for (const row of rows) {
+    const entry = byMonth.get(row.date.toISOString().slice(0, 7));
+    if (!entry) continue;
+    const amount = Number(row._sum.amount ?? 0);
+    if (row.type === "income") entry.income += amount;
+    else entry.expense += amount;
+  }
+
+  return c.json({ months: series });
 });
 
 // Saldo diário acumulado do mês (gráfico de tendência da Visão Geral) — 1
