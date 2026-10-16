@@ -6,97 +6,100 @@
 
 web
 
+## Stack
+
+- `apps/web` — Next.js 16 (App Router) + Tailwind v4, painel principal.
+- `apps/mobile` — Expo (SDK 57) / React Native, app iOS e Android.
+- `apps/api` — Hono + Prisma (PostgreSQL), filas BullMQ/Redis.
+- `apps/landing` — landing page de anúncio: Next.js 16 em exportação estática + Tailwind v4, mesma stack do web (escolha do usuário, 14/10/2026).
+
 ## Users
 
-Famílias e casais brasileiros de classe média que gerenciam finanças em
-conjunto. Usam o produto no dia a dia tanto pelo bot do Telegram (registro
-rápido de gastos por texto/voz) quanto pela web (visão consolidada,
-relatórios, configuração de orçamentos/metas/contas). Perfis de acesso
-dentro de um grupo: owner/admin/member/viewer.
+Famílias e casais brasileiros de classe média que gerenciam o dinheiro da casa
+em conjunto. Lançam gastos no dia a dia pelo celular ou pela web e usam o
+painel para ver o mês consolidado, acompanhar orçamentos e metas e decidir
+juntos. Dentro de um grupo, cada pessoa tem um papel: dono, administrador,
+membro ou visualizador.
 
 ## Product Purpose
 
-Gestão financeira pessoal e familiar: controle de transações, orçamentos,
-metas, contas a pagar e contas bancárias, com sincronização opcional via
-Open Finance (Pluggy) e insights gerados por IA (Groq). Sucesso é a família
-conseguir ver e decidir sobre o dinheiro em conjunto sem fricção — registro
-rápido pelo bot, visão clara na web.
+Gestão financeira pessoal e familiar: transações, orçamentos, metas, contas a
+pagar e contas bancárias, com importação de extrato e um assistente de IA. Sucesso é a família conseguir ver
+e decidir sobre o dinheiro em conjunto sem fricção.
 
 ## Positioning
 
 Gestão financeira **em grupo/família** como mecanismo central, não recurso
-lateral: contas, transações, orçamentos e metas compartilhados entre
-membros de um grupo com papéis definidos (owner/admin/member/viewer),
-convite por link, dashboard agregado do grupo e notificações de atividade.
-Concorrentes de orçamento pessoal (Mobills, Organizze, GuiaBolso) tratam
-compartilhamento como funcionalidade extra; aqui é a espinha dorsal do
-produto.
+lateral: contas, transações, orçamentos e metas compartilhados entre membros
+com papéis definidos, convite por link, painel agregado do grupo e aviso de
+atividade. Concorrentes de orçamento pessoal (Mobills, Organizze, GuiaBolso)
+tratam compartilhamento como funcionalidade extra; aqui é a espinha dorsal.
 
 ## Operating Context
 
-- Web (Next.js/Tailwind v4) como painel principal: overview com KPIs e
-  gráficos, transações, contas, orçamentos, metas, contas a pagar, grupos,
-  configurações, área administrativa.
-- Bot do Telegram (grammy) para registro rápido de gastos por texto ou voz
-  (Whisper via Groq), vinculado à conta web por código.
-- Sincronização bancária opcional via Pluggy/Open Finance (atrás de feature
-  flag, custo mensal).
-- Monetização via assinatura (Mercado Pago: planos Free/Pro/Família) e Pix
-  manual.
-- App mobile (Expo) existe apenas como scaffold, sem telas reais — fora do
-  escopo do redesign visual atual (Workstream 5 trata mobile como etapa
-  separada, futura).
+- Web (`apps/web`): visão geral com KPIs e gráficos (clique na categoria
+  detalha as transações), transações, contas, orçamentos, metas, contas a
+  pagar, grupos, recompensas, configurações e área administrativa.
+- App mobile (`apps/mobile`): mesmas áreas principais, leitura de cupom fiscal
+  por foto e assistente de IA. **Ainda não publicado nas lojas.**
+- Assistente de IA (Groq) com conversas e agentes personalizados; insights
+  mensais e consultas em linguagem natural.
+- Importação de extrato CSV/OFX com deduplicação.
+- **Sem integração bancária automática.** Existe código da Pluggy atrás de
+  feature flag (`NEXT_PUBLIC_ENABLE_PLUGGY`), desligado e fora do produto;
+  Open Finance nunca é anunciado em interface, landing ou e-mail.
+- Gamificação: pontos e níveis por registrar transações, sequência de dias,
+  check-in diário com recompensa configurável, Roleta Semanal e emblemas.
+- Categorias padrão hierárquicas mais categorias personalizadas do usuário.
+- Monetização por assinatura (Free/Pro/Família), mensal, semestral ou anual,
+  paga por Mercado Pago ou Pix.
 
 ## Capabilities and Constraints
 
-- CRUD completo de transações, orçamentos, categorias (sistema + usuário,
-  hierárquicas), contas financeiras (checking/savings/credit_card/
-  investment/wallet), metas e contas recorrentes.
-- Import de extrato CSV/OFX com dedup por `externalId`; diferenciação
-  débito/crédito por conta.
-- Insights de IA (Groq/Llama 3.3): resumo mensal, detecção de recorrências,
-  forecast de orçamento, consultas em linguagem natural.
-- Área administrativa (roles user/support/admin): gestão de usuários/planos,
-  checkouts, métodos de pagamento, configuração de IA com limites de uso.
-- PWA (add to home screen).
-- Stack: Next.js (App Router) + Tailwind v4 com tokens `oklch()`,
-  componentes hand-rolled em `components/ui/` com
-  `class-variance-authority` (sem shadcn CLI). Sem lib de animação hoje
-  (`framer-motion` etc. não instalado).
-- Idioma: PT-BR em toda a interface e comunicação.
+- Planos (features em `apps/api/src/lib/plans.ts`; preços no banco, editáveis
+  em `/admin/pricing`):
+  - **Free**: lançamento manual e importação de extrato, 3 meses de
+    histórico, sem IA, sem leitura de cupom, sem grupo.
+  - **Pro**: histórico ilimitado, insights e assistente de IA, leitura de
+    cupom. Sem grupo.
+  - **Família**: tudo do Pro + grupo familiar com até 5 membros.
+- A landing lê os preços pela API pública de planos — nunca escrever valores
+  fixos.
+- Domínios da landing e do app ainda não definidos (`NEXT_PUBLIC_APP_URL` no
+  deploy).
+- Idioma: PT-BR em toda a interface e comunicação; moeda, data e categorias no
+  formato brasileiro.
 
 ## Brand Commitments
 
-Nome do produto ainda não formalizado como marca (uso interno "finances").
-Identidade visual atual (paleta indigo em OKLCH, dark mode preto puro) é
-tratada como **anti-referência** para o Workstream 5 — o usuário optou por
-substituição deliberada, não preservação. Nenhum outro compromisso de marca
-(logo, tom de voz formal, tipografia) confirmado até aqui.
+- Nome do produto: **ControlAI** (web, app mobile, manifest, metadados).
+- Logo: quadrado arredondado amarelo `#FFC300` com linha de gráfico em grafite
+  `#1C1C1E` — `apps/web/public/icons/logo.svg`.
+- Sistema visual do app: "Fechamento de Caixa" em `apps/web/DESIGN.md`. A
+  identidade antiga (indigo, dark mode preto puro) é anti-referência.
 
 ## Evidence on Hand
 
-- `docs/features.md`: mapa completo de funcionalidades por fase, já
-  implementadas em produção.
-- Nenhum dado de cliente real, depoimento, case ou benchmark de mercado
-  disponível — não inventar essas evidências em trabalho futuro.
+- `docs/features.md`: mapa de funcionalidades por fase.
+- `docs/landing/`: esboços aprovados da landing (direção C escolhida, com
+  elementos de A e B).
+- **Não existem** depoimentos, cases, números de clientes, avaliações de loja
+  ou cobertura de imprensa — não inventar.
+- App não publicado nas lojas: nenhum link de loja real.
 
 ## Product Principles
 
-1. Compartilhamento em grupo é o mecanismo central, não um extra — todo
-   design deve deixar claro "de quem" é cada dado quando há múltiplos
-   membros.
-2. Registro de gasto tem que ser rápido (via bot) e a visão consolidada
-   tem que ser clara (via web) — são dois modos de uso complementares, não
-   concorrentes.
-3. PT-BR e formatos brasileiros (moeda, data, categorias) são regra, não
-   exceção.
-4. Simplicidade para o usuário leigo em finanças; recursos avançados (IA,
-   Open Finance) ficam disponíveis mas não são pré-requisito de uso.
-5. Área administrativa e fluxos de pagamento exigem clareza e confiança
-   visual acima de expressividade — é dinheiro real.
+1. Compartilhamento em grupo é o mecanismo central — todo design deixa claro
+   "de quem" é cada dado quando há vários membros.
+2. Registrar tem que ser rápido e a visão consolidada tem que ser clara: são
+   dois modos de uso complementares.
+3. PT-BR e formatos brasileiros são regra, não exceção.
+4. Simplicidade para quem é leigo em finanças; a IA fica disponível, mas não
+   é pré-requisito.
+5. Dinheiro real exige clareza e confiança visual acima de expressividade,
+   principalmente em pagamento e área administrativa.
 
 ## Accessibility & Inclusion
 
-Nenhum requisito de acessibilidade específico confirmado além dos padrões
-gerais (WCAG AA como piso razoável para um produto financeiro usado por
-público amplo, incluindo usuários menos familiarizados com tecnologia).
+WCAG AA como piso: produto financeiro usado por público amplo, incluindo
+pessoas pouco familiarizadas com tecnologia.

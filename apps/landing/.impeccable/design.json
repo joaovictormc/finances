@@ -1,0 +1,454 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-15T02:04:09+00:00",
+  "title": "Design System: ControlAI — landing",
+  "extensions": {
+    "colorMeta": {
+      "marker": {
+        "role": "primary",
+        "displayName": "Amarelo-marcador",
+        "canonical": "oklch(84.8% 0.174 86)",
+        "tonalRamp": [
+          "oklch(15% 0.174 86)",
+          "oklch(25% 0.174 86)",
+          "oklch(35% 0.174 86)",
+          "oklch(45% 0.174 86)",
+          "oklch(55% 0.174 86)",
+          "oklch(65% 0.174 86)",
+          "oklch(80% 0.174 86)",
+          "oklch(95% 0.174 86)"
+        ]
+      },
+      "azul": {
+        "role": "secondary",
+        "displayName": "Azul-no-azul",
+        "canonical": "oklch(54.6% 0.215 263)",
+        "tonalRamp": [
+          "oklch(15% 0.2 263)",
+          "oklch(25% 0.2 263)",
+          "oklch(35% 0.2 263)",
+          "oklch(45% 0.2 263)",
+          "oklch(55% 0.2 263)",
+          "oklch(65% 0.2 263)",
+          "oklch(80% 0.2 263)",
+          "oklch(95% 0.2 263)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Grafite",
+        "canonical": "oklch(22.7% 0.004 286)",
+        "tonalRamp": [
+          "oklch(15% 0.006 286)",
+          "oklch(25% 0.006 286)",
+          "oklch(35% 0.006 286)",
+          "oklch(45% 0.006 286)",
+          "oklch(55% 0.006 286)",
+          "oklch(65% 0.006 286)",
+          "oklch(80% 0.006 286)",
+          "oklch(95% 0.006 286)"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Grafite médio",
+        "canonical": "oklch(39.3% 0.012 286)",
+        "tonalRamp": [
+          "oklch(15% 0.012 286)",
+          "oklch(25% 0.012 286)",
+          "oklch(35% 0.012 286)",
+          "oklch(45% 0.012 286)",
+          "oklch(55% 0.012 286)",
+          "oklch(65% 0.012 286)",
+          "oklch(80% 0.012 286)",
+          "oklch(95% 0.012 286)"
+        ]
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Grafite claro",
+        "canonical": "oklch(47.4% 0.013 286)",
+        "tonalRamp": [
+          "oklch(15% 0.013 286)",
+          "oklch(25% 0.013 286)",
+          "oklch(35% 0.013 286)",
+          "oklch(45% 0.013 286)",
+          "oklch(55% 0.013 286)",
+          "oklch(65% 0.013 286)",
+          "oklch(80% 0.013 286)",
+          "oklch(95% 0.013 286)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Papel",
+        "canonical": "oklch(98.5% 0.001 106)",
+        "tonalRamp": [
+          "oklch(15% 0.004 106)",
+          "oklch(25% 0.004 106)",
+          "oklch(35% 0.004 106)",
+          "oklch(45% 0.004 106)",
+          "oklch(55% 0.004 106)",
+          "oklch(65% 0.004 106)",
+          "oklch(80% 0.004 106)",
+          "oklch(95% 0.004 106)"
+        ]
+      },
+      "paper-2": {
+        "role": "neutral",
+        "displayName": "Papel-fosco",
+        "canonical": "oklch(94.5% 0.004 106)",
+        "tonalRamp": [
+          "oklch(15% 0.004 106)",
+          "oklch(25% 0.004 106)",
+          "oklch(35% 0.004 106)",
+          "oklch(45% 0.004 106)",
+          "oklch(55% 0.004 106)",
+          "oklch(65% 0.004 106)",
+          "oklch(80% 0.004 106)",
+          "oklch(95% 0.004 106)"
+        ]
+      },
+      "sheet": {
+        "role": "neutral",
+        "displayName": "Folha",
+        "canonical": "oklch(100% 0 0)",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(55% 0 0)",
+          "oklch(65% 0 0)",
+          "oklch(80% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Régua de extrato",
+        "canonical": "oklch(87.2% 0.007 97)",
+        "tonalRamp": [
+          "oklch(15% 0.007 97)",
+          "oklch(25% 0.007 97)",
+          "oklch(35% 0.007 97)",
+          "oklch(45% 0.007 97)",
+          "oklch(55% 0.007 97)",
+          "oklch(65% 0.007 97)",
+          "oklch(80% 0.007 97)",
+          "oklch(95% 0.007 97)"
+        ]
+      },
+      "night": {
+        "role": "neutral",
+        "displayName": "Noite",
+        "canonical": "oklch(22.7% 0.004 286)",
+        "tonalRamp": [
+          "oklch(15% 0.006 286)",
+          "oklch(25% 0.006 286)",
+          "oklch(35% 0.006 286)",
+          "oklch(45% 0.006 286)",
+          "oklch(55% 0.006 286)",
+          "oklch(65% 0.006 286)",
+          "oklch(80% 0.006 286)",
+          "oklch(95% 0.006 286)"
+        ]
+      },
+      "night-rule": {
+        "role": "neutral",
+        "displayName": "Régua noturna",
+        "canonical": "oklch(35% 0.009 286)",
+        "tonalRamp": [
+          "oklch(15% 0.009 286)",
+          "oklch(25% 0.009 286)",
+          "oklch(35% 0.009 286)",
+          "oklch(45% 0.009 286)",
+          "oklch(55% 0.009 286)",
+          "oklch(65% 0.009 286)",
+          "oklch(80% 0.009 286)",
+          "oklch(95% 0.009 286)"
+        ]
+      },
+      "night-ink": {
+        "role": "neutral",
+        "displayName": "Tinta noturna",
+        "canonical": "oklch(96.7% 0.003 106)",
+        "tonalRamp": [
+          "oklch(15% 0.003 106)",
+          "oklch(25% 0.003 106)",
+          "oklch(35% 0.003 106)",
+          "oklch(45% 0.003 106)",
+          "oklch(55% 0.003 106)",
+          "oklch(65% 0.003 106)",
+          "oklch(80% 0.003 106)",
+          "oklch(95% 0.003 106)"
+        ]
+      },
+      "night-ink-2": {
+        "role": "neutral",
+        "displayName": "Tinta noturna secundária",
+        "canonical": "oklch(83.7% 0.007 286)",
+        "tonalRamp": [
+          "oklch(15% 0.007 286)",
+          "oklch(25% 0.007 286)",
+          "oklch(35% 0.007 286)",
+          "oklch(45% 0.007 286)",
+          "oklch(55% 0.007 286)",
+          "oklch(65% 0.007 286)",
+          "oklch(80% 0.007 286)",
+          "oklch(95% 0.007 286)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Só o título do hero; passa pelo kern()."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Título de cada seção; passa pelo kern()."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Títulos das linhas de recurso."
+      },
+      "label-title": {
+        "displayName": "Título de folha",
+        "purpose": "Títulos de folha, card e papel (15-22px, 700)."
+      },
+      "body-lead": {
+        "displayName": "Body lead",
+        "purpose": "Subtítulo do hero, máx. 540px."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Introdução de seção e texto de recurso."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Notas, rótulos e legendas em ink-3; sem caixa alta."
+      },
+      "money": {
+        "displayName": "Money",
+        "purpose": "Todo valor, data e contagem: mono tabular, sem quebra."
+      }
+    },
+    "shadows": [
+      {
+        "name": "object-phone",
+        "value": "0 40px 80px -36px rgba(28,28,30,0.55), 0 2px 6px rgba(28,28,30,0.25)",
+        "purpose": "Só o celular desenhado."
+      },
+      {
+        "name": "object-receipt",
+        "value": "0 18px 36px -22px rgba(28,28,30,0.55), 0 1px 2px rgba(28,28,30,0.12)",
+        "purpose": "Só o cupom fiscal desenhado."
+      },
+      {
+        "name": "hover-cta-lg",
+        "value": "0 14px 30px -16px rgba(28,28,30,0.7)",
+        "purpose": "Hover dos CTAs grafite de 56px, com translateY(-1px)."
+      },
+      {
+        "name": "hover-cta-lg-marker",
+        "value": "0 14px 30px -14px rgba(255,195,0,0.75)",
+        "purpose": "Hover do CTA amarelo de 56px."
+      },
+      {
+        "name": "hover-cta-sm",
+        "value": "0 6px 16px -8px rgba(28,28,30,0.45)",
+        "purpose": "Hover do CTA do cabeçalho (0.6 na versão grafite)."
+      },
+      {
+        "name": "hover-plan-outline",
+        "value": "0 8px 20px -14px rgba(28,28,30,0.5)",
+        "purpose": "Hover dos botões de contorno dos planos."
+      },
+      {
+        "name": "hover-plan-marker",
+        "value": "0 10px 24px -12px rgba(255,195,0,0.7)",
+        "purpose": "Hover do botão amarelo do plano Família."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Única curva do sistema: fechamento do extrato e entrada de balões."
+      },
+      {
+        "name": "ledger-row-settle",
+        "value": "opacity/transform 600ms ease-out-expo, +90ms por linha, de translateY(10px)",
+        "purpose": "Linhas do extrato assentando ao entrar na tela (35% visível)."
+      },
+      {
+        "name": "ledger-marker-sweep",
+        "value": "background-size 0% -> 100% em 900ms ease-out-expo, 650ms de atraso",
+        "purpose": "Grifo amarelo varrendo o saldo depois das linhas."
+      },
+      {
+        "name": "bubble-in",
+        "value": "420ms ease-out-expo, de translateY(6px) scale(0.98)",
+        "purpose": "Entrada dos balões do assistente."
+      },
+      {
+        "name": "typing-dot",
+        "value": "1s infinite, atrasos 0/0.15s/0.3s",
+        "purpose": "Digitando… do assistente."
+      },
+      {
+        "name": "state",
+        "value": "200ms (cor, transform, sombra); 300ms no CTA do cabeçalho e na seta do FAQ",
+        "purpose": "Hover, seleção e troca de cor do CTA."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "durações 0.01ms, atrasos 0",
+        "purpose": "prefers-reduced-motion zera tudo; o estado final é o padrão."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botão primário",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "CTA grafite de 56px; o do hero, onde o amarelo pertence ao cabeçalho.",
+      "html": "<a class=\"ds-btn-primary\" href=\"#\">Criar conta grátis</a>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; min-height: 56px; padding: 0 28px; border-radius: 12px; background: var(--color-ink); color: var(--color-paper); font-family: var(--font-sans); font-size: 17px; font-weight: 600; text-decoration: none; transition: transform 200ms, box-shadow 200ms; } .ds-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 14px 30px -16px rgba(28,28,30,0.7); } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 3px; }"
+    },
+    {
+      "name": "Botão marcador",
+      "kind": "button",
+      "refersTo": "button-marker",
+      "description": "Mesma forma em amarelo; só quando é o único amarelo do viewport (chamada final, plano Família).",
+      "html": "<div class=\"ds-night-pad\"><a class=\"ds-btn-marker\" href=\"#\">Criar conta grátis</a></div>",
+      "css": ".ds-night-pad { background: var(--color-night); padding: 32px; } .ds-btn-marker { display: inline-flex; align-items: center; min-height: 56px; padding: 0 28px; border-radius: 12px; background: var(--color-marker); color: var(--color-ink); font-family: var(--font-sans); font-size: 17px; font-weight: 600; text-decoration: none; transition: transform 200ms, box-shadow 200ms; } .ds-btn-marker:hover { transform: translateY(-1px); box-shadow: 0 14px 30px -14px rgba(255,195,0,0.75); } .ds-btn-marker:focus-visible { outline: 2px solid var(--color-marker); outline-offset: 3px; }"
+    },
+    {
+      "name": "Botão de contorno",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Botão dos planos Free e Pro: borda grafite sobre folha.",
+      "html": "<a class=\"ds-btn-outline\" href=\"#\">Começar com o Pro</a>",
+      "css": ".ds-btn-outline { display: flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 24px; border: 1px solid var(--color-ink); border-radius: 12px; background: #fff; color: var(--color-ink); font-family: var(--font-sans); font-size: 15.5px; font-weight: 600; text-decoration: none; transition: transform 200ms, box-shadow 200ms; } .ds-btn-outline:hover { transform: translateY(-1px); box-shadow: 0 8px 20px -14px rgba(28,28,30,0.5); } .ds-btn-outline:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 3px; }"
+    },
+    {
+      "name": "Cabeçalho",
+      "kind": "nav",
+      "refersTo": "header-cta-hero",
+      "description": "Cabeçalho fixo em papel sólido; CTA amarelo no hero, grafite depois (classe is-scrolled).",
+      "html": "<header class=\"ds-header\"><span class=\"ds-logo\"><svg width=\"26\" height=\"26\" viewBox=\"0 0 96 96\" aria-hidden=\"true\"><rect width=\"96\" height=\"96\" rx=\"18\" fill=\"#FFC300\"/><path d=\"M24 66 L42 50 L54 59 L72 28\" fill=\"none\" stroke=\"#1C1C1E\" stroke-width=\"8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><circle cx=\"72\" cy=\"28\" r=\"8\" fill=\"#1C1C1E\"/></svg>ControlAI</span><nav class=\"ds-nav\"><a href=\"#\">Como funciona</a><a href=\"#\">Família</a><a href=\"#\">Planos</a></nav><a class=\"ds-header-cta\" href=\"#\">Criar conta grátis</a><a class=\"ds-header-cta is-scrolled\" href=\"#\">Criar conta grátis</a></header>",
+      "css": ".ds-header { display: flex; align-items: center; gap: 28px; padding: 12px 20px; background: var(--color-paper); border-bottom: 1px solid var(--color-rule); font-family: var(--font-sans); } .ds-logo { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 19px; font-weight: 800; letter-spacing: -0.01em; color: var(--color-ink); } .ds-nav { display: flex; gap: 28px; font-size: 15px; } .ds-nav a { color: var(--color-ink-2); text-decoration: none; transition: color 200ms; } .ds-nav a:hover { color: var(--color-ink); } .ds-header-cta { margin-left: auto; padding: 10px 16px; border-radius: 10px; background: var(--color-marker); color: var(--color-ink); font-size: 15px; font-weight: 600; text-decoration: none; box-shadow: 0 1px 0 rgba(28,28,30,0.18); transition: background-color 300ms, color 300ms, transform 300ms, box-shadow 300ms; } .ds-header-cta + .ds-header-cta { margin-left: 0; } .ds-header-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 16px -8px rgba(28,28,30,0.45); } .ds-header-cta.is-scrolled { background: var(--color-ink); color: var(--color-paper); box-shadow: none; } .ds-header-cta:focus-visible, .ds-nav a:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 3px; border-radius: 6px; }"
+    },
+    {
+      "name": "Sugestão do assistente",
+      "kind": "chip",
+      "refersTo": "suggestion-chip",
+      "description": "Pergunta tocável dentro do celular; selecionada ganha borda grafite e folha.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip\" aria-pressed=\"true\">Vamos fechar outubro no azul?<svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 12h15M13 6l6 6-6 6\"/></svg></button><button class=\"ds-chip\" aria-pressed=\"false\">Quem gastou mais este mês?<svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 12h15M13 6l6 6-6 6\"/></svg></button></div>",
+      "css": ".ds-chips { display: flex; flex-direction: column; gap: 6px; max-width: 320px; } .ds-chip { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; padding: 0 12px; border: 1px solid var(--color-rule); border-radius: 12px; background: var(--color-paper); color: var(--color-ink-2); font-family: var(--font-sans); font-size: 13.5px; text-align: left; cursor: pointer; transition: color 200ms, border-color 200ms, background-color 200ms; } .ds-chip:hover { border-color: var(--color-ink-3); color: var(--color-ink); } .ds-chip[aria-pressed=\"true\"] { border-color: var(--color-ink); background: #fff; color: var(--color-ink); } .ds-chip:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 3px; }"
+    },
+    {
+      "name": "Seletor de período",
+      "kind": "custom",
+      "refersTo": "segmented-option-selected",
+      "description": "Grupo de rádio do período de cobrança.",
+      "html": "<div class=\"ds-seg\" role=\"radiogroup\"><button role=\"radio\" aria-checked=\"true\">Mensal</button><button role=\"radio\" aria-checked=\"false\">Semestral</button><button role=\"radio\" aria-checked=\"false\">Anual</button></div>",
+      "css": ".ds-seg { display: inline-flex; padding: 4px; border: 1px solid var(--color-rule); border-radius: 12px; background: #fff; } .ds-seg button { min-height: 40px; padding: 0 16px; border: 0; border-radius: 8px; background: transparent; color: var(--color-ink-2); font-family: var(--font-sans); font-size: 14.5px; font-weight: 500; cursor: pointer; transition: color 200ms, background-color 200ms; } .ds-seg button:hover { color: var(--color-ink); } .ds-seg button[aria-checked=\"true\"] { background: var(--color-ink); color: var(--color-paper); } .ds-seg button:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 3px; }"
+    },
+    {
+      "name": "Folha do extrato",
+      "kind": "card",
+      "refersTo": "ledger-sheet",
+      "description": "Assinatura do sistema: linhas assinadas, valores em mono, total sob régua dupla com o grifo 'no azul'. Plana (a sombra da folha construída é desvio não canonizado).",
+      "html": "<div class=\"ds-ledger\"><div class=\"ds-ledger-head\"><span>Extrato · Família Souza</span><span class=\"ds-money ds-dim\">OUTUBRO 2026</span></div><div class=\"ds-row\"><span class=\"ds-money ds-dim\">01/10</span><span>Salário</span><span class=\"ds-av\">AN</span><span class=\"ds-money ds-azul\">+ 6.400,00</span></div><div class=\"ds-row\"><span class=\"ds-money ds-dim\">08/10</span><span>Supermercado</span><span class=\"ds-av\">RS</span><span class=\"ds-money\">− 1.182,40</span></div><div class=\"ds-total\"><span>Saldo de outubro</span><span class=\"ds-total-val\"><span class=\"ds-money ds-azul ds-big\">+ 3.160,00</span><span class=\"ds-marker\">no azul</span></span></div></div>",
+      "css": ".ds-ledger { max-width: 560px; padding: 24px 32px; border: 1px solid var(--color-rule); border-radius: 16px; background: #fff; color: var(--color-ink); font-family: var(--font-sans); } .ds-ledger-head { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 12px; border-bottom: 2px solid var(--color-ink); font-family: var(--font-display); font-size: 17px; font-weight: 700; } .ds-row { display: grid; grid-template-columns: 56px 1fr 40px auto; align-items: center; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--color-rule); font-size: 15.5px; } .ds-money { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; white-space: nowrap; text-align: right; } .ds-dim { color: var(--color-ink-3); font-size: 13px; text-align: left; } .ds-azul { color: var(--color-azul); } .ds-av { display: flex; width: 28px; height: 28px; align-items: center; justify-content: center; border-radius: 9999px; background: var(--color-paper-2); color: var(--color-ink-2); font-size: 11px; font-weight: 600; } .ds-total { display: flex; justify-content: space-between; align-items: flex-start; padding-top: 20px; border-top: 3px double var(--color-ink); font-size: 16px; font-weight: 600; } .ds-total-val { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; } .ds-big { font-size: 32px; font-weight: 500; line-height: 1; } .ds-marker { font-size: 15px; font-weight: 600; background-image: linear-gradient(var(--color-marker), var(--color-marker)); background-repeat: no-repeat; background-position: 0 88%; background-size: 100% 0.42em; padding-inline: 0.08em; transition: background-size 900ms cubic-bezier(0.16,1,0.3,1); } .ds-ledger:hover .ds-marker { background-size: 100% 0.42em; }"
+    },
+    {
+      "name": "Plano em destaque",
+      "kind": "card",
+      "refersTo": "plan-card-featured",
+      "description": "Card do plano Família na noite, com o botão amarelo como único marcador do viewport.",
+      "html": "<article class=\"ds-plan\"><h3>Família</h3><p class=\"ds-plan-sub\">O Pro para a casa inteira, em grupo.</p><p class=\"ds-plan-price\">R$ 00,00</p><p class=\"ds-plan-sub\">por mês</p><a class=\"ds-plan-cta\" href=\"#\">Começar com o Família</a><ul><li><span>Grupo familiar com papéis</span><span>Até 5 pessoas</span></li><li><span>Leitura de cupom pelo app</span><svg width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12.5l4.5 4.5L19 7\"/></svg></li></ul></article>",
+      "css": ".ds-plan { max-width: 340px; padding: 28px; border-radius: 16px; background: var(--color-night); color: var(--color-night-ink); font-family: var(--font-sans); } .ds-plan h3 { margin: 0; font-family: var(--font-display); font-size: 22px; font-weight: 700; } .ds-plan-sub { margin: 4px 0 0; font-size: 14.5px; color: var(--color-night-ink-2); } .ds-plan-price { margin: 24px 0 0; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 36px; font-weight: 500; line-height: 1; } .ds-plan-cta { display: flex; align-items: center; justify-content: center; min-height: 48px; margin-top: 24px; border-radius: 12px; background: var(--color-marker); color: var(--color-ink); font-size: 15.5px; font-weight: 600; text-decoration: none; transition: transform 200ms, box-shadow 200ms; } .ds-plan-cta:hover { transform: translateY(-1px); box-shadow: 0 10px 24px -12px rgba(255,195,0,0.7); } .ds-plan-cta:focus-visible { outline: 2px solid var(--color-marker); outline-offset: 3px; } .ds-plan ul { margin: 32px 0 0; padding: 0; list-style: none; } .ds-plan li { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; font-size: 14.5px; color: var(--color-night-ink-2); } .ds-plan li + li { border-top: 1px solid var(--color-night-rule); } .ds-plan li > :last-child { color: var(--color-night-ink); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Fechamento de Caixa",
+    "overview": "**Creative North Star: \"Fechamento de Caixa\"**\n\nA landing herda o mundo do app (`apps/web/DESIGN.md`) e o leva para uma superfície de persuasão: a página inteira é um extrato. Papel e grafite são chão e tinta; réguas finas de extrato separam as seções no lugar de cards; os valores em dinheiro alinham em mono tabular como coluna de planilha; o total fecha com régua dupla, como no fechamento contábil. O amarelo-marcador é um grifo de caneta, não uma cor de marca espalhada: um elemento por viewport, e o resto da tela fica em grafite.\n\nO ritmo alterna faixas de papel, papel-fosco e faixas noturnas em grafite (papéis do grupo, plano Família, chamada final, rodapé). Os objetos do produto são desenhados em CSS (o celular com o assistente, o cupom fiscal), nunca capturas de tela. O movimento é escasso e tem um único momento autoral: o extrato \"fecha\" ao entrar na tela. As superfícies do navegador (seleção, foco, barra de rolagem, cor do tema) também pertencem ao sistema.\n\nAnti-referência herdada e confirmada: a identidade antiga do produto (indigo saturado, dark mode preto puro). Esta landing não a usa em nenhuma forma.",
+    "keyCharacteristics": [
+      "Extrato como estrutura: réguas de 1px, colunas, total sob régua dupla.",
+      "Um grifo amarelo por viewport; o CTA do cabeçalho cede o amarelo depois do hero.",
+      "Dinheiro sempre em IBM Plex Mono tabular, sem quebra entre \"R$\" e o número.",
+      "Faixas noturnas em grafite marcam mudança de assunto, não decoração.",
+      "Objetos desenhados (celular, cupom) no lugar de mockups e screenshots.",
+      "Um momento de movimento (fechamento do extrato), tudo visível sem JS e com movimento reduzido."
+    ],
+    "rules": [
+      {
+        "name": "The One Marker Rule",
+        "body": "Um único elemento amarelo por viewport. No hero ele é do CTA do cabeçalho, por isso o CTA do hero é grafite; quando o hero sai por baixo do cabeçalho, o CTA do cabeçalho vira grafite e cede o amarelo à seção da vez.",
+        "section": "colors"
+      },
+      {
+        "name": "The Native Idiom Rule",
+        "body": "Azul só significa dinheiro positivo. Se não é um valor ou um saldo, não é azul.",
+        "section": "colors"
+      },
+      {
+        "name": "The Night Band Rule",
+        "body": "Faixas noturnas usam o grafite da tinta (`night` = `ink`), nunca preto puro, e trocam régua, texto e foco pelos pares `night-*` e pelo anel amarelo.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ledger Number Rule",
+        "body": "Todo valor em dinheiro usa a classe `money`: mono, `tabular-nums`, sem quebra entre o símbolo e o número. Texto corrido nunca usa a mono.",
+        "section": "typography"
+      },
+      {
+        "name": "The Kerned Punctuation Rule",
+        "body": "Todo título em Plus Jakarta 800 passa pelo helper `kern()`, que puxa ponto e vírgula 0.06em de volta para a palavra; com o tracking negativo dos títulos, a pontuação descolaria (\"dinheiro .\").",
+        "section": "typography"
+      },
+      {
+        "name": "The Drawn Object Rule",
+        "body": "Sombra em repouso é privilégio de objeto físico desenhado (celular, cupom). Folha, card e painel de interface são planos e se delimitam por régua.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** deixar um único elemento amarelo por viewport e fazer o CTA do cabeçalho virar grafite depois do hero (The One Marker Rule).",
+      "**Do** usar `money` (IBM Plex Mono, `tnum`, `nowrap`) em todo valor, data e contagem (The Ledger Number Rule).",
+      "**Do** passar todo título de Plus Jakarta 800 pelo `kern()` (The Kerned Punctuation Rule).",
+      "**Do** estruturar listas, tabelas e comparações com réguas de 1px em `rule`, e fechar totais com régua dupla de 3px em grafite.",
+      "**Do** desenhar os objetos do produto em CSS (celular, cupom) e rotular dados de demonstração como exemplo.",
+      "**Do** marcar mudança de assunto com faixa noturna em `night`, com régua, texto e foco `night-*`.",
+      "**Do** tematizar as superfícies do navegador: seleção em amarelo com texto grafite, foco de 2px, barra de rolagem fina em `rule`, `theme-color` papel.",
+      "**Do** começar todo movimento no estado final sem JS e zerar durações com `prefers-reduced-motion`."
+    ],
+    "donts": [
+      "**Don't** pôr o amarelo em dois elementos no mesmo viewport, nem como fundo de seção inteira.",
+      "**Don't** usar azul em link, ícone ou botão; azul é saldo positivo.",
+      "**Don't** dar sombra em repouso a folha, card ou painel de interface; sombra parada é só de objeto desenhado (The Drawn Object Rule).",
+      "**Don't** usar preto puro nem indigo saturado; a faixa escura é o grafite `#1c1c1e`.",
+      "**Don't** usar `backdrop-filter` no cabeçalho fixo; o fundo é papel sólido.",
+      "**Don't** usar a mono em texto corrido."
+    ]
+  }
+}

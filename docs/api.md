@@ -221,6 +221,31 @@ GET   /api/gamification/history
 
 Check-in: um por dia (dia de São Paulo). A cada `rewardDays` check-ins seguidos (7º, 14º, 21º…) soma `rewardPoints`; pular um dia volta a sequência a 1. `checkin.streak` no perfil já vem zerado quando o usuário pulou um dia.
 
+## Landing page
+
+Públicas (sem login), lidas pela landing:
+```
+GET /api/public/plans                    planos com preços atuais (features do código, preços do banco)
+GET /api/public/landing/pages            → { slugs, footer: [{ slug, title }], menu: [{ label, href }] }   só publicadas
+GET /api/public/landing/pages/:slug      página publicada ("inicio" = raiz do site)
+GET /api/public/landing/preview/:token   rascunho, com token assinado de 30 min (gerado pelo admin)
+```
+
+Editor no admin (requer `role: "admin"`):
+```
+GET    /api/admin/landing/pages                 lista (cria a "inicio" com o conteúdo de fábrica na 1ª vez)
+POST   /api/admin/landing/pages                 { slug, title }  página nova, vazia, não publicada
+GET    /api/admin/landing/pages/:id
+PATCH  /api/admin/landing/pages/:id             { slug?, title?, description?, showInFooter?, sections? }  salva o rascunho
+POST   /api/admin/landing/pages/:id/publish     copia rascunho → publicado e avisa a landing → { page, revalidated }
+POST   /api/admin/landing/pages/:id/discard     rascunho volta ao publicado
+POST   /api/admin/landing/pages/:id/preview-token  → { token }
+DELETE /api/admin/landing/pages/:id             (a "inicio" não pode ser excluída)
+GET    /api/admin/landing/menu                  → { menu: [{ label, href }] }
+PATCH  /api/admin/landing/menu                  { menu }  até 6 itens; vale na hora e regera todas as páginas publicadas
+```
+Seções são blocos estruturados (`LandingSectionSchema` em `@finances/validations`): hero, ledger, roles, productRows, pricing, faq, cta, text, highlights. Links aceitam só `signup`, `login`, `#ancora`, `/pagina` ou `https://`.
+
 ## Admin (`/api/admin/*`, requer `role: "admin"`)
 
 ```

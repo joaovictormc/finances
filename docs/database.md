@@ -52,6 +52,11 @@ Schema em: `packages/db/prisma/schema.prisma` (33 models).
   - `type` decide o que é entregue: `points` soma no perfil; `plan_days` soma dias de assinatura na hora. Prêmio gravado antes desse campo normaliza como `points`.
 - `GamificationSpinLog` — auditoria de cada giro real: `prizeLabel`, `prizePoints`, `prizeType`, `prizeDays`, `source` (weekly/purchased)
 
+### Landing page
+- `LandingPage` — `slug` (unique; `inicio` é a raiz do site), `title`, `description`, `showInFooter`, `draftSections` e `publishedSections` (JSON de blocos validados por `LandingSectionsSchema`), `publishedAt`
+  - O admin edita só o rascunho; publicar copia o rascunho para `publishedSections`, a única versão servida ao público.
+- `LandingSettings` — singleton; `menu` (JSON `[{ label, href }]`, `LandingMenuSchema`): cabeçalho e rodapé de todas as páginas. Vale ao salvar, sem rascunho.
+
 ### Monetização
 - `Subscription` — userId (unique), plan (free/pro/familia), status (active/past_due/canceled), `interval` (monthly/semiannual/annual), `mpPreapprovalId` (prefixo `pix:` quando pago via Pix), currentPeriodEnd, canceledAt
   - `currentPeriodEnd` **nulo significa acesso sem prazo** — é como a concessão manual do admin é gravada. Toda rotina que soma dias (renovação, prêmio da roleta, indicação) precisa respeitar isso: datar essa linha tiraria acesso em vez de dar.

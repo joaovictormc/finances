@@ -778,3 +778,38 @@ model AssistantMessage {
   @@index([conversationId, createdAt])
   @@map("assistant_messages")
 }
+
+// ─────────────────────────────────────────────
+// LANDING PAGE (conteúdo editável no admin)
+// ─────────────────────────────────────────────
+
+/// Página da landing (apps/landing). Seções são blocos estruturados validados
+/// por LandingSectionsSchema (@finances/validations): o admin edita o
+/// rascunho; publicar copia o rascunho para `publishedSections`, que é a
+/// única versão que a rota pública serve.
+model LandingPage {
+  id                String    @id @default(cuid())
+  /// "inicio" é a raiz do site (/); as demais ficam em /<slug>.
+  slug              String    @unique
+  title             String
+  description       String    @default("")
+  showInFooter      Boolean   @default(false)
+  draftSections     Json      @default("[]")
+  publishedSections Json?
+  publishedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("landing_pages")
+}
+
+/// Configuração geral da landing (linha única). `menu`: itens do cabeçalho,
+/// validados por LandingMenuSchema; vale ao salvar, sem rascunho.
+model LandingSettings {
+  id        String   @id @default("singleton")
+  menu      Json     @default("[]")
+  updatedAt DateTime @updatedAt
+
+  @@map("landing_settings")
+}
+

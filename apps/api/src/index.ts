@@ -18,6 +18,8 @@ import aiRoute from "./routes/ai";
 import assistantRoute from "./routes/assistant";
 import groupsRoute from "./routes/groups";
 import billingRoute from "./routes/billing";
+import publicRoute from "./routes/public";
+import adminLandingRoute from "./routes/admin-landing";
 import mercadopagoWebhookRoute from "./routes/webhooks/mercadopago";
 import reportsRoute from "./routes/reports";
 import referralsRoute from "./routes/referrals";
@@ -58,6 +60,8 @@ app.use(
   cors({
     origin: [
       process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+      // Landing page (lê /api/public/plans no navegador).
+      process.env.LANDING_URL ?? "http://localhost:3002",
       "http://localhost:19006", // Expo web (SDK antigo)
       "http://localhost:8081", // Expo web (SDK 54+)
       ...LAN_ORIGINS,
@@ -100,9 +104,11 @@ app.route("/api/ai", aiRoute);
 app.route("/api/assistant", assistantRoute);
 app.route("/api/groups", groupsRoute);
 app.route("/api/billing", billingRoute);
+app.route("/api/public", publicRoute);
 app.route("/api/webhooks/mercadopago", mercadopagoWebhookRoute);
 app.route("/api/reports", reportsRoute);
 app.route("/api/referrals", referralsRoute);
+app.route("/api/admin/landing", adminLandingRoute);
 app.route("/api/admin", adminRoute);
 app.route("/api/settings", settingsRoute);
 app.route("/api/notifications", notificationsRoute);

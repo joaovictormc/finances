@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, Receipt, Bot, CreditCard, ArrowRight, Sparkles, Tag } from "lucide-react";
+import { Users, Receipt, Bot, CreditCard, ArrowRight, Sparkles, Tag, LayoutTemplate } from "lucide-react";
 
 const sections = [
   {
@@ -31,6 +31,12 @@ const sections = [
     title: "Modelos de IA",
     description: "Configure o modelo ativo, kill-switches e veja uso/custo",
     icon: Bot,
+  },
+  {
+    href: "/admin/landing",
+    title: "Landing page",
+    description: "Edite textos e blocos do site de anúncio, crie páginas e publique",
+    icon: LayoutTemplate,
   },
   {
     href: "/admin/gamification",
