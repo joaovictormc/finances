@@ -24,16 +24,26 @@ export default function SettingsScreen() {
   const [reportError, setReportError] = useState<string | null>(null);
 
   const [referralLink, setReferralLink] = useState("");
+  const [referralReward, setReferralReward] = useState<{
+    text: string | null;
+    campaign: { name: string; endsAt: string | null } | null;
+  } | null>(null);
   const [summary, setSummary] = useState<ReferralSummary | null>(null);
   const [loadingReferrals, setLoadingReferrals] = useState(true);
 
   useEffect(() => {
     Promise.all([
-      api.get<{ code: string; link: string }>("/api/referrals/code"),
+      api.get<{
+        code: string;
+        link: string;
+        reward: string | null;
+        campaign: { name: string; endsAt: string | null } | null;
+      }>("/api/referrals/code"),
       api.get<ReferralSummary>("/api/referrals"),
     ])
       .then(([codeRes, summaryRes]) => {
         setReferralLink(codeRes.link);
+        setReferralReward({ text: codeRes.reward, campaign: codeRes.campaign });
         setSummary(summaryRes);
       })
       .catch(() => {})
@@ -280,7 +290,15 @@ export default function SettingsScreen() {
           <Text className="text-base font-semibold text-foreground dark:text-foreground-dark">Indique e ganhe</Text>
         </View>
         <Text className="mb-4 text-sm text-muted-foreground dark:text-muted-foreground-dark">
-          Compartilhe seu link. Quando a pessoa indicada assinar um plano pago, você ganha 30 dias grátis.
+          {referralReward?.text
+            ? `Compartilhe seu link. Quando a pessoa indicada assinar um plano pago, você ganha ${referralReward.text}.${
+                referralReward.campaign?.endsAt
+                  ? ` Campanha ${referralReward.campaign.name}: indicações até ${new Date(
+                      new Date(referralReward.campaign.endsAt).getTime() - 1
+                    ).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}.`
+                  : ""
+              }`
+            : "Compartilhe seu link com quem também quer organizar as finanças."}
         </Text>
 
         {loadingReferrals ? (

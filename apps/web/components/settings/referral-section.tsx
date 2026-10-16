@@ -12,19 +12,36 @@ interface ReferralSummary {
   referrals: Array<{ id: string; referredName: string; rewardGranted: boolean; createdAt: string }>;
 }
 
+/** Texto da recompensa vigente (campanha ou padrão), vindo da API. */
+function referralCopy(reward: { text: string | null; campaign: { name: string; endsAt: string | null } | null } | null) {
+  if (!reward) return "Compartilhe seu link com quem também quer organizar as finanças.";
+  if (!reward.text) return "Compartilhe seu link com quem também quer organizar as finanças.";
+  const until = reward.campaign?.endsAt
+    ? ` Campanha ${reward.campaign.name}: indicações até ${new Date(new Date(reward.campaign.endsAt).getTime() - 1).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}.`
+    : "";
+  return `Compartilhe seu link. Quando a pessoa indicada assinar um plano pago, você ganha ${reward.text}.${until}`;
+}
+
 export function ReferralSection() {
   const { toast } = useToast();
   const [link, setLink] = useState("");
+  const [reward, setReward] = useState<{ text: string | null; campaign: { name: string; endsAt: string | null } | null } | null>(null);
   const [summary, setSummary] = useState<ReferralSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
-      api.get<{ code: string; link: string }>("/api/referrals/code"),
+      api.get<{
+        code: string;
+        link: string;
+        reward: string | null;
+        campaign: { name: string; endsAt: string | null } | null;
+      }>("/api/referrals/code"),
       api.get<ReferralSummary>("/api/referrals"),
     ])
       .then(([codeRes, summaryRes]) => {
         setLink(codeRes.link);
+        setReward({ text: codeRes.reward, campaign: codeRes.campaign });
         setSummary(summaryRes);
       })
       .finally(() => setIsLoading(false));
@@ -42,7 +59,7 @@ export function ReferralSection() {
         <h2 className="text-base font-semibold">Indique e ganhe</h2>
       </div>
       <p className="text-sm text-muted-foreground mb-4">
-        Compartilhe seu link. Quando a pessoa indicada assinar um plano pago, você ganha 30 dias grátis.
+        {referralCopy(reward)}
       </p>
 
       {!isLoading && link && (

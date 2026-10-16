@@ -26,6 +26,8 @@ import {
   isBillingInterval,
 } from "../lib/billing-interval";
 import { addRecurrence } from "../lib/subscription-period";
+import { confirmRedemption } from "../lib/coupons";
+import { grantReferralReward } from "../lib/referrals";
 import { PAID_PLANS, listPlanPrices, updatePlanPrices } from "../lib/plan-prices";
 
 const app = new Hono<{ Variables: AuthVariables }>();
@@ -119,9 +121,11 @@ app.post("/users/:id/subscription/cancel", async (c) => {
     }
   }
 
+  // Cancelamento pelo admin é imediato (estorno, abuso): fecha o período agora.
+  // O do próprio usuário, em /billing/cancel, mantém o acesso até o fim do pago.
   const updated = await db.subscription.update({
     where: { userId },
-    data: { status: "canceled", canceledAt: new Date() },
+    data: { status: "canceled", canceledAt: new Date(), currentPeriodEnd: new Date() },
   });
 
   await db.paymentEvent.create({
@@ -246,6 +250,12 @@ app.post("/payment-events/:id/confirm-pix", async (c) => {
       rawPayload: { ...payload, adminId },
     },
   });
+
+  // O uso do cupom (se houve) passa a contar, e quem indicou recebe a
+  // recompensa — antes só o webhook do cartão fazia isso, e indicação que
+  // virava assinatura por Pix nunca era paga.
+  await confirmRedemption(`pix:${payload.txid}`);
+  await grantReferralReward(payload.userId);
 
   return c.json(subscription);
 });

@@ -32,8 +32,10 @@ export function decidePlanGrant(input: {
     return { action: "skip", reason: "acesso_sem_prazo" };
   }
 
+  // Cancelada mas ainda dentro do período pago também conta: os dias somam
+  // ao fim do período, não a partir de hoje (senão o prêmio comeria o resto).
   const stillValid =
-    subscription?.status === "active" &&
+    (subscription?.status === "active" || subscription?.status === "canceled") &&
     !!subscription.currentPeriodEnd &&
     subscription.currentPeriodEnd.getTime() > input.now.getTime();
 

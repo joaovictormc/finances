@@ -9,3 +9,4 @@ export * from "./password.schema";
 export * from "./category.schema";
 export * from "./landing.schema";
 export * from "./landing-defaults";
+export * from "./promotion.schema";

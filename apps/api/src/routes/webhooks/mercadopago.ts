@@ -1,3 +1,5 @@
+import { notifyCardPaymentFailed } from "../../lib/reminders";
+import { confirmRedemption } from "../../lib/coupons";
 import { Hono } from "hono";
 import { db } from "@finances/db";
 import {
@@ -136,6 +138,9 @@ app.post("/", async (c) => {
         },
       });
 
+      // Cupom usado neste checkout passa a contar no limite (idempotente).
+      await confirmRedemption(dataId);
+
       if (previous?.status !== "active") {
         await grantReferralReward(userId);
       }
@@ -149,6 +154,13 @@ app.post("/", async (c) => {
         },
         create: { userId, plan: "free", status, mpPreapprovalId: dataId, currentPeriodEnd: null },
       });
+      // Ativa que passou a "atrasada": a cobrança recorrente no cartão falhou.
+      // Avisa uma vez, na transição (o webhook pode repetir o mesmo status).
+      if (status === "past_due" && previous?.status === "active") {
+        await notifyCardPaymentFailed(userId, previous.plan).catch((err) =>
+          console.error("[mercadopago-webhook] aviso de cobrança recusada falhou:", err)
+        );
+      }
     }
   }
 

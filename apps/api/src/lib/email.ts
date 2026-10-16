@@ -57,6 +57,7 @@ async function renderEmailTemplate(
     "bill-reminder": () => import("../emails/bill-reminder"),
     "budget-alert": () => import("../emails/budget-alert"),
     "ai-insight": () => import("../emails/ai-insight"),
+    notice: () => import("../emails/notice"),
   };
 
   const loader = templates[template];

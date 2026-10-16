@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, Receipt, Bot, CreditCard, ArrowRight, Sparkles, Tag, LayoutTemplate } from "lucide-react";
+import { Users, Receipt, Bot, CreditCard, ArrowRight, Sparkles, Tag, LayoutTemplate, TicketPercent } from "lucide-react";
 
 const sections = [
   {
@@ -19,6 +19,12 @@ const sections = [
     title: "Precificação",
     description: "Defina o valor de cada plano nos períodos mensal, semestral e anual",
     icon: Tag,
+  },
+  {
+    href: "/admin/promotions",
+    title: "Promoções",
+    description: "Cupons de desconto e campanhas de recompensa por indicação",
+    icon: TicketPercent,
   },
   {
     href: "/admin/checkouts",

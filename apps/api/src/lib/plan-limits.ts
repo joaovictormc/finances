@@ -29,14 +29,33 @@ export function isSubscriptionExpired(subscription: {
   return limit.getTime() < Date.now();
 }
 
+/**
+ * A assinatura ainda dá acesso ao plano pago?
+ *
+ * - ativa: até o fim do período mais a carência (pagamento atrasando);
+ * - cancelada pelo usuário: até o fim do período já pago, sem carência —
+ *   é o que a tela promete ("você volta para o Free no fim do período").
+ *   Antes, cancelar derrubava o acesso na hora;
+ * - qualquer outro status (pendente, atrasada): sem acesso.
+ */
+export function hasPaidAccess(
+  subscription: { status: string; currentPeriodEnd: Date | null },
+  now: Date = new Date()
+): boolean {
+  if (subscription.status === "active") return !isSubscriptionExpired(subscription);
+  if (subscription.status === "canceled") {
+    return !!subscription.currentPeriodEnd && subscription.currentPeriodEnd.getTime() > now.getTime();
+  }
+  return false;
+}
+
 /** Contas com role "admin" têm acesso completo ao sistema, independente da assinatura. */
 export async function getEffectivePlan(userId: string): Promise<PlanDefinition> {
   const user = await db.user.findUnique({ where: { id: userId }, select: { role: true } });
   if (user?.role === "admin") return ADMIN_PLAN;
 
   const subscription = await db.subscription.findUnique({ where: { userId } });
-  if (!subscription || subscription.status !== "active") return getPlan("free");
-  if (isSubscriptionExpired(subscription)) return getPlan("free");
+  if (!subscription || !hasPaidAccess(subscription)) return getPlan("free");
   return getPlan(subscription.plan);
 }
 

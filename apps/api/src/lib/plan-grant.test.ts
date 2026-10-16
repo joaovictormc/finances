@@ -54,12 +54,22 @@ describe("decidePlanGrant", () => {
     expect(result).toEqual({ action: "grant", plan: "familia", currentPeriodEnd: daysFromNow(20) });
   });
 
-  it("reativa quem cancelou, contando a partir de hoje", () => {
+  it("soma ao fim do período de quem cancelou mas ainda está no prazo pago", () => {
     const result = decidePlanGrant({
       days: 7,
       plan: "pro",
       now,
       subscription: { plan: "pro", status: "canceled", currentPeriodEnd: daysFromNow(3) },
+    });
+    expect(result).toEqual({ action: "grant", plan: "pro", currentPeriodEnd: daysFromNow(10) });
+  });
+
+  it("reativa quem cancelou e já passou do prazo, contando a partir de hoje", () => {
+    const result = decidePlanGrant({
+      days: 7,
+      plan: "pro",
+      now,
+      subscription: { plan: "pro", status: "canceled", currentPeriodEnd: daysFromNow(-2) },
     });
     expect(result).toEqual({ action: "grant", plan: "pro", currentPeriodEnd: daysFromNow(7) });
   });

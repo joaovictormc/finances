@@ -51,6 +51,22 @@ tratam compartilhamento como funcionalidade extra; aqui é a espinha dorsal.
 - Gamificação: pontos e níveis por registrar transações, sequência de dias,
   check-in diário com recompensa configurável, Roleta Semanal e emblemas.
 - Categorias padrão hierárquicas mais categorias personalizadas do usuário.
+- Avisos (sino no app, push no celular e e-mail opcional) que existem de fato:
+  insight mensal, conta recorrente detectada, previsão de estouro de orçamento
+  (para o grupo todo em orçamento de grupo), novo membro no grupo, recompensa
+  de indicação, prêmio de dias de plano, lembrete de conta a pagar (3 dias
+  antes e no dia), meta em 50/75/100% (todos os membros em meta de grupo),
+  assinatura Pix vencendo (5 dias antes e no dia) e cobrança recusada no
+  cartão. **Não existem** aviso por gasto lançado no grupo nem por saldo
+  negativo — não anunciar.
+- Cancelar a assinatura para a cobrança e mantém o plano até o fim do período
+  já pago; o cancelamento feito pelo admin é imediato.
+- Promoções (Admin › Promoções): cupons de desconto que valem para a
+  assinatura inteira (cartão e Pix, mínimo R$ 1,00 por cobrança, um uso por
+  pessoa) e recompensa de indicação configurável — regra padrão e campanhas
+  com período; quem indica e já paga ganha dias no próprio plano, quem está no
+  Free ganha dias de um plano, pontos ou nada, conforme a regra. Não há
+  período de teste.
 - Monetização por assinatura (Free/Pro/Família), mensal, semestral ou anual,
   paga por Mercado Pago ou Pix.
 

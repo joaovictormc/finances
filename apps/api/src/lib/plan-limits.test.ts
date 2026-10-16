@@ -14,6 +14,7 @@ import {
   isAssistantAllowed,
   isReceiptScanAllowed,
   isSubscriptionExpired,
+  hasPaidAccess,
 } from "./plan-limits";
 
 beforeEach(() => {
@@ -74,6 +75,35 @@ describe("getEffectivePlan", () => {
   it("não expira concessão manual sem prazo", async () => {
     asUser("user", { plan: "familia", status: "active", currentPeriodEnd: null });
     expect((await getEffectivePlan("u1")).id).toBe("familia");
+  });
+});
+
+describe("cancelamento pelo usuário", () => {
+  it("mantém o plano pago até o fim do período já pago", async () => {
+    asUser("user", { plan: "familia", status: "canceled", currentPeriodEnd: daysFromNow(12) });
+    expect((await getEffectivePlan("u1")).id).toBe("familia");
+  });
+
+  it("cai no free quando o período pago termina, sem carência", async () => {
+    asUser("user", { plan: "familia", status: "canceled", currentPeriodEnd: daysFromNow(-1) });
+    expect((await getEffectivePlan("u1")).id).toBe("free");
+  });
+
+  it("cai no free na hora quando a cancelada não tem período (concessão sem prazo encerrada)", async () => {
+    asUser("user", { plan: "pro", status: "canceled", currentPeriodEnd: null });
+    expect((await getEffectivePlan("u1")).id).toBe("free");
+  });
+});
+
+describe("hasPaidAccess", () => {
+  it("ativa: vale até o fim do período mais a carência", () => {
+    expect(hasPaidAccess({ status: "active", currentPeriodEnd: daysFromNow(-2) })).toBe(true);
+    expect(hasPaidAccess({ status: "active", currentPeriodEnd: daysFromNow(-4) })).toBe(false);
+  });
+
+  it("pendente ou atrasada não dá acesso", () => {
+    expect(hasPaidAccess({ status: "pending", currentPeriodEnd: daysFromNow(10) })).toBe(false);
+    expect(hasPaidAccess({ status: "past_due", currentPeriodEnd: daysFromNow(10) })).toBe(false);
   });
 });
 

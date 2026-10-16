@@ -40,6 +40,8 @@ const ALERT_TYPES = new Set([
   "budget_alert",
   "overdraft_warning",
   "bill_reminder",
+  "subscription_expiring",
+  "subscription_payment_failed",
 ]);
 
 /**
@@ -57,6 +59,8 @@ const FALLBACK_LINKS: Record<string, string> = {
   group_activity: "/groups",
   referral_reward: "/rewards",
   pix_checkout_pending: "/admin/checkouts",
+  subscription_expiring: "/settings/billing",
+  subscription_payment_failed: "/settings/billing",
 };
 
 function linkFor(item: Notification): string | null {

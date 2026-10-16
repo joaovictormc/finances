@@ -65,7 +65,10 @@ Schema em: `packages/db/prisma/schema.prisma` (33 models).
 - `PaymentEvent` — `mpEventId` (unique, idempotência de webhook), type, rawPayload (JSON) — usado tanto pra eventos do Mercado Pago quanto pra ações manuais do admin (`admin_plan_override`, `pix_checkout_created`, `pix_payment_confirmed` etc.)
 - `PaymentMethodConfig` — singleton por método (`id: "mercadopago" | "pix"`), `enabled`, `config` (JSON com chaves/tokens — segredos mascarados na API)
 - `ReferralCode` — código único por usuário
-- `Referral` — referrerId, referredId (unique), rewardGranted
+- `Referral` — referrerId, referredId (unique), rewardGranted, `rewardRuleId` (regra vigente quando o código foi resgatado)
+- `ReferralRewardRule` — regra padrão (`isDefault`, sem período) + campanhas (`startsAt`/`endsAt`, `active`): `paidReferrerDays` (quem já paga, dias no próprio plano) e `freeRewardType` `plan_days`|`points`|`none` com `freeRewardPlan`/`freeRewardDays`/`freeRewardPoints` (quem está no Free)
+- `Coupon` — `code` (unique, maiúsculas), `percentOff` **ou** `amountOffCents`, `plans[]` (vazio = todos), `startsAt`/`expiresAt`, `maxRedemptions`, `active`
+- `CouponRedemption` — unique (`couponId`, `userId`); `checkoutRef` (preapprovalId ou `pix:<txid>`), `status` `pending`→`confirmed` na confirmação do pagamento
 
 ## Transaction — Tabela Principal
 

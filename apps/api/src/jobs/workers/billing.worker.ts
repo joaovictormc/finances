@@ -4,6 +4,7 @@ import { redis } from "../../lib/redis";
 import { sendNotification } from "../../lib/notifications";
 import { isUniqueViolation } from "../../lib/prisma-errors";
 import { listPendingPixCheckouts, type PixCheckoutStage } from "../../lib/pix-checkout";
+import { sendBillReminders, sendPixExpiryReminders } from "../../lib/reminders";
 
 const STAGE_TITLE: Record<PixCheckoutStage, string> = {
   expiring: "Pix pendente perto de vencer",
@@ -93,6 +94,16 @@ export const billingWorker = new Worker(
       case "scan-pix-checkouts":
         await notifyPendingPixCheckouts();
         return;
+      case "send-bill-reminders": {
+        const sent = await sendBillReminders();
+        console.log(`[billing] lembretes de conta enviados: ${sent}`);
+        return;
+      }
+      case "send-pix-expiry-reminders": {
+        const sent = await sendPixExpiryReminders();
+        console.log(`[billing] avisos de Pix vencendo enviados: ${sent}`);
+        return;
+      }
       default:
         console.warn(`[billing] Job desconhecido: ${job.name}`);
     }

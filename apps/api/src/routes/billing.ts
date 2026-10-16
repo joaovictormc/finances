@@ -2,61 +2,31 @@ import { randomUUID } from "node:crypto";
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
+import { CouponPreviewSchema } from "@finances/validations";
 import { db } from "@finances/db";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
-import { PLANS } from "../lib/plans";
 import { createSubscriptionCheckout, cancelSubscriptionAtMercadoPago } from "../lib/mercadopago";
 import {
   getEffectivePlan,
   isSubscriptionExpired,
+  hasPaidAccess,
   planHasIntegrationsModule,
   planHasFamilyModule,
 } from "../lib/plan-limits";
 import { checkRateLimit } from "../lib/rate-limit";
 import { getPaymentMethodConfig, readPaymentMethodConfig } from "../lib/payment-methods";
 import { buildPixPayload, pixTxidFromId } from "../lib/pix";
-import {
-  BILLING_INTERVALS,
-  INTERVAL_LABELS,
-  INTERVAL_MONTHS,
-  type BillingInterval,
-} from "../lib/billing-interval";
-import { getCheckoutPriceCents, listPlanPrices } from "../lib/plan-prices";
+import { BILLING_INTERVALS, type BillingInterval } from "../lib/billing-interval";
+import { getCheckoutPriceCents } from "../lib/plan-prices";
+import { COUPON_MESSAGES, applyDiscount, checkCoupon, reserveRedemption } from "../lib/coupons";
+import { getPlanCatalog } from "../lib/plan-catalog";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
 app.use("*", requireAuth);
 
-/**
- * Catálogo de planos: features vêm do código, preços vêm do banco.
- *
- * `priceCents` continua sendo o mensal — é o preço de vitrine, o que a tela
- * mostra antes do usuário escolher período. Os demais vêm em `prices`.
- */
-app.get("/plans", async (c) => {
-  const prices = await listPlanPrices();
-
-  return c.json(
-    Object.values(PLANS).map((plan) => {
-      const available = prices.filter((price) => price.plan === plan.id && price.active);
-      const monthly = available.find((price) => price.interval === "monthly");
-
-      return {
-        ...plan,
-        priceCents: monthly?.priceCents ?? plan.priceCents,
-        prices: available.map((price) => ({
-          interval: price.interval,
-          label: INTERVAL_LABELS[price.interval],
-          months: INTERVAL_MONTHS[price.interval],
-          priceCents: price.priceCents,
-          // Quanto sai por mês no período — deixa o desconto do anual visível
-          // sem cada tela ter que refazer a conta.
-          monthlyEquivalentCents: Math.round(price.priceCents / INTERVAL_MONTHS[price.interval]),
-        })),
-      };
-    }),
-  );
-});
+// Catálogo (features do código + preços do banco) — ver lib/plan-catalog.ts.
+app.get("/plans", async (c) => c.json(await getPlanCatalog()));
 
 app.get("/payment-methods", async (c) => {
   const [mercadopago, pix] = await Promise.all([
@@ -94,6 +64,47 @@ const CheckoutSchema = z.object({
   // Default mensal: é o que todo checkout criava antes dos períodos existirem,
   // então cliente antigo que não manda o campo continua funcionando.
   interval: z.enum(BILLING_INTERVALS).default("monthly"),
+  /** Cupom de desconto opcional; o preço com desconto vale para a assinatura inteira. */
+  couponCode: z.string().trim().max(30).optional(),
+});
+
+type PricedCheckout =
+  | { ok: true; originalCents: number; finalCents: number; couponId: string | null; couponCode: string | null }
+  | { ok: false; status: 400; error: string };
+
+/** Preço vigente com o cupom (se houver) já aplicado e validado. */
+async function priceWithCoupon(
+  userId: string,
+  plan: "pro" | "familia",
+  interval: BillingInterval,
+  couponCode: string | undefined
+): Promise<PricedCheckout> {
+  const originalCents = await resolveCheckoutPrice(plan, interval);
+  if (originalCents === null) return { ok: false, status: 400, error: "Este período não está disponível para contratação" };
+  if (!couponCode) return { ok: true, originalCents, finalCents: originalCents, couponId: null, couponCode: null };
+
+  const check = await checkCoupon(couponCode, userId, plan);
+  if (!check.ok) return { ok: false, status: 400, error: COUPON_MESSAGES[check.reason] };
+  return {
+    ok: true,
+    originalCents,
+    finalCents: applyDiscount(originalCents, check.coupon),
+    couponId: check.coupon.id,
+    couponCode: check.coupon.code,
+  };
+}
+
+/** Prévia do cupom na tela de planos: preço com desconto antes de pagar. */
+app.post("/coupon/preview", zValidator("json", CouponPreviewSchema), async (c) => {
+  const userId = c.get("userId");
+  const { code, plan, interval } = c.req.valid("json");
+  const priced = await priceWithCoupon(userId, plan, interval, code);
+  if (!priced.ok) return c.json({ error: priced.error }, priced.status);
+  const coupon = await db.coupon.findUnique({
+    where: { id: priced.couponId! },
+    select: { code: true, description: true, percentOff: true, amountOffCents: true },
+  });
+  return c.json({ ...coupon, plan, interval, originalCents: priced.originalCents, finalCents: priced.finalCents });
 });
 
 /** Preço vigente, ou `null` quando o admin desativou o período. */
@@ -105,7 +116,7 @@ async function resolveCheckoutPrice(plan: "pro" | "familia", interval: BillingIn
 
 app.post("/checkout", zValidator("json", CheckoutSchema), async (c) => {
   const userId = c.get("userId");
-  const { plan, interval } = c.req.valid("json");
+  const { plan, interval, couponCode } = c.req.valid("json");
 
   // Cada checkout cria um preapproval no Mercado Pago (chamada externa) e uma
   // linha em PaymentEvent. Sem limite, um laço de script enche a mesma lista
@@ -117,10 +128,9 @@ app.post("/checkout", zValidator("json", CheckoutSchema), async (c) => {
   const user = await db.user.findUnique({ where: { id: userId }, select: { email: true } });
   if (!user) return c.json({ error: "Usuário não encontrado" }, 404);
 
-  const priceCents = await resolveCheckoutPrice(plan, interval);
-  if (priceCents === null) {
-    return c.json({ error: "Este período não está disponível para contratação" }, 400);
-  }
+  const priced = await priceWithCoupon(userId, plan, interval, couponCode);
+  if (!priced.ok) return c.json({ error: priced.error }, priced.status);
+  const priceCents = priced.finalCents;
 
   const { preapprovalId, checkoutUrl } = await createSubscriptionCheckout({
     userId,
@@ -130,13 +140,13 @@ app.post("/checkout", zValidator("json", CheckoutSchema), async (c) => {
     priceCents,
   });
 
-  // Só grava "pending" na assinatura se não houver uma assinatura ATIVA hoje —
-  // sobrescrever plan/status aqui derrubaria o plano pago atual (getEffectivePlan
-  // trata status != "active" como free) mesmo sem o pagamento do novo plano ter
-  // sido confirmado ainda. A confirmação real (webhook do Mercado Pago) já sabe
-  // qual plano ativar a partir do valor pago, independente do que foi gravado aqui.
+  // Só grava "pending" se a pessoa não tem acesso pago hoje — sobrescrever
+  // plan/status derrubaria o plano atual (inclusive o de quem cancelou e ainda
+  // está no período pago) antes de o pagamento novo ser confirmado. A
+  // confirmação real (webhook do Mercado Pago) já sabe qual plano ativar a
+  // partir do valor pago, independente do que foi gravado aqui.
   const existing = await db.subscription.findUnique({ where: { userId } });
-  if (existing?.status !== "active") {
+  if (!existing || !hasPaidAccess(existing)) {
     await db.subscription.upsert({
       where: { userId },
       update: { plan, interval, status: "pending", mpPreapprovalId: preapprovalId },
@@ -150,16 +160,35 @@ app.post("/checkout", zValidator("json", CheckoutSchema), async (c) => {
       type: "checkout_created",
       // `interval` aqui é a fonte da verdade do período pro webhook — mesmo
       // papel que `plan` já cumpria pra não depender do valor pago.
-      rawPayload: { userId, plan, interval, preapprovalId, priceCents },
+      rawPayload: {
+        userId,
+        plan,
+        interval,
+        preapprovalId,
+        priceCents,
+        ...(priced.couponCode && { couponCode: priced.couponCode, originalCents: priced.originalCents }),
+      },
     },
   });
+
+  if (priced.couponId) {
+    await reserveRedemption({
+      couponId: priced.couponId,
+      userId,
+      checkoutRef: preapprovalId,
+      plan,
+      interval,
+      originalCents: priced.originalCents,
+      finalCents: priced.finalCents,
+    });
+  }
 
   return c.json({ checkoutUrl });
 });
 
 app.post("/checkout-pix", zValidator("json", CheckoutSchema), async (c) => {
   const userId = c.get("userId");
-  const { plan, interval } = c.req.valid("json");
+  const { plan, interval, couponCode } = c.req.valid("json");
 
   if (!(await checkRateLimit({ key: "checkout-pix", userId, max: 10, windowSeconds: 15 * 60 }))) {
     return c.json({ error: "Muitas tentativas de checkout. Tente novamente em alguns minutos." }, 429);
@@ -170,10 +199,9 @@ app.post("/checkout-pix", zValidator("json", CheckoutSchema), async (c) => {
     return c.json({ error: "Pagamento via Pix não está disponível no momento" }, 503);
   }
 
-  const priceCents = await resolveCheckoutPrice(plan, interval);
-  if (priceCents === null) {
-    return c.json({ error: "Este período não está disponível para contratação" }, 400);
-  }
+  const priced = await priceWithCoupon(userId, plan, interval, couponCode);
+  if (!priced.ok) return c.json({ error: priced.error }, priced.status);
+  const priceCents = priced.finalCents;
 
   const txid = pixTxidFromId(randomUUID());
 
@@ -188,7 +216,7 @@ app.post("/checkout-pix", zValidator("json", CheckoutSchema), async (c) => {
   // Mesmo motivo do /checkout: não sobrescrever uma assinatura ATIVA antes do
   // pagamento Pix ser confirmado manualmente (ver /admin/payment-events/:id/confirm-pix).
   const existingSubscription = await db.subscription.findUnique({ where: { userId } });
-  if (existingSubscription?.status !== "active") {
+  if (!existingSubscription || !hasPaidAccess(existingSubscription)) {
     await db.subscription.upsert({
       where: { userId },
       update: { plan, interval, status: "pending", mpPreapprovalId: `pix:${txid}` },
@@ -202,9 +230,28 @@ app.post("/checkout-pix", zValidator("json", CheckoutSchema), async (c) => {
       type: "pix_checkout_created",
       // O admin confirma esse Pix à mão depois; `interval` é o que diz a ele
       // quantos meses liberar.
-      rawPayload: { userId, plan, interval, txid, amount: priceCents / 100 },
+      rawPayload: {
+        userId,
+        plan,
+        interval,
+        txid,
+        amount: priceCents / 100,
+        ...(priced.couponCode && { couponCode: priced.couponCode, originalAmount: priced.originalCents / 100 }),
+      },
     },
   });
+
+  if (priced.couponId) {
+    await reserveRedemption({
+      couponId: priced.couponId,
+      userId,
+      checkoutRef: `pix:${txid}`,
+      plan,
+      interval,
+      originalCents: priced.originalCents,
+      finalCents: priced.finalCents,
+    });
+  }
 
   return c.json({ payload, txid, amount: priceCents / 100 });
 });
@@ -219,12 +266,13 @@ app.post("/cancel", async (c) => {
   if (!subscription.mpPreapprovalId.startsWith("pix:")) {
     await cancelSubscriptionAtMercadoPago(subscription.mpPreapprovalId);
   }
-  await db.subscription.update({
+  // Para a recorrência; o acesso continua até `currentPeriodEnd` (hasPaidAccess).
+  const updated = await db.subscription.update({
     where: { userId },
     data: { status: "canceled", canceledAt: new Date() },
   });
 
-  return c.json({ success: true });
+  return c.json({ success: true, accessUntil: hasPaidAccess(updated) ? updated.currentPeriodEnd : null });
 });
 
 export default app;

@@ -13,7 +13,7 @@ export default function Welcome({ name = "usuário" }: Props) {
         <p>Sua conta foi criada com sucesso. Agora você pode:</p>
         <ul>
           <li>Registrar gastos e receitas</li>
-          <li>Conectar sua conta bancária via Open Finance</li>
+          <li>Importar o extrato do banco em OFX ou CSV</li>
           <li>Tirar dúvidas sobre suas finanças com o assistente de IA</li>
           <li>Criar orçamentos e metas financeiras</li>
         </ul>

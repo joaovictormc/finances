@@ -21,8 +21,14 @@ export default function BillReminder({
         <h1 style={{ color: "#f59e0b" }}>⚠️ Lembrete de conta</h1>
         <p>Olá, {name}!</p>
         <p>
-          Sua conta <strong>{billName}</strong> no valor de <strong>{amount}</strong> vence em{" "}
-          <strong>{daysUntilDue} {daysUntilDue === 1 ? "dia" : "dias"}</strong>
+          Sua conta <strong>{billName}</strong> no valor de <strong>{amount}</strong>{" "}
+          {daysUntilDue === 0 ? (
+            <strong>vence hoje</strong>
+          ) : (
+            <>
+              vence em <strong>{daysUntilDue} {daysUntilDue === 1 ? "dia" : "dias"}</strong>
+            </>
+          )}
           {dueDate ? ` (${dueDate})` : ""}.
         </p>
         <p style={{ color: "#6b7280", fontSize: 13 }}>

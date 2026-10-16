@@ -146,7 +146,7 @@ GET    /api/groups/:id/dashboard?year=&month=
 ## Referrals (Fase 6)
 
 ```
-GET  /api/referrals/code      → { code, link }
+GET  /api/referrals/code      → { code, link, reward, campaign }   reward: frase da recompensa que esta pessoa ganharia hoje ("30 dias de Pro", "200 pontos") ou null
 POST /api/referrals/redeem    { code }
 GET  /api/referrals           → { total, rewardsGranted, referrals[] }
 ```
@@ -157,9 +157,10 @@ GET  /api/referrals           → { total, rewardsGranted, referrals[] }
 GET  /api/billing/plans              → PlanDefinition[] (free/pro/familia); `priceCents` é o mensal (vitrine) e `prices[]` traz um item por período ativo com { interval, label, months, priceCents, monthlyEquivalentCents }
 GET  /api/billing/payment-methods    → { mercadopago: boolean, pix: boolean } (habilitados)
 GET  /api/billing/subscription       → { plan, status, currentPeriodEnd, canceledAt, hasIntegrationsModule, hasFamilyModule }
-POST /api/billing/checkout           { plan: "pro"|"familia", interval?: "monthly"|"semiannual"|"annual" } → { checkoutUrl } (Mercado Pago). `interval` default "monthly"; 400 se o período estiver desativado no admin
-POST /api/billing/checkout-pix       { plan: "pro"|"familia", interval? } → { payload, txid, amount } (BR Code Pix)
-POST /api/billing/cancel             → { success: true }
+POST /api/billing/checkout           { plan: "pro"|"familia", interval?: "monthly"|"semiannual"|"annual", couponCode? } → { checkoutUrl } (Mercado Pago). `interval` default "monthly"; 400 se o período estiver desativado no admin ou o cupom não valer
+POST /api/billing/checkout-pix       { plan: "pro"|"familia", interval?, couponCode? } → { payload, txid, amount } (BR Code Pix)
+POST /api/billing/coupon/preview     { code, plan, interval? } → { code, description, percentOff, amountOffCents, originalCents, finalCents }   400 com o motivo se não valer
+POST /api/billing/cancel             → { success: true, accessUntil }   para a recorrência; o plano continua até `accessUntil` (fim do período pago)
 ```
 
 ## Notificações (`/api/notifications`)
@@ -220,6 +221,22 @@ GET   /api/gamification/history
 ```
 
 Check-in: um por dia (dia de São Paulo). A cada `rewardDays` check-ins seguidos (7º, 14º, 21º…) soma `rewardPoints`; pular um dia volta a sequência a 1. `checkin.streak` no perfil já vem zerado quando o usuário pulou um dia.
+
+## Promoções (admin)
+
+```
+GET    /api/admin/promotions/coupons                lista com usos confirmados e pendentes
+POST   /api/admin/promotions/coupons                { code, description, discountType: "percent"|"fixed", percentOff?, amountOffCents?, plans[], startsAt?, expiresAt?, maxRedemptions?, active }
+PATCH  /api/admin/promotions/coupons/:id            mesmo corpo; vale só para checkouts novos
+DELETE /api/admin/promotions/coupons/:id            409 se já houve uso confirmado (desative em vez de excluir)
+GET    /api/admin/promotions/referral-rules         regra padrão + campanhas, com `isCurrent` e nº de indicações
+POST   /api/admin/promotions/referral-rules         campanha { name, startsAt, endsAt, active, paidReferrerDays, freeRewardType: "plan_days"|"points"|"none", freeRewardPlan, freeRewardDays, freeRewardPoints }
+PATCH  /api/admin/promotions/referral-rules/:id     (a padrão ignora período e "ativa")
+DELETE /api/admin/promotions/referral-rules/:id     409 se houver indicações da campanha aguardando recompensa
+```
+- Cupom: desconto vale para a assinatura inteira (cartão e Pix), mínimo de R$ 1,00 por cobrança, um uso por pessoa. O uso nasce "pending" no checkout e só conta no limite quando o pagamento é confirmado (webhook do cartão ou Pix confirmado pelo admin).
+- Datas do admin são dias de Brasília: "vale até 31/10" inclui o dia 31 inteiro.
+- Indicação: cada indicação guarda a regra vigente no cadastro do indicado. Quem indica e já paga ganha dias no próprio plano; quem está no Free ganha o que a regra disser. Paga uma vez (reivindicação atômica), também quando a assinatura do indicado é por Pix.
 
 ## Landing page
 

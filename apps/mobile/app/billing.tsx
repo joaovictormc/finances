@@ -1,12 +1,12 @@
-import { useCallback, useState } from "react";
-import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Alert } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as WebBrowser from "expo-web-browser";
 import * as Clipboard from "expo-clipboard";
 import { api } from "@/lib/api-client";
 import { useTheme } from "@/lib/theme";
-import { formatBRL } from "@/lib/format";
+import { formatBRL, formatDate } from "@/lib/format";
 import type {
   AvailablePaymentMethods,
   BillingInterval,
@@ -36,7 +36,7 @@ function discountPercent(price: PlanPrice, monthlyCents: number | undefined): nu
 
 function planFeatures(plan: PlanDefinition): string[] {
   return [
-    plan.maxBankConnections === null ? "Conexões bancárias ilimitadas" : `${plan.maxBankConnections} conexão bancária`,
+    plan.receiptScan ? "Leitura de cupom por foto no app" : "Sem leitura de cupom",
     plan.historyMonths === null ? "Histórico completo" : `${plan.historyMonths} meses de histórico`,
     plan.assistant ? "Assistente de IA com agentes personalizados" : "Sem assistente de IA",
     plan.aiInsights ? "Insights e IA conversacional" : "Sem insights de IA",
@@ -54,6 +54,72 @@ export default function BillingScreen() {
   const [pixCheckout, setPixCheckout] = useState<PixCheckout | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedInterval, setSelectedInterval] = useState<BillingInterval>("monthly");
+  const [couponInput, setCouponInput] = useState("");
+  // Cupom aplicado: preço com desconto por plano no período, ou o motivo de não valer.
+  const [coupon, setCoupon] = useState<{
+    code: string;
+    byPlan: Partial<Record<PlanId, { finalCents: number } | { error: string }>>;
+  } | null>(null);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+
+  const previewCoupon = useCallback(
+    async (code: string) => {
+      const paid = plans.filter((p) => p.id !== "free" && p.prices.some((price) => price.interval === selectedInterval));
+      const entries = await Promise.all(
+        paid.map(async (p) => {
+          try {
+            const r = await api.post<{ finalCents: number }>("/api/billing/coupon/preview", {
+              code,
+              plan: p.id,
+              interval: selectedInterval,
+            });
+            return [p.id, { finalCents: r.finalCents }] as const;
+          } catch (err) {
+            return [p.id, { error: err instanceof Error ? err.message : "Cupom inválido" }] as const;
+          }
+        })
+      );
+      return Object.fromEntries(entries) as NonNullable<typeof coupon>["byPlan"];
+    },
+    [plans, selectedInterval]
+  );
+
+  async function applyCoupon() {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setApplyingCoupon(true);
+    setError(null);
+    try {
+      const byPlan = await previewCoupon(code);
+      const results = Object.values(byPlan);
+      if (!results.some((r) => r && "finalCents" in r)) {
+        const firstError = results.find((r) => r && "error" in r) as { error: string } | undefined;
+        setError(firstError?.error ?? "Cupom inválido.");
+        return;
+      }
+      setCoupon({ code, byPlan });
+    } finally {
+      setApplyingCoupon(false);
+    }
+  }
+
+  // Trocou o período: recalcula o desconto sobre o novo preço.
+  useEffect(() => {
+    if (!coupon) return;
+    let active = true;
+    void previewCoupon(coupon.code).then((byPlan) => {
+      if (active) setCoupon((prev) => (prev ? { ...prev, byPlan } : prev));
+    });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedInterval]);
+
+  const couponFor = (plan: PlanId) => {
+    const r = coupon?.byPlan[plan];
+    return r && "finalCents" in r ? coupon!.code : undefined;
+  };
 
   const load = useCallback(() => {
     Promise.all([
@@ -84,6 +150,7 @@ export default function BillingScreen() {
       const { checkoutUrl } = await api.post<{ checkoutUrl: string }>("/api/billing/checkout", {
         plan,
         interval: selectedInterval,
+        couponCode: couponFor(plan),
       });
       await WebBrowser.openBrowserAsync(checkoutUrl);
       load();
@@ -101,6 +168,7 @@ export default function BillingScreen() {
       const data = await api.post<PixCheckout>("/api/billing/checkout-pix", {
         plan,
         interval: selectedInterval,
+        couponCode: couponFor(plan),
       });
       setPixCheckout(data);
     } catch (err) {
@@ -205,6 +273,39 @@ export default function BillingScreen() {
         </View>
       )}
 
+      <View className="flex-row items-end gap-2">
+        <View className="flex-1">
+          <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Cupom de desconto</Text>
+          <TextInput
+            className="h-11 rounded-md border border-border bg-card px-3 font-mono text-foreground dark:border-border-dark dark:bg-card-dark dark:text-foreground-dark"
+            placeholder="Digite o código"
+            placeholderTextColor={colors.mutedForeground}
+            autoCapitalize="characters"
+            maxLength={30}
+            editable={!coupon}
+            value={coupon ? coupon.code : couponInput}
+            onChangeText={(v) => setCouponInput(v.toUpperCase())}
+            onSubmitEditing={() => void applyCoupon()}
+            accessibilityLabel="Cupom de desconto"
+          />
+        </View>
+        <Pressable
+          onPress={() => {
+            if (coupon) {
+              setCoupon(null);
+              setCouponInput("");
+            } else void applyCoupon();
+          }}
+          disabled={applyingCoupon || (!coupon && !couponInput.trim())}
+          className="h-11 items-center justify-center rounded-md border border-border px-4 dark:border-border-dark"
+          style={{ opacity: applyingCoupon || (!coupon && !couponInput.trim()) ? 0.5 : 1 }}
+        >
+          <Text className="text-sm font-medium text-foreground dark:text-foreground-dark">
+            {coupon ? "Remover" : applyingCoupon ? "Aplicando…" : "Aplicar"}
+          </Text>
+        </Pressable>
+      </View>
+
       {plans.map((plan) => {
         const isCurrent = subscription?.plan === plan.id;
         const price = plan.prices.find((entry) => entry.interval === selectedInterval);
@@ -233,12 +334,33 @@ export default function BillingScreen() {
                 <Text className="text-2xl font-bold text-foreground dark:text-foreground-dark">Grátis</Text>
               ) : price ? (
                 <>
-                  <Text className="text-2xl font-bold text-foreground dark:text-foreground-dark">
-                    {formatBRL(price.priceCents / 100)}
-                    <Text className="text-sm font-normal text-muted-foreground dark:text-muted-foreground-dark">
-                      {PERIOD_SUFFIX[price.interval]}
-                    </Text>
-                  </Text>
+                  {(() => {
+                    const withCoupon = coupon?.byPlan[plan.id];
+                    const hasDiscount = !!withCoupon && "finalCents" in withCoupon;
+                    return (
+                      <>
+                        {hasDiscount && (
+                          <Text className="text-sm text-muted-foreground line-through dark:text-muted-foreground-dark">
+                            {formatBRL(price.priceCents / 100)}
+                          </Text>
+                        )}
+                        <Text className="text-2xl font-bold text-foreground dark:text-foreground-dark">
+                          {formatBRL((hasDiscount ? (withCoupon as { finalCents: number }).finalCents : price.priceCents) / 100)}
+                          <Text className="text-sm font-normal text-muted-foreground dark:text-muted-foreground-dark">
+                            {PERIOD_SUFFIX[price.interval]}
+                          </Text>
+                        </Text>
+                        {hasDiscount && (
+                          <Text className="mt-1 text-xs font-medium text-foreground dark:text-foreground-dark">
+                            Com o cupom {coupon!.code}, em todas as cobranças
+                          </Text>
+                        )}
+                        {withCoupon && "error" in withCoupon && (
+                          <Text className="mt-1 text-xs text-muted-foreground dark:text-muted-foreground-dark">{withCoupon.error}</Text>
+                        )}
+                      </>
+                    );
+                  })()}
                   {price.months > 1 && (
                     <Text className="mt-1 text-xs text-muted-foreground dark:text-muted-foreground-dark">
                       {formatBRL(price.monthlyEquivalentCents / 100)} por mês
@@ -340,7 +462,9 @@ export default function BillingScreen() {
       )}
       {subscription?.canceledAt && (
         <Text className="text-center text-sm text-muted-foreground dark:text-muted-foreground-dark">
-          Assinatura cancelada — acesso ao plano pago continua até o fim do período já pago.
+          {subscription.currentPeriodEnd && new Date(subscription.currentPeriodEnd).getTime() > Date.now()
+            ? `Assinatura cancelada. Você continua com o plano até ${formatDate(subscription.currentPeriodEnd)} e depois volta para o Free.`
+            : "Assinatura cancelada. O período pago terminou e sua conta voltou para o Free."}
         </Text>
       )}
       {error && <Text className="text-center text-sm text-destructive dark:text-destructive-dark">{error}</Text>}

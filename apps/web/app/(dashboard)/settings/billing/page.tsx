@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check } from "lucide-react";
 import QRCode from "react-qr-code";
@@ -13,7 +13,7 @@ import { useToast } from "@/components/ui/toast-provider";
 import { useConfirm } from "@/components/ui/confirm-provider";
 import { api } from "@/lib/api-client";
 import { queryKeys } from "@/lib/queries";
-import { formatBRL } from "@/lib/utils";
+import { formatBRL, formatDate } from "@/lib/utils";
 
 type PlanId = "free" | "pro" | "familia";
 type Interval = "monthly" | "semiannual" | "annual";
@@ -40,6 +40,7 @@ interface PlanDefinition {
   /** Um item por período habilitado no admin; vazio no plano Free. */
   prices: PlanPrice[];
   maxBankConnections: number | null;
+  receiptScan: boolean;
   historyMonths: number | null;
   aiInsights: boolean;
   assistant: boolean;
@@ -74,7 +75,7 @@ function discountPercent(price: PlanPrice, monthlyCents: number | undefined): nu
 
 function planFeatures(plan: PlanDefinition): string[] {
   return [
-    plan.maxBankConnections === null ? "Conexões bancárias ilimitadas" : `${plan.maxBankConnections} conexão bancária`,
+    plan.receiptScan ? "Leitura de cupom por foto no app" : "Sem leitura de cupom",
     plan.historyMonths === null ? "Histórico completo" : `${plan.historyMonths} meses de histórico`,
     plan.assistant ? "Assistente de IA com agentes personalizados" : "Sem assistente de IA",
     plan.aiInsights ? "Insights e IA conversacional" : "Sem insights de IA",
@@ -93,6 +94,16 @@ export default function BillingPage() {
   const [actionPlan, setActionPlan] = useState<PlanId | null>(null);
   const [pixCheckout, setPixCheckout] = useState<PixCheckout | null>(null);
   const [selectedInterval, setSelectedInterval] = useState<Interval>("monthly");
+  const [couponInput, setCouponInput] = useState("");
+  // Cupom aplicado: preço com desconto por plano no período escolhido, ou o
+  // motivo de não valer para aquele plano.
+  const [coupon, setCoupon] = useState<{
+    code: string;
+    byPlan: Partial<Record<PlanId, { finalCents: number; originalCents: number } | { error: string }>>;
+  } | null>(null);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+  // Hora lida uma vez (render puro): basta para dizer se o período pago ainda corre.
+  const [now] = useState(() => Date.now());
 
   useEffect(() => {
     Promise.all([
@@ -112,6 +123,68 @@ export default function BillingPage() {
       .finally(() => setIsLoading(false));
   }, []);
 
+  /** Consulta o cupom para cada plano pago no período escolhido. */
+  const previewCoupon = useCallback(
+    async (code: string) => {
+      const paid = plans.filter((p) => p.id !== "free" && p.prices.some((price) => price.interval === selectedInterval));
+      const entries = await Promise.all(
+        paid.map(async (p) => {
+          try {
+            const r = await api.post<{ finalCents: number; originalCents: number }>("/api/billing/coupon/preview", {
+              code,
+              plan: p.id,
+              interval: selectedInterval,
+            });
+            return [p.id, { finalCents: r.finalCents, originalCents: r.originalCents }] as const;
+          } catch (err) {
+            return [p.id, { error: err instanceof Error ? err.message : "Cupom inválido" }] as const;
+          }
+        })
+      );
+      return Object.fromEntries(entries) as NonNullable<typeof coupon>["byPlan"];
+    },
+    [plans, selectedInterval]
+  );
+
+  async function applyCoupon() {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setApplyingCoupon(true);
+    try {
+      const byPlan = await previewCoupon(code);
+      const results = Object.values(byPlan);
+      const valid = results.some((r) => r && "finalCents" in r);
+      if (!valid) {
+        const firstError = results.find((r) => r && "error" in r) as { error: string } | undefined;
+        toast({ title: firstError?.error ?? "Cupom inválido", variant: "error" });
+        return;
+      }
+      setCoupon({ code, byPlan });
+      toast({ title: `Cupom ${code} aplicado`, variant: "success" });
+    } finally {
+      setApplyingCoupon(false);
+    }
+  }
+
+  // Trocou o período: o desconto é recalculado sobre o novo preço.
+  useEffect(() => {
+    if (!coupon) return;
+    let active = true;
+    void previewCoupon(coupon.code).then((byPlan) => {
+      if (active) setCoupon((prev) => (prev ? { ...prev, byPlan } : prev));
+    });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedInterval]);
+
+  /** Código a enviar no checkout deste plano (só se o cupom vale para ele). */
+  const couponFor = (plan: PlanId) => {
+    const r = coupon?.byPlan[plan];
+    return r && "finalCents" in r ? coupon!.code : undefined;
+  };
+
   const handleUpgrade = async (plan: PlanId) => {
     if (plan === "free") return;
     setActionPlan(plan);
@@ -119,6 +192,7 @@ export default function BillingPage() {
       const { checkoutUrl } = await api.post<{ checkoutUrl: string }>("/api/billing/checkout", {
         plan,
         interval: selectedInterval,
+        couponCode: couponFor(plan),
       });
       window.location.href = checkoutUrl;
     } catch {
@@ -131,7 +205,11 @@ export default function BillingPage() {
     if (plan === "free") return;
     setActionPlan(plan);
     try {
-      const data = await api.post<PixCheckout>("/api/billing/checkout-pix", { plan, interval: selectedInterval });
+      const data = await api.post<PixCheckout>("/api/billing/checkout-pix", {
+        plan,
+        interval: selectedInterval,
+        couponCode: couponFor(plan),
+      });
       setPixCheckout(data);
     } catch (err) {
       toast({ title: (err as Error).message || "Erro ao gerar Pix", variant: "error" });
@@ -201,6 +279,40 @@ export default function BillingPage() {
         </div>
       )}
 
+      <div className="mb-6 flex flex-wrap items-end gap-3">
+        <label className="flex min-w-[220px] flex-col gap-1 text-sm font-medium text-foreground">
+          Cupom de desconto
+          <input
+            value={coupon ? coupon.code : couponInput}
+            onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void applyCoupon();
+            }}
+            disabled={!!coupon}
+            maxLength={30}
+            placeholder="Digite o código"
+            className="h-10 rounded-md border border-border bg-card px-3 font-mono text-sm uppercase focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-70"
+          />
+        </label>
+        {coupon ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10"
+            onClick={() => {
+              setCoupon(null);
+              setCouponInput("");
+            }}
+          >
+            Remover cupom
+          </Button>
+        ) : (
+          <Button type="button" variant="outline" className="h-10" onClick={() => void applyCoupon()} loading={applyingCoupon} disabled={!couponInput.trim()}>
+            Aplicar
+          </Button>
+        )}
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-3">
         {plans.map((plan) => {
           const isCurrent = subscription?.plan === plan.id;
@@ -227,12 +339,34 @@ export default function BillingPage() {
                   <p className="text-2xl font-bold">Grátis</p>
                 ) : price ? (
                   <>
-                    <p className="text-2xl font-bold">
-                      {formatBRL(price.priceCents / 100)}
-                      <span className="text-sm font-normal text-muted-foreground">
-                        {PERIOD_SUFFIX[price.interval]}
-                      </span>
-                    </p>
+                    {(() => {
+                      const withCoupon = coupon?.byPlan[plan.id];
+                      if (withCoupon && "finalCents" in withCoupon) {
+                        return (
+                          <>
+                            <p className="text-sm text-muted-foreground line-through">{formatBRL(price.priceCents / 100)}</p>
+                            <p className="text-2xl font-bold">
+                              {formatBRL(withCoupon.finalCents / 100)}
+                              <span className="text-sm font-normal text-muted-foreground">{PERIOD_SUFFIX[price.interval]}</span>
+                            </p>
+                            <p className="mt-1 text-xs font-medium text-foreground">Com o cupom {coupon!.code}, em todas as cobranças</p>
+                          </>
+                        );
+                      }
+                      return (
+                        <>
+                          <p className="text-2xl font-bold">
+                            {formatBRL(price.priceCents / 100)}
+                            <span className="text-sm font-normal text-muted-foreground">
+                              {PERIOD_SUFFIX[price.interval]}
+                            </span>
+                          </p>
+                          {withCoupon && "error" in withCoupon && (
+                            <p className="mt-1 text-xs text-muted-foreground">{withCoupon.error}</p>
+                          )}
+                        </>
+                      );
+                    })()}
                     {price.months > 1 && (
                       <p className="text-xs text-muted-foreground mt-1">
                         {formatBRL(price.monthlyEquivalentCents / 100)} por mês
@@ -322,7 +456,10 @@ export default function BillingPage() {
       )}
       {subscription?.canceledAt && (
         <p className="text-sm text-muted-foreground mt-4">
-          Assinatura cancelada — o acesso ao plano pago já foi encerrado.
+          {/* Cancelar para a cobrança; o acesso segue até o fim do período já pago. */}
+          {subscription.currentPeriodEnd && new Date(subscription.currentPeriodEnd).getTime() > now
+            ? `Assinatura cancelada. Você continua com o plano até ${formatDate(subscription.currentPeriodEnd)} e depois volta para o Free.`
+            : "Assinatura cancelada. O período pago terminou e sua conta voltou para o Free."}
         </p>
       )}
 

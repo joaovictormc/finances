@@ -15,6 +15,7 @@ const WEB_TO_MOBILE: Record<string, string> = {
   "/goals": "/goals",
   "/groups": "/groups",
   "/rewards": "/rewards",
+  "/settings/billing": "/billing",
 };
 
 /** Destino por tipo, para avisos gravados antes de os emissores mandarem link. */
@@ -26,6 +27,8 @@ const FALLBACK_LINKS: Record<string, string> = {
   goal_milestone: "/goals",
   group_activity: "/groups",
   referral_reward: "/rewards",
+  subscription_expiring: "/settings/billing",
+  subscription_payment_failed: "/settings/billing",
 };
 
 /** Só caminho interno: URL absoluta viraria redirecionador aberto. */

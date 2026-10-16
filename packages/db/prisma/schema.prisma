@@ -602,6 +602,12 @@ model Referral {
   rewardGranted Boolean @default(false)
   createdAt     DateTime @default(now())
 
+  /// Regra de recompensa vigente quando o código foi resgatado (cadastro):
+  /// quem foi indicado durante uma campanha leva a recompensa dela mesmo
+  /// assinando depois que a campanha acabou.
+  rewardRuleId String?
+  rewardRule   ReferralRewardRule? @relation(fields: [rewardRuleId], references: [id], onDelete: SetNull)
+
   @@map("referrals")
 }
 
@@ -813,3 +819,78 @@ model LandingSettings {
   @@map("landing_settings")
 }
 
+// ─────────────────────────────────────────────
+// PROMOÇÕES (cupons e recompensa de indicação)
+// ─────────────────────────────────────────────
+
+/// Cupom de desconto. O preço com desconto vale para a assinatura inteira,
+/// no cartão (preapproval do Mercado Pago) e no Pix. Um uso por pessoa.
+model Coupon {
+  id             String    @id @default(cuid())
+  /// Sempre em maiúsculas (normalizado na gravação e na busca).
+  code           String    @unique
+  description    String    @default("")
+  /// Exatamente um dos dois: porcentagem (1–100) ou valor fixo por cobrança.
+  percentOff     Int?
+  amountOffCents Int?
+  /// Planos aceitos; vazio = todos os pagos.
+  plans          String[]  @default([])
+  startsAt       DateTime?
+  expiresAt      DateTime?
+  /// Limite de usos confirmados; nulo = sem limite.
+  maxRedemptions Int?
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  redemptions CouponRedemption[]
+
+  @@map("coupons")
+}
+
+/// Uso de cupom. Nasce "pending" no checkout e vira "confirmed" quando o
+/// pagamento é confirmado — só os confirmados contam no limite, então
+/// checkout abandonado não gasta o cupom.
+model CouponRedemption {
+  id            String    @id @default(cuid())
+  couponId      String
+  coupon        Coupon    @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId        String
+  /// preapprovalId do Mercado Pago, ou "pix:<txid>".
+  checkoutRef   String
+  plan          String
+  interval      String
+  originalCents Int
+  finalCents    Int
+  status        String    @default("pending")
+  createdAt     DateTime  @default(now())
+  confirmedAt   DateTime?
+
+  @@unique([couponId, userId])
+  @@index([checkoutRef])
+  @@map("coupon_redemptions")
+}
+
+/// Recompensa de quem indica. Uma regra padrão (isDefault, sem período) e
+/// campanhas com início e fim que a substituem enquanto vigentes.
+model ReferralRewardRule {
+  id               String    @id @default(cuid())
+  name             String
+  isDefault        Boolean   @default(false)
+  startsAt         DateTime?
+  endsAt           DateTime?
+  active           Boolean   @default(true)
+  /// Quem indica e já paga: dias somados ao próprio plano.
+  paidReferrerDays Int       @default(30)
+  /// Quem indica e está no Free: "plan_days" | "points" | "none".
+  freeRewardType   String    @default("plan_days")
+  freeRewardPlan   String    @default("pro")
+  freeRewardDays   Int       @default(30)
+  freeRewardPoints Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  referrals Referral[]
+
+  @@map("referral_reward_rules")
+}

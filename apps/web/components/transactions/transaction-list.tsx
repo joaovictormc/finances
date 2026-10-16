@@ -196,7 +196,7 @@ export function TransactionList({
         <EmptyState
           icon={ArrowLeftRight}
           title="Nenhuma transação encontrada"
-          description="Adicione manualmente ou conecte sua conta bancária via Open Finance"
+          description="Adicione manualmente ou importe o extrato do banco (OFX ou CSV)"
         />
       </div>
     );

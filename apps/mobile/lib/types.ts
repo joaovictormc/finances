@@ -143,6 +143,7 @@ export type PlanDefinition = {
   /** Um item por período habilitado no admin; vazio no plano Free. */
   prices: PlanPrice[];
   maxBankConnections: number | null;
+  receiptScan: boolean;
   historyMonths: number | null;
   aiInsights: boolean;
   assistant: boolean;

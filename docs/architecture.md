@@ -128,3 +128,17 @@ Better Auth com:
 | `bill-detector` | `bill-detector.worker.ts` | Agendado — detecta contas recorrentes a partir do histórico |
 | `gamification` | `gamification.worker.ts` | Agendado — recap semanal |
 | `billing` | `billing.worker.ts` | Agendado (9h) — avisa o admin sobre checkout Pix perto de vencer ou já vencido |
+
+Agendamentos em `jobs/scheduler.ts` (`SCHEDULES`), sempre no fuso **America/Sao_Paulo** — independente do relógio do servidor (no Docker é UTC). Cada boot registra com `upsertJobScheduler` (id fixo, não duplica) e remove agendamentos que saíram da lista.
+
+| Horário (Brasília) | Rotina |
+|---|---|
+| Dia 1, 6h | insight mensal (`fan-out-monthly-insights`) |
+| Todo dia, 7h | contas recorrentes (`fan-out-detect-recurring`) |
+| Todo dia, 8h | previsão de estouro de orçamento (`fan-out-budget-forecasts`) |
+| Segunda, 6h | resumo semanal da gamificação (`fan-out-weekly-recap`) |
+| Todo dia, 9h | Pix pendentes, aviso ao admin (`scan-pix-checkouts`) |
+| Todo dia, 8h | lembrete de contas a pagar: 3 dias antes e no dia (`send-bill-reminders`) |
+| Todo dia, 9h | assinatura Pix vencendo: 5 dias antes e no dia (`send-pix-expiry-reminders`) |
+
+Lembretes (`lib/reminders.ts`) gravam uma chave em `metadata.dedupKey` da notificação: rodar a rotina de novo não repete o aviso. Fora das rotinas: cobrança recusada no cartão avisa no webhook do Mercado Pago (assinatura ativa que vira atrasada) e marcos de meta (50/75/100%) avisam quando o valor da meta sobe.

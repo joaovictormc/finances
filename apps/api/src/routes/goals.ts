@@ -1,3 +1,4 @@
+import { notifyGoalMilestone } from "../lib/reminders";
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { db } from "@finances/db";
@@ -59,6 +60,13 @@ app.patch("/:id", zValidator("json", UpdateGoalSchema), async (c) => {
       ...(data.targetDate && { targetDate: new Date(data.targetDate) }),
     },
   });
+
+  // Marcos de 50/75/100%: só quando o valor guardado subiu. Não bloqueia a resposta.
+  if (data.currentAmount !== undefined) {
+    void notifyGoalMilestone(goal, Number(existing.currentAmount)).catch((err) =>
+      console.error("[goals] aviso de marco falhou:", err)
+    );
+  }
 
   return c.json(goal);
 });
