@@ -1,7 +1,9 @@
 // v2: a v1 gravava toda resposta GET no cache — páginas HTML e payloads RSC
 // (com dados financeiros do usuário) inclusive — e nunca limpava entre deploys.
 // Trocar o nome faz o activate apagar esse cache antigo.
-const CACHE_NAME = "finances-static-v2";
+// v3: ícones trocados para a identidade nova — mesmos nomes de arquivo, então
+// sem trocar o cache quem já tinha os antigos continuaria com eles.
+const CACHE_NAME = "finances-static-v3";
 const PRECACHE_URLS = ["/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
 // Teto de entradas: cada deploy gera chunks com hash novo, e os antigos nunca
 // mais são pedidos. Sem limite o cache só cresce.

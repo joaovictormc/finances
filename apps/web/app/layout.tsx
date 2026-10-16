@@ -12,15 +12,18 @@ const ledgerMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], v
 
 export const metadata: Metadata = {
   title: { default: "ControlAI", template: "%s | ControlAI" },
-  description: "Controle financeiro inteligente com IA, Open Finance e assistente financeiro",
+  description: "Controle financeiro da família, com assistente de IA",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "ControlAI",
   },
+  // favicon.ico (16/32/48) vem de app/favicon.ico pela convenção do Next; o
+  // SVG fica nítido em qualquer densidade nos navegadores que o aceitam.
   icons: {
     icon: [
+      { url: "/icons/logo.svg", type: "image/svg+xml" },
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
