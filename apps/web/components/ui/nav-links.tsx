@@ -18,8 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/auth-client";
-import { usePlanAccess } from "@/lib/use-plan-access";
-import { useToast } from "@/components/ui/toast-provider";
+import { useModuleLinks } from "@/lib/use-plan-access";
 
 const baseNavItems = [
   { href: "/overview", label: "Visão Geral", icon: LayoutDashboard },
@@ -39,45 +38,34 @@ type NavItem = {
   href: string;
   label: string;
   icon: typeof LayoutDashboard;
-  locked: boolean;
-  lockedMessage: string;
 };
 
 export function NavLinks({ collapsed = false }: { collapsed?: boolean }) {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const { toast } = useToast();
-  const { hasIntegrations, hasGroupAccess } = usePlanAccess();
+  const { isLocked, hrefFor } = useModuleLinks();
   const isAdmin = (session?.user as { role?: string } | undefined)?.role === "admin";
 
   const items: NavItem[] = [
-    ...baseNavItems.map((item) => ({ ...item, locked: false, lockedMessage: "" })),
-    {
-      ...groupsItem,
-      locked: !hasGroupAccess,
-      lockedMessage: "Família é exclusivo do plano Família. Faça upgrade para criar ou entrar em um grupo.",
-    },
-    {
-      ...assistantItem,
-      locked: !hasIntegrations,
-      lockedMessage: "O assistente de IA está disponível nos planos Pro e Família. Faça upgrade para usar.",
-    },
-    { ...settingsItem, locked: false, lockedMessage: "" },
-    ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: ShieldCheck, locked: false, lockedMessage: "" }] : []),
+    ...baseNavItems,
+    groupsItem,
+    assistantItem,
+    settingsItem,
+    ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: ShieldCheck }] : []),
   ];
 
   return (
     <nav className="flex-1 min-h-0 overflow-y-auto space-y-1 p-3">
       {items.map((item) => {
+        const locked = isLocked(item.href);
         const active = pathname.startsWith(item.href);
         return (
           <Link
             key={item.href}
-            href={item.href}
-            onClick={() => {
-              if (item.locked) toast({ title: item.lockedMessage, variant: "warning" });
-            }}
-            title={collapsed ? item.label : undefined}
+            // Bloqueado leva direto à tela de planos, que diz qual plano libera.
+            href={hrefFor(item.href)}
+            title={collapsed ? (locked ? `${item.label} (ver planos)` : item.label) : undefined}
+            aria-label={locked ? `${item.label}, bloqueado no seu plano: ver planos` : undefined}
             className={cn(
               "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
               collapsed && "justify-center",
@@ -90,7 +78,7 @@ export function NavLinks({ collapsed = false }: { collapsed?: boolean }) {
             {!collapsed && (
               <>
                 <span className="flex-1">{item.label}</span>
-                {item.locked && <Lock size={12} className="shrink-0 opacity-60" />}
+                {locked && <Lock size={12} className="shrink-0 opacity-60" />}
               </>
             )}
           </Link>

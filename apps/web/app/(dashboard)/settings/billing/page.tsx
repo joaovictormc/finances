@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check } from "lucide-react";
 import QRCode from "react-qr-code";
@@ -83,6 +83,28 @@ function planFeatures(plan: PlanDefinition): string[] {
   ];
 }
 
+/** O que cada módulo bloqueado faz e qual plano o libera (faixa no topo da tela). */
+const LOCKED_MODULE_COPY = {
+  familia: {
+    title: "Família faz parte do plano Família",
+    body: "Crie um grupo, convide até 5 pessoas e acompanhem juntos contas, orçamentos e metas. Quem você convidar entra de graça.",
+    plan: "familia" as PlanId,
+    badge: "Libera a Família",
+  },
+  assistente: {
+    title: "O assistente faz parte dos planos Pro e Família",
+    body: "Pergunte sobre seus gastos, orçamentos e contas a vencer e receba respostas com os números do seu mês.",
+    plan: "pro" as PlanId,
+    badge: "Libera o assistente",
+  },
+};
+
+const noopSubscribe = () => () => {};
+function readLockedModule(): keyof typeof LOCKED_MODULE_COPY | null {
+  const value = new URLSearchParams(window.location.search).get("recurso");
+  return value === "familia" || value === "assistente" ? value : null;
+}
+
 export default function BillingPage() {
   const { toast } = useToast();
   const confirm = useConfirm();
@@ -102,6 +124,10 @@ export default function BillingPage() {
     byPlan: Partial<Record<PlanId, { finalCents: number; originalCents: number } | { error: string }>>;
   } | null>(null);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
+  // Módulo bloqueado que trouxe a pessoa até aqui (?recurso=), vindo do menu.
+  // useSyncExternalStore lê a URL no cliente sem divergir do HTML do servidor
+  // (que não tem a query); useSearchParams exigiria um Suspense na página.
+  const lockedModule = useSyncExternalStore(noopSubscribe, readLockedModule, () => null);
   // Hora lida uma vez (render puro): basta para dizer se o período pago ainda corre.
   const [now] = useState(() => Date.now());
 
@@ -260,6 +286,13 @@ export default function BillingPage() {
         </p>
       </div>
 
+      {lockedModule && subscription?.plan === "free" && (
+        <div role="status" className="mb-6 rounded-2xl border border-primary/40 bg-primary/10 px-5 py-4">
+          <p className="font-semibold text-foreground">{LOCKED_MODULE_COPY[lockedModule].title}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{LOCKED_MODULE_COPY[lockedModule].body}</p>
+        </div>
+      )}
+
       {intervalOptions.length > 1 && (
         <div className="mb-6 inline-flex rounded-xl border border-border/60 bg-muted/40 p-1">
           {intervalOptions.map((option) => (
@@ -323,16 +356,20 @@ export default function BillingPage() {
           // período. Mostrar o card sem poder assinar é mais honesto do que
           // sumir com o plano da lista.
           const unavailable = plan.id !== "free" && !price;
+          // Plano que libera o módulo que trouxe a pessoa até aqui.
+          const recommended =
+            !!lockedModule && subscription?.plan === "free" && LOCKED_MODULE_COPY[lockedModule].plan === plan.id;
           return (
             <div
               key={plan.id}
               className={`bg-card rounded-2xl border p-6 shadow-sm flex flex-col ${
-                isCurrent ? "border-primary ring-1 ring-primary/30" : "border-border/60"
+                isCurrent || recommended ? "border-primary ring-1 ring-primary/30" : "border-border/60"
               }`}
             >
               <div className="flex items-center justify-between mb-1">
                 <h2 className="text-base font-semibold">{plan.name}</h2>
                 {isCurrent && <Badge variant="success">Atual</Badge>}
+                {recommended && lockedModule && <Badge variant="warning">{LOCKED_MODULE_COPY[lockedModule].badge}</Badge>}
               </div>
               <div className="mb-4">
                 {plan.id === "free" ? (

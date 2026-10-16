@@ -33,3 +33,37 @@ export function usePlanAccess(): PlanAccess {
     hasGroupAccess: hasFamily || (groups.data?.length ?? 0) > 0,
   };
 }
+
+/** Módulos que dependem de plano, com a rota do módulo e o motivo do bloqueio. */
+export type LockedModule = "familia" | "assistente";
+
+const MODULE_ROUTES: Record<LockedModule, string> = { familia: "/groups", assistente: "/assistant" };
+
+/**
+ * Destino de um item de menu: o módulo, ou a tela de planos quando ele está
+ * bloqueado — com o módulo na URL para a tela explicar qual plano libera.
+ * Antes o clique abria o módulo e só mostrava um aviso no rodapé.
+ */
+export function useModuleLinks() {
+  const { hasIntegrations, hasGroupAccess, loading } = usePlanAccess();
+  // Enquanto o plano carrega, nada aparece bloqueado (evita piscar o cadeado
+  // para quem paga).
+  const locked: Record<LockedModule, boolean> = {
+    familia: !loading && !hasGroupAccess,
+    assistente: !loading && !hasIntegrations,
+  };
+  const moduleFor = (href: string): LockedModule | null =>
+    (Object.keys(MODULE_ROUTES) as LockedModule[]).find((m) => MODULE_ROUTES[m] === href) ?? null;
+
+  return {
+    isLocked: (href: string) => {
+      const m = moduleFor(href);
+      return m ? locked[m] : false;
+    },
+    hrefFor: (href: string) => {
+      const m = moduleFor(href);
+      return m && locked[m] ? `/settings/billing?recurso=${m}` : href;
+    },
+  };
+}
+

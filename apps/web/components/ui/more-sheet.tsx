@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, CreditCard, Bot, Settings, Sparkles, Users, X } from "lucide-react";
+import { FileText, CreditCard, Bot, Settings, Sparkles, Users, X, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useModuleLinks } from "@/lib/use-plan-access";
 
 // A grade é de 2 colunas: manter a contagem par evita um item órfão na última
 // linha. Recompensas também fechava uma lacuna — não havia entrada para ela em
@@ -24,6 +25,7 @@ interface MoreSheetProps {
 
 export function MoreSheet({ open, onClose }: MoreSheetProps) {
   const pathname = usePathname();
+  const { isLocked, hrefFor } = useModuleLinks();
 
   if (!open) return null;
 
@@ -40,10 +42,12 @@ export function MoreSheet({ open, onClose }: MoreSheetProps) {
         <div className="grid grid-cols-2 gap-2">
           {moreItems.map((item) => {
             const active = pathname.startsWith(item.href);
+            const locked = isLocked(item.href);
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={hrefFor(item.href)}
+                aria-label={locked ? `${item.label}, bloqueado no seu plano: ver planos` : undefined}
                 onClick={onClose}
                 className={cn(
                   "flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
@@ -51,7 +55,8 @@ export function MoreSheet({ open, onClose }: MoreSheetProps) {
                 )}
               >
                 <item.icon size={16} />
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {locked && <Lock size={12} className="shrink-0 opacity-60" />}
               </Link>
             );
           })}
