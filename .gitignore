@@ -45,3 +45,9 @@ coverage/
 *.tsbuildinfo
 
 .superpowers/
+
+# Claude Code: configuração local da máquina (hooks com caminhos absolutos)
+.claude/settings.local.json
+
+# Impeccable: capturas de revisão geradas a cada build (o brief e o design.json ficam versionados)
+apps/*/.impeccable/review/
