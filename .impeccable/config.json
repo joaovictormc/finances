@@ -8,6 +8,18 @@
         "value": "spin-wheel-pointer-wobble",
         "createdAt": "2026-08-31T02:17:44.940Z",
         "reason": "User confirmed spin-wheel-pointer-wobble is intentional"
+      },
+      {
+        "rule": "overused-font",
+        "value": "plus jakarta sans",
+        "createdAt": "2026-10-17T21:23:29.607Z",
+        "reason": "Projeto: apps/web/DESIGN.md define Plus Jakarta Sans/Inter/IBM Plex Mono como fontes da identidade"
+      },
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-10-17T21:23:29.703Z",
+        "reason": "Projeto: apps/web/DESIGN.md define Plus Jakarta Sans/Inter/IBM Plex Mono como fontes da identidade"
       }
     ]
   }

@@ -61,40 +61,62 @@ build instalável fora da App Store (mesmo em modo "ad-hoc"/interno). Se só
 tiver Android por agora, pule essa parte — o plano abaixo funciona igual só
 com Android.
 
-### A.2 — Criar `apps/mobile/eas.json`
+### A.2 — Endereço da API em cada perfil (`apps/mobile/eas.json`)
+
+O app não descobre o endereço da API sozinho: ele é **embutido no app no momento
+do build**, a partir das variáveis `env` de cada perfil do `eas.json`. Mudou o
+endereço? Precisa gerar um build novo.
 
 ```json
 {
-  "cli": {
-    "version": ">= 12.0.0",
-    "appVersionSource": "remote"
-  },
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "env": { "EXPO_PUBLIC_API_URL": "http://SEU_IP_LOCAL:3001" }
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://IP_DA_HOMOLOGACAO:3011",
+        "EXPO_PUBLIC_LANDING_URL": "http://IP_DA_HOMOLOGACAO:3012"
+      }
     },
     "preview": {
       "distribution": "internal",
       "android": { "buildType": "apk" },
-      "env": { "EXPO_PUBLIC_API_URL": "https://api.SEUDOMINIO.com.br" }
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://IP_DA_HOMOLOGACAO:3011",
+        "EXPO_PUBLIC_LANDING_URL": "http://IP_DA_HOMOLOGACAO:3012"
+      }
     },
     "production": {
       "autoIncrement": true,
-      "env": { "EXPO_PUBLIC_API_URL": "https://api.SEUDOMINIO.com.br" }
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.SEUDOMINIO.com.br",
+        "EXPO_PUBLIC_LANDING_URL": "https://SEUDOMINIO.com.br"
+      }
     }
   }
 }
 ```
 
-- `development`: dev client conectado no Metro da sua máquina (substitui o
-  Expo Go quando precisar de um módulo nativo que o Expo Go não tem).
-- **`preview`**: é o perfil pro seu uso diário — gera um APK que já aponta
-  pra API de produção real (depois que a Parte C estiver no ar). Instala no
-  celular e usa normalmente pra sentir a performance de verdade.
-- `production`: reservado pra quando for publicar na Play Store/App Store
-  (mesmo `EXPO_PUBLIC_API_URL`, mas com `autoIncrement` de versão).
+- `EXPO_PUBLIC_API_URL`: a API (`apps/mobile/lib/api-client.ts` e `auth-client.ts`).
+- `EXPO_PUBLIC_LANDING_URL`: links de Termos e Privacidade na tela de cadastro.
+
+**Regras do endereço da API** — errar qualquer uma faz o login falhar:
+
+1. **Sem barra no final e sem `/api`**: `https://api.seudominio.com.br`. O app
+   monta `${EXPO_PUBLIC_API_URL}/api/...`; com barra sobra `//api`.
+2. **Igual ao `BETTER_AUTH_URL` da API**, letra por letra (protocolo, host e
+   porta). O app nativo envia como `Origin` o próprio endereço da API, e o
+   Better Auth só aceita origens da lista `trustedOrigins`, que já inclui o
+   `BETTER_AUTH_URL`. Igual a ele, não precisa mexer em `LAN_ORIGINS`.
+   Diferente (outro IP, outra porta), inclua a origem em `LAN_ORIGINS` na API.
+3. **Produção com `https://`.** HTTP puro só funciona porque o `app.json`
+   libera tráfego sem criptografia (`NSAllowsArbitraryLoads` no iOS,
+   `usesCleartextTraffic` no Android) para a homologação por IP. Para publicar
+   nas lojas, o ideal é tirar essa liberação quando a homologação também tiver HTTPS.
+
+No dia a dia com Expo Go (`pnpm --filter @finances/mobile dev`), o endereço
+vem do `apps/mobile/.env` (fora do Git; ver `apps/mobile/.env.example`). O
+`eas build` não envia esse arquivo, e as variáveis do perfil têm prioridade.
 
 ### A.3 — Gerar o build
 
@@ -137,12 +159,27 @@ Dois pontos que costumam morder:
 Sem essas credenciais o app continua funcionando: a central de notificações
 dentro do app é alimentada pela API e não depende de push.
 
-### A.5 — Atualizar sem recompilar (opcional, EAS Update)
+### A.5 — Atualizar sem recompilar (EAS Update)
 
-Se quiser aplicar ajustes de JS/TSX sem gerar um novo APK a cada vez,
-`expo-updates` + `eas update` publica a atualização OTA pro app já
-instalado. Fica de fora deste plano inicial — só vale configurar se o ciclo
-de testar-ajustar-recompilar via EAS Build ficar lento demais na prática.
+`expo-updates` já está configurado (`app.json` → `updates`), e `eas update`
+publica JS/TSX novo para o app instalado sem passar pela loja.
+
+Cada perfil do `eas.json` tem um `channel` (`development`, `preview`,
+`production`): o app só recebe as atualizações publicadas no canal com que
+foi compilado. Builds feitos antes de o canal existir não recebem nada; gere
+um build novo.
+
+**Cuidado com o endereço da API:** o `eas update` não lê o `env` do
+`eas.json`. Ele empacota com as variáveis da sua máquina, ou seja, o
+`apps/mobile/.env` (IP local). Publicar assim faz o app de produção passar a
+chamar o seu computador. Sempre passe o endereço na linha de comando:
+
+```bash
+cd apps/mobile
+EXPO_PUBLIC_API_URL="https://api.SEUDOMINIO.com.br" \
+EXPO_PUBLIC_LANDING_URL="https://SEUDOMINIO.com.br" \
+  eas update --channel production --message "descrição da mudança"
+```
 
 ---
 
@@ -384,8 +421,9 @@ um subdomínio:
 1. DNS: `A @`, `A www`, `A app` e `A api` apontando para o IP da VPS.
 2. No EasyPanel, novo serviço "App" igual aos outros (branch `main`, contexto
    `.`), Dockerfile `apps/landing/Dockerfile`, porta interna `3002`.
-3. **Build args** da landing (entram no JavaScript do navegador, então mudar
-   exige rebuild):
+3. **Build args** (entram no JavaScript do navegador, então mudar exige
+   rebuild). No **web**: `NEXT_PUBLIC_LANDING_URL=https://seudominio.com.br`
+   e `API_INTERNAL_URL` (C.5). Na **landing**:
    - `NEXT_PUBLIC_APP_URL=https://app.seudominio.com.br` (botões Criar conta/Entrar)
    - `NEXT_PUBLIC_API_URL=https://api.seudominio.com.br` (preços atualizados no navegador)
 4. **Variáveis de ambiente da landing** (runtime):
@@ -395,8 +433,9 @@ um subdomínio:
    - `LANDING_URL=https://seudominio.com.br` (CORS e aviso de publicação)
    - `LANDING_REVALIDATE_SECRET` = o mesmo da landing
    - `LANDING_PREVIEW_SECRET` (opcional; sem ele usa o `BETTER_AUTH_SECRET`)
-6. **Variável nova no web**: `NEXT_PUBLIC_LANDING_URL=https://seudominio.com.br`
-   (botões Pré-visualizar e Ver no site do editor).
+6. **`NEXT_PUBLIC_LANDING_URL` no web** vai como build arg (item 3), não só
+   como variável: é ela que monta os links de Termos e Privacidade do cadastro
+   e os botões Pré-visualizar e Ver no site do editor.
 7. Mudar no web e na API o endereço do app para o subdomínio:
    `NEXT_PUBLIC_APP_URL=https://app.seudominio.com.br`. O `BETTER_AUTH_URL`
    continua sendo o da API.

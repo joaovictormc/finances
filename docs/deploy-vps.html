@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instalação na VPS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #FAFAF9;
+    --card: #FFFFFF;
+    --ink: #1C1C1E;
+    --muted: #5B5B60;
+    --line: #E4E4E0;
+    --marker: #FFC300;
+    --marker-soft: #FFF4CC;
+    --blue: #2563EB;
+    --danger: #B42318;
+    --danger-soft: #FDECEA;
+    --code-bg: #1C1C1E;
+    --code-ink: #F2F2EF;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #141416;
+      --card: #1C1C1E;
+      --ink: #F2F2EF;
+      --muted: #A3A3A8;
+      --line: #2E2E32;
+      --marker-soft: #3A3010;
+      --danger-soft: #3B1714;
+      --danger: #FF8A80;
+      --code-bg: #0E0E10;
+      --blue: #8AB4FF;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.6 Inter, system-ui, sans-serif;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 48px 16px 96px; }
+  h1, h2, h3 { font-family: "Plus Jakarta Sans", Inter, sans-serif; line-height: 1.25; }
+  h1 { font-size: clamp(28px, 5vw, 40px); margin: 0 0 12px; }
+  h2 { font-size: 22px; margin: 0 0 4px; }
+  h3 { font-size: 16px; margin: 24px 0 8px; }
+  p { margin: 8px 0; }
+  a { color: var(--blue); }
+  .lede { color: var(--muted); font-size: 18px; max-width: 640px; }
+  .mark { background: linear-gradient(transparent 55%, var(--marker) 55%); padding: 0 2px; }
+  code, pre, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 14px; }
+  :not(pre) > code { background: var(--marker-soft); color: var(--ink); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+  pre {
+    position: relative;
+    background: var(--code-bg);
+    color: var(--code-ink);
+    padding: 16px 16px 16px 16px;
+    border-radius: 10px;
+    overflow-x: auto;
+    line-height: 1.55;
+    margin: 12px 0;
+  }
+  pre .c { color: #8E8E93; }
+  .copy {
+    position: absolute; top: 8px; right: 8px;
+    font: 500 12px Inter, sans-serif;
+    background: #2E2E32; color: var(--code-ink);
+    border: 0; border-radius: 6px; padding: 4px 10px; cursor: pointer;
+  }
+  .copy:hover { background: #3A3A3F; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-weight: 600; color: var(--muted); font-size: 13px; }
+  .table-scroll { overflow-x: auto; }
+  .map { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 24px 0 8px; }
+  .svc { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .svc b { display: block; font-family: "Plus Jakarta Sans", sans-serif; }
+  .svc .mono { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+  .step {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 24px;
+    margin: 20px 0;
+  }
+  .step-head { display: flex; gap: 14px; align-items: flex-start; }
+  .num {
+    flex: none;
+    width: 34px; height: 34px; border-radius: 9px;
+    display: grid; place-items: center;
+    background: var(--ink); color: var(--paper);
+    font: 700 15px "Plus Jakarta Sans", sans-serif;
+  }
+  .step-head p { color: var(--muted); margin: 2px 0 0; }
+  .note, .warn {
+    border-radius: 10px; padding: 12px 14px; margin: 14px 0; font-size: 15px;
+  }
+  .note { background: var(--marker-soft); }
+  .warn { background: var(--danger-soft); }
+  .warn::before {
+    content: "Atenção";
+    display: block;
+    font: 700 12px "Plus Jakarta Sans", sans-serif;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--danger);
+    margin-bottom: 4px;
+  }
+  .choice { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .choice > div { border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 99px; background: var(--marker); color: #1C1C1E; margin-left: 6px; }
+  ul.check { list-style: none; padding: 0; margin: 8px 0; }
+  ul.check li { display: flex; gap: 10px; align-items: flex-start; padding: 4px 0; }
+  ul.check input { margin-top: 5px; accent-color: var(--ink); }
+  ol { padding-left: 20px; }
+  li { margin: 4px 0; }
+  .toc { columns: 2 220px; padding-left: 22px; color: var(--muted); }
+  .toc li { break-inside: avoid; margin: 0 0 6px; }
+  .toc a { color: var(--ink); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  footer { color: var(--muted); font-size: 14px; margin-top: 40px; }
+  @media (max-width: 520px) {
+    .step { padding: 18px 16px; }
+    .wrap { padding-top: 32px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Instalação na VPS com domínio</h1>
+<p class="lede">Passo a passo para colocar o ControlAI em produção: VPS com EasyPanel, três serviços (API, app e landing), domínio com HTTPS e o app mobile apontando para a API pública.</p>
+
+<div class="map">
+  <div class="svc"><b>Landing</b><span class="mono">seudominio.com.br · porta 3002<br>apps/landing/Dockerfile</span></div>
+  <div class="svc"><b>App (web)</b><span class="mono">app.seudominio.com.br · porta 3000<br>apps/web/Dockerfile</span></div>
+  <div class="svc"><b>API + workers</b><span class="mono">api.seudominio.com.br · porta 3001<br>apps/api/Dockerfile</span></div>
+</div>
+<p class="mono" style="color:var(--muted)">Troque <code>seudominio.com.br</code> pelo seu domínio em todos os blocos abaixo.</p>
+
+<ol class="toc" start="0">
+  <li><a href="#s0">Antes de começar</a></li>
+  <li><a href="#s1">Preparar a VPS</a></li>
+  <li><a href="#s2">Instalar o EasyPanel</a></li>
+  <li><a href="#s3">Apontar o domínio</a></li>
+  <li><a href="#s4">Banco de dados e Redis</a></li>
+  <li><a href="#s5">Gerar os segredos</a></li>
+  <li><a href="#s6">Serviço da API</a></li>
+  <li><a href="#s7">Migrations, dados iniciais e admin</a></li>
+  <li><a href="#s8">Serviço do app (web)</a></li>
+  <li><a href="#s9">Serviço da landing</a></li>
+  <li><a href="#s10">Conferir se está tudo no ar</a></li>
+  <li><a href="#s11">Configurar pelo painel admin</a></li>
+  <li><a href="#s12">Mercado Pago e Brevo</a></li>
+  <li><a href="#s13">App mobile</a></li>
+  <li><a href="#s14">Backup e rotina</a></li>
+  <li><a href="#s15">Problemas comuns</a></li>
+</ol>
+
+<!-- 0 -->
+<section class="step" id="s0">
+  <div class="step-head"><span class="num">0</span><div><h2>Antes de começar</h2><p>O que precisa estar em mãos.</p></div></div>
+  <ul class="check">
+    <li><input type="checkbox"><span>Domínio registrado (Registro.br para <code>.com.br</code>) com acesso ao painel de DNS.</span></li>
+    <li><input type="checkbox"><span>VPS com <b>Ubuntu 24.04 LTS</b>, no mínimo <b>2 vCPU, 4 GB de RAM e 40 GB de disco</b>. O build do Next.js usa bastante memória; com 2 GB ele trava.</span></li>
+    <li><input type="checkbox"><span>Acesso SSH à VPS como root (ou usuário com sudo).</span></li>
+    <li><input type="checkbox"><span>Repositório <code>joaovictormc/finances</code> no GitHub, branch <code>main</code> atualizada.</span></li>
+    <li><input type="checkbox"><span>Chaves de Brevo, Groq (e, se for usar, Claude e Ollama) e Mercado Pago. As de IA e de pagamento também podem ser cadastradas depois, pelo painel admin.</span></li>
+  </ul>
+  <h3>Decisão: onde fica o banco de produção</h3>
+  <div class="choice">
+    <div>
+      <b>A. No ZimaOS, via Tailscale</b>
+      <p>É a decisão registrada em <code>docs/deploy.md</code>. A VPS entra na rede Tailscale e acessa o Postgres e o Redis de casa.</p>
+      <p style="color:var(--muted)">Contra: se a internet ou a energia de casa cair, a produção cai junto. Cada consulta atravessa a internet.</p>
+    </div>
+    <div>
+      <b>B. Na própria VPS</b><span class="tag">recomendado</span>
+      <p>Postgres e Redis como serviços do EasyPanel, na mesma máquina da API. Mais rápido e sem depender de casa.</p>
+      <p style="color:var(--muted)">Contra: o backup passa a ser responsabilidade da VPS (passo 14).</p>
+    </div>
+  </div>
+</section>
+
+<!-- 1 -->
+<section class="step" id="s1">
+  <div class="step-head"><span class="num">1</span><div><h2>Preparar a VPS</h2><p>Atualizar, criar memória de troca e fechar portas.</p></div></div>
+<pre><code>ssh root@IP_DA_VPS
+
+apt update &amp;&amp; apt upgrade -y
+
+<span class="c"># 4 GB de swap: evita o build do Next morrer por falta de memória</span>
+fallocate -l 4G /swapfile &amp;&amp; chmod 600 /swapfile
+mkswap /swapfile &amp;&amp; swapon /swapfile
+echo '/swapfile none swap sw 0 0' &gt;&gt; /etc/fstab
+
+<span class="c"># Firewall: SSH, HTTP, HTTPS e o painel do EasyPanel (3000, só até ele ganhar domínio)</span>
+ufw allow 22 &amp;&amp; ufw allow 80 &amp;&amp; ufw allow 443 &amp;&amp; ufw allow 3000
+ufw --force enable</code></pre>
+</section>
+
+<!-- 2 -->
+<section class="step" id="s2">
+  <div class="step-head"><span class="num">2</span><div><h2>Instalar o EasyPanel</h2><p>Ele cuida do Docker, dos builds, dos domínios e dos certificados HTTPS.</p></div></div>
+<pre><code>curl -sSL https://get.easypanel.io | sh</code></pre>
+  <ol>
+    <li>Abra <code>http://IP_DA_VPS:3000</code> e crie a conta de administrador do EasyPanel.</li>
+    <li>Crie um projeto chamado <code>controlai</code>.</li>
+    <li>Em <b>Settings → GitHub</b>, conecte sua conta para o EasyPanel ler o repositório.</li>
+  </ol>
+  <div class="note">Depois do passo 3, dê um domínio ao próprio painel (ex.: <code>painel.seudominio.com.br</code>, em Settings) e feche a porta 3000: <code>ufw delete allow 3000</code>.</div>
+</section>
+
+<!-- 3 -->
+<section class="step" id="s3">
+  <div class="step-head"><span class="num">3</span><div><h2>Apontar o domínio</h2><p>No painel de DNS do domínio, registros do tipo A para o IP da VPS.</p></div></div>
+  <div class="table-scroll"><table>
+    <tr><th>Tipo</th><th>Nome</th><th>Valor</th><th>Para</th></tr>
+    <tr><td>A</td><td><code>@</code></td><td>IP da VPS</td><td>landing</td></tr>
+    <tr><td>A</td><td><code>www</code></td><td>IP da VPS</td><td>redireciona para a landing</td></tr>
+    <tr><td>A</td><td><code>app</code></td><td>IP da VPS</td><td>app web</td></tr>
+    <tr><td>A</td><td><code>api</code></td><td>IP da VPS</td><td>API (web, mobile e webhooks)</td></tr>
+    <tr><td>A</td><td><code>painel</code></td><td>IP da VPS</td><td>EasyPanel (opcional)</td></tr>
+  </table></div>
+  <p>Confira a propagação (pode levar de minutos a algumas horas):</p>
+<pre><code>dig +short api.seudominio.com.br
+dig +short app.seudominio.com.br
+dig +short seudominio.com.br</code></pre>
+  <p>Os três devem responder o IP da VPS. O certificado HTTPS só é emitido depois disso.</p>
+</section>
+
+<!-- 4 -->
+<section class="step" id="s4">
+  <div class="step-head"><span class="num">4</span><div><h2>Banco de dados e Redis</h2><p>Siga só a opção escolhida no passo 0.</p></div></div>
+
+  <h3>Opção A: ZimaOS via Tailscale</h3>
+<pre><code><span class="c"># na VPS</span>
+curl -fsSL https://tailscale.com/install.sh | sh
+tailscale up            <span class="c"># abre um link para autorizar a máquina na sua conta</span>
+
+<span class="c"># testar se a VPS enxerga o Postgres e o Redis</span>
+apt install -y netcat-openbsd
+nc -zv IP_TAILSCALE_DO_ZIMAOS 5432
+nc -zv IP_TAILSCALE_DO_ZIMAOS 6379</code></pre>
+  <p>Crie um banco <b>só para produção</b>, separado da homologação:</p>
+<pre><code><span class="c"># no ZimaOS</span>
+docker exec -it NOME_DO_CONTAINER_POSTGRES psql -U postgres -c "CREATE DATABASE controlai_prod;"</code></pre>
+<pre><code>DATABASE_URL="postgresql://USUARIO:SENHA@IP_TAILSCALE_DO_ZIMAOS:5432/controlai_prod?schema=public"
+REDIS_URL="redis://IP_TAILSCALE_DO_ZIMAOS:6379/2"     <span class="c"># /2 = base separada da homologação</span></code></pre>
+
+  <h3>Opção B: na VPS (EasyPanel)</h3>
+  <ol>
+    <li>No projeto <code>controlai</code>, <b>+ Service → Postgres</b>. Nome: <code>postgres</code>. Anote usuário, senha e banco que ele gerar.</li>
+    <li><b>+ Service → Redis</b>. Nome: <code>redis</code>.</li>
+    <li>Na aba de cada um, copie o <b>endereço interno</b> (algo como <code>controlai_postgres</code>). Os outros serviços do projeto falam com eles por esse nome, sem abrir porta para a internet.</li>
+  </ol>
+<pre><code>DATABASE_URL="postgresql://postgres:SENHA@controlai_postgres:5432/controlai?schema=public"
+REDIS_URL="redis://default:SENHA@controlai_redis:6379"</code></pre>
+  <div class="note">O código funciona com Postgres comum: o TimescaleDB é opcional (<code>docs/setup.md</code>).</div>
+</section>
+
+<!-- 5 -->
+<section class="step" id="s5">
+  <div class="step-head"><span class="num">5</span><div><h2>Gerar os segredos</h2><p>No seu Mac. Guarde cada resultado num gerenciador de senhas.</p></div></div>
+<pre><code>openssl rand -base64 32   <span class="c"># BETTER_AUTH_SECRET</span>
+openssl rand -base64 32   <span class="c"># APP_ENCRYPTION_KEY</span>
+openssl rand -hex 32      <span class="c"># LANDING_REVALIDATE_SECRET</span>
+openssl rand -hex 32      <span class="c"># LANDING_PREVIEW_SECRET</span></code></pre>
+  <div class="warn"><b>APP_ENCRYPTION_KEY é para sempre.</b> Ela criptografa as chaves de IA e do Mercado Pago gravadas pelo painel. Se mudar ou se perder, essas chaves deixam de abrir e precisam ser cadastradas de novo. Guarde uma cópia fora da VPS.</div>
+</section>
+
+<!-- 6 -->
+<section class="step" id="s6">
+  <div class="step-head"><span class="num">6</span><div><h2>Serviço da API</h2><p>Primeiro serviço a subir: o web e a landing dependem dele.</p></div></div>
+  <ol>
+    <li><b>+ Service → App</b>, nome <code>api</code>.</li>
+    <li><b>Source:</b> GitHub, repositório <code>joaovictormc/finances</code>, branch <code>main</code>.</li>
+    <li><b>Build:</b> Dockerfile, caminho <code>apps/api/Dockerfile</code>, contexto <code>/</code> (raiz do repositório).</li>
+    <li><b>Environment:</b> cole o bloco abaixo, trocando os valores.</li>
+    <li><b>Domains:</b> <code>api.seudominio.com.br</code>, HTTPS ligado, porta interna <code>3001</code>.</li>
+    <li>Ative o <b>deploy automático</b> a cada push na <code>main</code>.</li>
+  </ol>
+<pre><code><span class="c"># Banco e fila (passo 4)</span>
+DATABASE_URL="..."
+REDIS_URL="..."
+
+<span class="c"># Endereços públicos — sem barra no final</span>
+BETTER_AUTH_URL="https://api.seudominio.com.br"
+NEXT_PUBLIC_APP_URL="https://app.seudominio.com.br"
+LANDING_URL="https://seudominio.com.br"
+LAN_ORIGINS=""
+
+<span class="c"># Segredos (passo 5)</span>
+BETTER_AUTH_SECRET="..."
+APP_ENCRYPTION_KEY="..."
+LANDING_REVALIDATE_SECRET="..."
+LANDING_PREVIEW_SECRET="..."
+
+<span class="c"># Cadastro e e-mail</span>
+AUTH_REQUIRE_EMAIL_VERIFICATION="true"
+BREVO_API_KEY="..."
+EMAIL_FROM_ADDRESS="nao-responda@seudominio.com.br"
+
+<span class="c"># Admin: só no primeiro deploy (passo 7), depois remova</span>
+ADMIN_BOOTSTRAP="true"
+ADMIN_EMAIL="voce@seudominio.com.br"
+ADMIN_PASSWORD="uma-senha-forte"
+
+<span class="c"># Opcionais: também podem ser cadastradas no painel admin</span>
+GROQ_API_KEY=""
+ANTHROPIC_API_KEY=""
+OLLAMA_API_KEY=""
+MERCADOPAGO_ACCESS_TOKEN=""
+MERCADOPAGO_WEBHOOK_SECRET=""</code></pre>
+  <div class="note">
+    <b>Por que cada endereço importa:</b> <code>BETTER_AUTH_URL</code> é o endereço da própria API e também a origem que o app mobile apresenta no login. <code>NEXT_PUBLIC_APP_URL</code> entra nos links dos e-mails, no retorno do Mercado Pago e na lista de origens aceitas no login do web. <code>LANDING_URL</code> libera a landing no CORS e é chamado ao publicar no editor.
+  </div>
+  <p>Os workers (insights, lembretes, rotinas de assinatura) rodam dentro do processo da API. Não há serviço separado.</p>
+</section>
+
+<!-- 7 -->
+<section class="step" id="s7">
+  <div class="step-head"><span class="num">7</span><div><h2>Migrations, dados iniciais e admin</h2><p>O banco novo está vazio: criar as tabelas, as categorias padrão e a conta admin.</p></div></div>
+  <p><b>Opção A (banco no ZimaOS):</b> rode do seu Mac, com Tailscale ligado, antes de abrir o app:</p>
+<pre><code>cd ~/Documents/GitHub/finances
+read -rs "PGPASS?Senha do banco de produção: "; echo
+export PROD_URL="postgresql://USUARIO:${PGPASS}@IP_TAILSCALE_DO_ZIMAOS:5432/controlai_prod?schema=public"
+DATABASE_URL="$PROD_URL" pnpm --filter @finances/db exec prisma migrate deploy
+DATABASE_URL="$PROD_URL" pnpm --filter @finances/db db:seed</code></pre>
+  <p><b>Opção B (banco na VPS):</b> no EasyPanel, serviço <code>api</code> → aba <b>Console</b>:</p>
+<pre><code>pnpm --filter @finances/db exec prisma migrate deploy
+pnpm --filter @finances/db db:seed</code></pre>
+  <p>Depois, no EasyPanel, <b>reinicie</b> o serviço <code>api</code>. Com <code>ADMIN_BOOTSTRAP="true"</code>, ao subir ele cria a conta admin com o e-mail e a senha do passo 6.</p>
+  <div class="warn">Entre com o admin uma vez para confirmar, depois <b>apague</b> <code>ADMIN_BOOTSTRAP</code>, <code>ADMIN_EMAIL</code> e <code>ADMIN_PASSWORD</code> do serviço e faça redeploy. Ligado, ele redefine a senha do admin a cada reinício.</div>
+  <div class="warn">Nunca use o endereço do banco de produção como <code>--shadow-database-url</code> do Prisma: o banco de rascunho é apagado.</div>
+</section>
+
+<!-- 8 -->
+<section class="step" id="s8">
+  <div class="step-head"><span class="num">8</span><div><h2>Serviço do app (web)</h2><p>O navegador fala só com <code>app.seudominio.com.br</code>; o web repassa <code>/api/*</code> para a API pela rede interna.</p></div></div>
+  <ol>
+    <li><b>+ Service → App</b>, nome <code>web</code>, mesmo repositório e branch.</li>
+    <li><b>Build:</b> Dockerfile <code>apps/web/Dockerfile</code>, contexto <code>/</code>.</li>
+    <li><b>Build args</b> (entram no build; mudar exige rebuild):</li>
+  </ol>
+<pre><code>API_INTERNAL_URL=http://controlai_api:3001
+NEXT_PUBLIC_LANDING_URL=https://seudominio.com.br</code></pre>
+  <ol start="4">
+    <li><b>Environment:</b></li>
+  </ol>
+<pre><code>API_INTERNAL_URL="http://controlai_api:3001"
+NEXT_PUBLIC_APP_URL="https://app.seudominio.com.br"</code></pre>
+  <ol start="5">
+    <li><b>Domains:</b> <code>app.seudominio.com.br</code>, HTTPS, porta interna <code>3000</code>.</li>
+  </ol>
+  <div class="note"><code>controlai_api</code> é o endereço interno do serviço da API no padrão do EasyPanel (<code>projeto_serviço</code>). Confira o nome exato na aba do serviço <code>api</code>. Errado, o app abre mas nenhuma tela carrega dados.</div>
+</section>
+
+<!-- 9 -->
+<section class="step" id="s9">
+  <div class="step-head"><span class="num">9</span><div><h2>Serviço da landing</h2><p>Site de apresentação, com conteúdo editado no admin.</p></div></div>
+  <ol>
+    <li><b>+ Service → App</b>, nome <code>landing</code>, mesmo repositório e branch.</li>
+    <li><b>Build:</b> Dockerfile <code>apps/landing/Dockerfile</code>, contexto <code>/</code>.</li>
+    <li><b>Build args:</b></li>
+  </ol>
+<pre><code>NEXT_PUBLIC_APP_URL=https://app.seudominio.com.br
+NEXT_PUBLIC_API_URL=https://api.seudominio.com.br</code></pre>
+  <ol start="4"><li><b>Environment:</b></li></ol>
+<pre><code>API_INTERNAL_URL="http://controlai_api:3001"
+LANDING_REVALIDATE_SECRET="o mesmo valor da API"</code></pre>
+  <ol start="5">
+    <li><b>Domains:</b> <code>seudominio.com.br</code> (porta interna <code>3002</code>) e <code>www.seudominio.com.br</code> com <b>redirecionamento</b> para o domínio sem www.</li>
+  </ol>
+  <div class="note">O redirecionamento do www importa: a API só libera no CORS o endereço exato da <code>LANDING_URL</code>. Acessada pelo www, a landing não consegue atualizar os preços no navegador.</div>
+</section>
+
+<!-- 10 -->
+<section class="step" id="s10">
+  <div class="step-head"><span class="num">10</span><div><h2>Conferir se está tudo no ar</h2><p>Na ordem: se um falhar, os seguintes também falham.</p></div></div>
+<pre><code>curl https://api.seudominio.com.br/health        <span class="c"># {"status":"ok",...}</span>
+curl -I https://app.seudominio.com.br/login     <span class="c"># 200</span>
+curl -I https://seudominio.com.br               <span class="c"># 200</span>
+curl -I https://www.seudominio.com.br           <span class="c"># 301/308 para o domínio sem www</span></code></pre>
+  <ul class="check">
+    <li><input type="checkbox"><span>Cadeado de HTTPS válido nos três domínios.</span></li>
+    <li><input type="checkbox"><span>Login com o admin em <code>app.seudominio.com.br</code>.</span></li>
+    <li><input type="checkbox"><span>Cadastro de uma conta de teste: o e-mail de confirmação chega (passo 12, Brevo).</span></li>
+    <li><input type="checkbox"><span>Na landing, a seção de planos mostra os preços.</span></li>
+    <li><input type="checkbox"><span>No admin → Landing page, publicar uma alteração e vê-la no site em seguida.</span></li>
+    <li><input type="checkbox"><span>No cadastro, os links de Termos e Privacidade abrem a landing (não <code>localhost</code>).</span></li>
+  </ul>
+</section>
+
+<!-- 11 -->
+<section class="step" id="s11">
+  <div class="step-head"><span class="num">11</span><div><h2>Configurar pelo painel admin</h2><p>Tudo aqui fica no banco e não precisa de deploy.</p></div></div>
+  <ul class="check">
+    <li><input type="checkbox"><span><b>Modelos de IA:</b> cadastrar as chaves (validadas na hora) e escolher provedor e modelo de cada função.</span></li>
+    <li><input type="checkbox"><span><b>Meios de pagamento:</b> Mercado Pago (access token e webhook secret) e Pix (chave, nome e cidade do recebedor).</span></li>
+    <li><input type="checkbox"><span><b>Preços dos planos:</b> conferir Pro e Família em cada período.</span></li>
+    <li><input type="checkbox"><span><b>Landing page:</b> criar <code>termos-de-uso</code> e <code>politica-de-privacidade</code> com os textos de <code>docs/legal/</code>, marcando "Mostrar link no rodapé do site".</span></li>
+    <li><input type="checkbox"><span><b>Promoções:</b> cupons de lançamento e regra de indicação, se for usar.</span></li>
+  </ul>
+</section>
+
+<!-- 12 -->
+<section class="step" id="s12">
+  <div class="step-head"><span class="num">12</span><div><h2>Mercado Pago e Brevo</h2><p>Integrações que dependem do domínio público.</p></div></div>
+  <h3>Mercado Pago: webhook</h3>
+  <ol>
+    <li>Em <a href="https://www.mercadopago.com.br/developers/panel/app">mercadopago.com.br/developers/panel/app</a>, abra a aplicação → <b>Webhooks → Configurar notificações</b> → <b>Modo produção</b>.</li>
+    <li>URL: <code>https://api.seudominio.com.br/api/webhooks/mercadopago</code></li>
+    <li>Eventos de assinatura: <b>Planos e assinaturas</b> (<code>subscription_preapproval</code>) e <b>Pagamentos de assinatura</b> (<code>subscription_authorized_payment</code>).</li>
+    <li>Salve e copie a <b>assinatura secreta</b> para o admin → Meios de pagamento → Mercado Pago (webhook secret).</li>
+  </ol>
+  <div class="warn">Sem <i>Pagamentos de assinatura</i>, as renovações mensais não chegam e quem continua pagando perde o plano no primeiro vencimento.</div>
+  <h3>Brevo: autenticar o domínio</h3>
+  <ol>
+    <li>No Brevo, <b>Senders, Domains &amp; Dedicated IPs → Domains → Add a domain</b>: <code>seudominio.com.br</code>.</li>
+    <li>Crie no DNS os registros que ele mostrar (código Brevo, DKIM e DMARC) e clique em verificar.</li>
+    <li>Cadastre o remetente do <code>EMAIL_FROM_ADDRESS</code> (ex.: <code>nao-responda@seudominio.com.br</code>).</li>
+  </ol>
+  <p style="color:var(--muted)">Sem o domínio autenticado, confirmação de cadastro, troca de senha e lembretes tendem a cair no spam ou nem ser entregues.</p>
+</section>
+
+<!-- 13 -->
+<section class="step" id="s13">
+  <div class="step-head"><span class="num">13</span><div><h2>App mobile</h2><p>O endereço da API é embutido no app no momento do build.</p></div></div>
+  <p>Em <code>apps/mobile/eas.json</code>, perfil <code>production</code>:</p>
+<pre><code>"production": {
+  "autoIncrement": true,
+  "channel": "production",
+  "env": {
+    "EXPO_PUBLIC_API_URL": "https://api.seudominio.com.br",
+    "EXPO_PUBLIC_LANDING_URL": "https://seudominio.com.br"
+  }
+}</code></pre>
+  <div class="note">
+    <b>Regras do endereço da API</b> (errar qualquer uma faz o login falhar):
+    <ol>
+      <li>Sem barra no final e sem <code>/api</code>.</li>
+      <li>Idêntico ao <code>BETTER_AUTH_URL</code> da API: o app apresenta esse endereço como origem no login, e a API só aceita origens conhecidas.</li>
+      <li>Com <code>https://</code>.</li>
+    </ol>
+  </div>
+<pre><code>cd apps/mobile
+eas build --platform android --profile production   <span class="c"># .aab para a Play Store</span>
+eas build --platform android --profile preview      <span class="c"># .apk para instalar direto (aponta para a homologação)</span></code></pre>
+  <div class="warn"><b>Atualização sem loja (<code>eas update</code>):</b> ela não lê o <code>env</code> do <code>eas.json</code>, e sim o <code>apps/mobile/.env</code> da sua máquina (IP local). Passe sempre o endereço na linha de comando:
+<pre><code>EXPO_PUBLIC_API_URL="https://api.seudominio.com.br" \
+EXPO_PUBLIC_LANDING_URL="https://seudominio.com.br" \
+  eas update --channel production --message "descrição"</code></pre>
+  </div>
+  <p>Push no celular: credenciais do build com <code>eas credentials</code> (detalhes em <code>docs/deploy.md</code>, A.4).</p>
+</section>
+
+<!-- 14 -->
+<section class="step" id="s14">
+  <div class="step-head"><span class="num">14</span><div><h2>Backup e rotina</h2><p>O que fazer depois de tudo no ar.</p></div></div>
+  <h3>Backup diário do banco (opção B)</h3>
+<pre><code><span class="c"># na VPS: descubra o nome do container do Postgres</span>
+docker ps --format '{{.Names}}' | grep postgres
+
+mkdir -p /root/backups
+crontab -e
+<span class="c"># todo dia às 3h, guarda 14 dias</span>
+0 3 * * * docker exec NOME_DO_CONTAINER pg_dump -U postgres -Fc controlai &gt; /root/backups/controlai-$(date +\%F).dump &amp;&amp; find /root/backups -name '*.dump' -mtime +14 -delete</code></pre>
+  <p>Copie os arquivos para fora da VPS de tempos em tempos (seu computador, Google Drive, S3). Backup que só existe na mesma máquina some junto com ela. Na opção A, faça o mesmo no ZimaOS.</p>
+  <h3>Publicar uma versão nova</h3>
+  <ol>
+    <li>Migration nova? Rode <code>prisma migrate deploy</code> no banco de produção <b>antes</b> do merge (passo 7).</li>
+    <li>Merge na <code>main</code>: o EasyPanel reconstrói e publica os três serviços.</li>
+    <li>Variável nova? Cadastre no serviço antes do merge.</li>
+  </ol>
+</section>
+
+<!-- 15 -->
+<section class="step" id="s15">
+  <div class="step-head"><span class="num">15</span><div><h2>Problemas comuns</h2><p>Sintoma → causa mais provável.</p></div></div>
+  <div class="table-scroll"><table>
+    <tr><th>Sintoma</th><th>Causa provável</th></tr>
+    <tr><td>Login no web não entra ou volta para a tela de login</td><td><code>NEXT_PUBLIC_APP_URL</code> da API diferente de <code>https://app.seudominio.com.br</code> (com barra no final, http em vez de https).</td></tr>
+    <tr><td>App abre, mas as telas ficam sem dados</td><td><code>API_INTERNAL_URL</code> do web errado; ele é lido no build, então corrija o build arg e faça rebuild.</td></tr>
+    <tr><td>Login no celular falha com erro de origem</td><td><code>EXPO_PUBLIC_API_URL</code> diferente do <code>BETTER_AUTH_URL</code>. Corrija o <code>eas.json</code> e gere build novo.</td></tr>
+    <tr><td>Landing mostra o conteúdo de fábrica</td><td><code>LANDING_REVALIDATE_SECRET</code> faltando ou diferente entre API e landing.</td></tr>
+    <tr><td>Landing sem preços</td><td>Acessada pelo www sem redirecionamento, ou <code>LANDING_URL</code> errado na API.</td></tr>
+    <tr><td>Links de Termos apontam para localhost</td><td>Build arg <code>NEXT_PUBLIC_LANDING_URL</code> do web ausente. Corrija e faça rebuild.</td></tr>
+    <tr><td>Build trava ou é encerrado no meio</td><td>Pouca memória: confira o swap do passo 1 ou aumente a VPS.</td></tr>
+    <tr><td>E-mails não chegam</td><td>Domínio não autenticado no Brevo, ou <code>EMAIL_FROM_ADDRESS</code> não cadastrado como remetente.</td></tr>
+    <tr><td>Chaves do painel "não abrem" depois de um ajuste</td><td><code>APP_ENCRYPTION_KEY</code> mudou. Volte o valor original.</td></tr>
+    <tr><td>Renovações do cartão não aparecem</td><td>Evento <i>Pagamentos de assinatura</i> desmarcado no webhook do Mercado Pago.</td></tr>
+  </table></div>
+</section>
+
+<footer>Detalhes técnicos e alternativas (homologação, self-hosted, Docker Compose) em <code>docs/deploy.md</code>.</footer>
+</div>
+<script>
+  document.querySelectorAll("pre").forEach((pre) => {
+    const button = document.createElement("button");
+    button.className = "copy";
+    button.type = "button";
+    button.textContent = "Copiar";
+    button.addEventListener("click", () => {
+      const text = pre.querySelector("code").innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        button.textContent = "Copiado";
+        setTimeout(() => (button.textContent = "Copiar"), 1500);
+      });
+    });
+    pre.appendChild(button);
+  });
+</script>
+</body>
+</html>
