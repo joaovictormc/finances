@@ -1,6 +1,7 @@
 "use client";
 
 import { useGroups, useSubscription } from "@/lib/queries";
+import { useHydrated } from "@/lib/use-hydrated";
 
 type PlanAccess = {
   plan: "free" | "pro" | "familia";
@@ -47,10 +48,12 @@ const MODULE_ROUTES: Record<LockedModule, string> = { familia: "/groups", assist
 export function useModuleLinks() {
   const { hasIntegrations, hasGroupAccess, loading } = usePlanAccess();
   // Enquanto o plano carrega, nada aparece bloqueado (evita piscar o cadeado
-  // para quem paga).
+  // para quem paga). Nem durante a hidratação: o servidor nunca tem o plano,
+  // e o cadeado desenhado ali divergiria do HTML dele.
+  const ready = useHydrated() && !loading;
   const locked: Record<LockedModule, boolean> = {
-    familia: !loading && !hasGroupAccess,
-    assistente: !loading && !hasIntegrations,
+    familia: ready && !hasGroupAccess,
+    assistente: ready && !hasIntegrations,
   };
   const moduleFor = (href: string): LockedModule | null =>
     (Object.keys(MODULE_ROUTES) as LockedModule[]).find((m) => MODULE_ROUTES[m] === href) ?? null;

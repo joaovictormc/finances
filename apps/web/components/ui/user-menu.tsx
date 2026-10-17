@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { authClient, useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import { useHydrated } from "@/lib/use-hydrated";
 
 export function UserMenu({ collapsed = false }: { collapsed?: boolean }) {
   const router = useRouter();
   const { data: session, isPending } = useSession();
+  const hydrated = useHydrated();
   const [loading, setLoading] = useState(false);
 
   async function handleSignOut() {
@@ -18,7 +20,8 @@ export function UserMenu({ collapsed = false }: { collapsed?: boolean }) {
     router.refresh();
   }
 
-  if (isPending) {
+  // Durante a hidratação, o mesmo esqueleto do servidor (que não tem a sessão).
+  if (!hydrated || isPending) {
     return <div className="h-9 animate-pulse rounded-md bg-muted" />;
   }
 

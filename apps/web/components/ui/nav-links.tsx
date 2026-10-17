@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/auth-client";
 import { useModuleLinks } from "@/lib/use-plan-access";
+import { useHydrated } from "@/lib/use-hydrated";
 
 const baseNavItems = [
   { href: "/overview", label: "Visão Geral", icon: LayoutDashboard },
@@ -44,7 +45,9 @@ export function NavLinks({ collapsed = false }: { collapsed?: boolean }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { isLocked, hrefFor } = useModuleLinks();
-  const isAdmin = (session?.user as { role?: string } | undefined)?.role === "admin";
+  // A sessão só existe no navegador: o item Admin entra depois da hidratação.
+  const hydrated = useHydrated();
+  const isAdmin = hydrated && (session?.user as { role?: string } | undefined)?.role === "admin";
 
   const items: NavItem[] = [
     ...baseNavItems,
