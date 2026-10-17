@@ -37,9 +37,10 @@ finances/
 │   │       │   └── webhooks/      mercadopago.ts, pluggy.ts
 │   │       ├── jobs/              queues.ts + scheduler.ts + workers/
 │   │       ├── lib/
-│   │       │   ├── ai/            groq-client, ai-settings, expense-parser,
-│   │       │   │                  financial-insights, recurring-detector,
-│   │       │   │                  budget-forecast, voice-transcriber
+│   │       │   ├── ai/            chat (Groq/Claude/Ollama), providers,
+│   │       │   │                  credentials, ai-settings, financial-insights,
+│   │       │   │                  category-suggester, receipt-parser,
+│   │       │   │                  recurring-detector, budget-forecast
 │   │       │   ├── import/        csv-parser, ofx-parser
 │   │       │   ├── pdf/           annual-report
 │   │       │   ├── pluggy/        client.ts

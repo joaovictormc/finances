@@ -1,5 +1,5 @@
-import { groq } from "./groq-client";
-import { getAiSettings, isWithinUsageLimit, logAiUsage } from "./ai-settings";
+import { AiProviderError, chat } from "./chat";
+import { getAiSettings, isWithinUsageLimit, logAiUsage, slotModel } from "./ai-settings";
 import { ParsedReceiptSchema, type ParsedReceipt } from "@finances/validations";
 
 const SYSTEM_PROMPT = `Você é um assistente especializado em ler fotos de cupons fiscais, notas de maquininha de cartão e NF-e (nota fiscal eletrônica) brasileiras.
@@ -64,7 +64,7 @@ function sanitizeReceiptDate(date: string | undefined, today: Date): string | un
 }
 
 /**
- * Interpreta uma foto de cupom fiscal/NF-e via modelo de visão da Groq.
+ * Interpreta uma foto de cupom fiscal/NF-e pelo modelo de imagem configurado em /admin/ai.
  * Nunca cria a transação sozinho — só devolve o JSON estruturado pro
  * usuário revisar e confirmar (mesmo princípio da sugestão de categoria).
  */
@@ -76,28 +76,29 @@ export async function parseReceiptImage(
   const settings = await getAiSettings();
   if (!settings.receiptScanEnabled || !(await isWithinUsageLimit(settings))) return null;
 
-  const dataUrl = `data:${mimeType};base64,${imageBuffer.toString("base64")}`;
   const today = new Date();
+  const { provider, model } = slotModel(settings, "vision");
 
-  const response = await groq.chat.completions.create({
-    model: settings.visionModel,
+  const response = await chat({
+    provider,
+    model,
     messages: [
       { role: "system", content: buildSystemPrompt(today.toISOString().slice(0, 10)) },
       {
         role: "user",
         content: [
           { type: "text", text: "Extraia os dados desse cupom/nota fiscal." },
-          { type: "image_url", image_url: { url: dataUrl } },
+          { type: "image", mimeType, base64: imageBuffer.toString("base64") },
         ],
       },
     ],
-    response_format: { type: "json_object" },
+    json: true,
     temperature: 0.1,
   });
 
-  await logAiUsage({ userId, feature: "receipt_scan", model: settings.visionModel, usage: response.usage });
+  await logAiUsage({ userId, feature: "receipt_scan", provider, model, usage: response.usage });
 
-  const raw = response.choices[0]?.message?.content;
+  const raw = response.content;
   if (!raw) return null;
 
   let json: unknown;
@@ -114,13 +115,13 @@ export async function parseReceiptImage(
 }
 
 /**
- * Traduz uma falha da Groq em mensagem que faz sentido pro usuário do app.
- * O free tier tem só 8.000 tokens/min e cada foto custa ~2.000, então esbarrar
- * no limite é comum o suficiente pra merecer texto próprio.
+ * Traduz uma falha do provedor de IA em mensagem que faz sentido pro usuário
+ * do app. O free tier da Groq tem só 8.000 tokens/min e cada foto custa
+ * ~2.000, então esbarrar no limite é comum o suficiente pra merecer texto próprio.
  */
 export function describeReceiptScanFailure(error: unknown): string {
-  const status = (error as { status?: number })?.status;
-  const message = (error as { error?: { error?: { message?: string } } })?.error?.error?.message ?? "";
+  const status = error instanceof AiProviderError ? error.status : undefined;
+  const message = error instanceof AiProviderError ? error.message : "";
 
   if (status === 429) {
     return "Muitas leituras em pouco tempo — espere alguns segundos e tente de novo.";
@@ -128,7 +129,7 @@ export function describeReceiptScanFailure(error: unknown): string {
   if (message.includes("invalid image data") || message.includes("invalid base64")) {
     return "Não consegui decodificar a foto. Tente tirar de novo, com boa luz e o cupom inteiro no quadro.";
   }
-  if (status === 400 && message.includes("decommissioned")) {
+  if ((status === 400 || status === 404) && /decommissioned|not[ _]found|does not exist/i.test(message)) {
     return "O modelo de IA configurado não existe mais — ajuste o modelo de visão em /admin/ai.";
   }
   return "A leitura por IA falhou agora. Tente de novo em instantes.";

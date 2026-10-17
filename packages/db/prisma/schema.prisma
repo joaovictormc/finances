@@ -626,6 +626,12 @@ model AiSettings {
   visionModel    String @default("qwen/qwen3.8-27b") // multimodal: aceita imagem + JSON mode
   assistantModel String @default("openai/gpt-oss-120b") // assistente de IA (/api/assistant)
 
+  // Provedor de cada função: groq | anthropic | ollama. A chave de cada um
+  // fica em AiProviderCredential (ou no .env, como reserva).
+  textProvider      String @default("groq")
+  visionProvider    String @default("groq")
+  assistantProvider String @default("groq")
+
   monthlyInsightsEnabled    Boolean @default(true) // geração de insight mensal
   assistantEnabled          Boolean @default(true) // kill-switch do assistente de IA
   nlQueryEnabled            Boolean @default(true) // POST /api/ai/query
@@ -701,12 +707,28 @@ model PaymentMethodConfig {
   @@map("payment_method_configs")
 }
 
+/// Chave de API de um provedor de IA, cadastrada em /admin/ai. Uma linha por
+/// provedor. `apiKey` vai criptografada (APP_ENCRYPTION_KEY); nula = usa a do
+/// .env. `models` guarda a última lista de modelos que a chave enxergou.
+model AiProviderCredential {
+  provider   String    @id // groq | anthropic | ollama
+  apiKey     String?
+  models     Json      @default("[]")
+  verifiedAt DateTime?
+  lastError  String?
+  updatedAt  DateTime  @updatedAt
+
+  @@map("ai_provider_credentials")
+}
+
 model AiUsageLog {
   id     String  @id @default(cuid())
   userId String?
   user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   feature           String // expense_parsing | monthly_insight | nl_query | voice_transcription
+  /// groq | anthropic | ollama. Linhas anteriores aos provedores são todas da Groq.
+  provider          String  @default("groq")
   model             String
   promptTokens      Int?
   completionTokens  Int?

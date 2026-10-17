@@ -2,9 +2,8 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { db } from "@finances/db";
-import type Groq from "groq-sdk";
-import { groq } from "../lib/ai/groq-client";
-import { getAiSettings, isWithinUsageLimit, logAiUsage } from "../lib/ai/ai-settings";
+import { chat, type ChatMessage } from "../lib/ai/chat";
+import { getAiSettings, isWithinUsageLimit, logAiUsage, slotModel } from "../lib/ai/ai-settings";
 import {
   TOOL_NAMES,
   TOOL_LABELS,
@@ -234,7 +233,7 @@ app.post("/conversations/:id/messages", zValidator("json", MessageSchema), async
   // ordem cronológica.
   const history = [...conversation.messages].reverse();
 
-  const messages: Groq.Chat.Completions.ChatCompletionMessageParam[] = [
+  const messages: ChatMessage[] = [
     { role: "system", content: buildSystemPrompt(conversation.agent ?? undefined) },
     ...history.map((message) => ({
       role: message.role === "user" ? ("user" as const) : ("assistant" as const),
@@ -244,49 +243,36 @@ app.post("/conversations/:id/messages", zValidator("json", MessageSchema), async
   ];
 
   const tools = selectTools(conversation.agent?.enabledTools ?? []);
+  const { provider, model } = slotModel(settings, "assistant");
   const calledTools: string[] = [];
   let answer: string | null = null;
 
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      const response = await groq.chat.completions.create({
-        model: settings.assistantModel,
-        messages,
-        tools,
-        tool_choice: "auto",
-        temperature: 0.3,
-      });
-      await logAiUsage({
-        userId,
-        feature: "assistant",
-        model: settings.assistantModel,
-        usage: response.usage,
-      });
+      const response = await chat({ provider, model, messages, tools, temperature: 0.3 });
+      await logAiUsage({ userId, feature: "assistant", provider, model, usage: response.usage });
 
-      const message = response.choices[0]?.message;
-      if (!message) break;
-
-      if (!message.tool_calls || message.tool_calls.length === 0) {
-        answer = message.content ?? null;
+      if (response.toolCalls.length === 0) {
+        answer = response.content;
         break;
       }
 
-      messages.push({ role: "assistant", content: message.content, tool_calls: message.tool_calls });
+      messages.push({ role: "assistant", content: response.content, toolCalls: response.toolCalls });
 
-      for (const call of message.tool_calls) {
-        calledTools.push(call.function.name);
+      for (const call of response.toolCalls) {
+        calledTools.push(call.name);
         let args: Record<string, unknown> = {};
         try {
-          args = JSON.parse(call.function.arguments);
+          args = JSON.parse(call.arguments);
         } catch {
           // mantém args vazio se o modelo enviar argumentos inválidos
         }
-        const result = await executeTool(userId, call.function.name, args);
-        messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
+        const result = await executeTool(userId, call.name, args);
+        messages.push({ role: "tool", toolCallId: call.id, content: JSON.stringify(result) });
       }
     }
   } catch (error) {
-    console.error("[assistant] falha na chamada à Groq:", (error as Error).message);
+    console.error(`[assistant] falha na chamada à IA (${provider}):`, (error as Error).message);
     return c.json({ error: "A IA não respondeu agora. Tente de novo em instantes." }, 502);
   }
 

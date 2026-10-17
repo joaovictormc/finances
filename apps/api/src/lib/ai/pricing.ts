@@ -1,9 +1,10 @@
 /**
- * Preço dos modelos da Groq, em USD por 1 milhão de tokens.
+ * Preço dos modelos, em USD por 1 milhão de tokens, por provedor.
  *
- * Tabela mantida à mão de propósito: a Groq não expõe preço por API, só na
- * página pública (groq.com/pricing). Ao trocar de modelo em /admin/ai, confira
- * lá e atualize aqui — catálogo e preço mudam com frequência.
+ * Tabela mantida à mão de propósito: nenhum provedor expõe preço por API, só
+ * nas páginas públicas (groq.com/pricing, anthropic.com/pricing,
+ * ollama.com/pricing). Ao trocar de modelo em /admin/ai, confira lá e
+ * atualize aqui — catálogo e preço mudam com frequência.
  *
  * Modelo ausente desta tabela NÃO é tratado como gratuito: o custo vira `null`
  * e a tela mostra "não estimado". Contar como zero subestimaria a fatura, que
@@ -11,11 +12,15 @@
  */
 type TokenPrice = { inputPerMillion: number; outputPerMillion: number };
 
-const TOKEN_PRICES: Record<string, TokenPrice> = {
-  "openai/gpt-oss-120b": { inputPerMillion: 0.15, outputPerMillion: 0.6 },
-  "openai/gpt-oss-20b": { inputPerMillion: 0.075, outputPerMillion: 0.3 },
-  "openai/gpt-oss-safeguard-20b": { inputPerMillion: 0.075, outputPerMillion: 0.3 },
-  "qwen/qwen3.8-27b": { inputPerMillion: 0.8, outputPerMillion: 4 },
+const TOKEN_PRICES: Record<string, Record<string, TokenPrice>> = {
+  groq: {
+    "openai/gpt-oss-120b": { inputPerMillion: 0.15, outputPerMillion: 0.6 },
+    "openai/gpt-oss-20b": { inputPerMillion: 0.075, outputPerMillion: 0.3 },
+    "openai/gpt-oss-safeguard-20b": { inputPerMillion: 0.075, outputPerMillion: 0.3 },
+    "qwen/qwen3.8-27b": { inputPerMillion: 0.8, outputPerMillion: 4 },
+  },
+  anthropic: {},
+  ollama: {},
 };
 
 /**
@@ -26,13 +31,14 @@ const AUDIO_MODELS = new Set(["whisper-large-v3", "whisper-large-v3-turbo"]);
 
 /** Custo estimado em USD, ou `null` quando não é possível estimar. */
 export function estimateCostUsd(
+  provider: string,
   model: string,
   promptTokens: number,
   completionTokens: number
 ): number | null {
   if (AUDIO_MODELS.has(model)) return null;
 
-  const price = TOKEN_PRICES[model];
+  const price = TOKEN_PRICES[provider]?.[model];
   if (!price) return null;
 
   return (

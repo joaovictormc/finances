@@ -1,8 +1,8 @@
 import { db } from "@finances/db";
-import type Groq from "groq-sdk";
+import type { ToolDef } from "./chat";
 
 /**
- * Ferramentas de consulta financeira expostas aos modelos da Groq via tool
+ * Ferramentas de consulta financeira expostas aos modelos de IA via tool
  * calling. Vivem aqui, e não dentro de uma rota, porque têm dois consumidores:
  * a pergunta avulsa (`POST /api/ai/query`) e o assistente com histórico
  * (`POST /api/assistant/conversations/:id/messages`).
@@ -10,73 +10,52 @@ import type Groq from "groq-sdk";
  * Toda função filtra por `userId` — nenhuma ferramenta enxerga dado de outro
  * usuário, mesmo que o modelo peça.
  */
-export const TOOLS: Groq.Chat.Completions.ChatCompletionTool[] = [
+export const TOOLS: ToolDef[] = [
   {
-    type: "function",
-    function: {
-      name: "get_spending_by_category",
-      description: "Retorna o total gasto por categoria em um período de datas",
-      parameters: {
-        type: "object",
-        properties: {
-          startDate: { type: "string", description: "Data inicial, formato YYYY-MM-DD" },
-          endDate: { type: "string", description: "Data final, formato YYYY-MM-DD" },
-        },
-        required: ["startDate", "endDate"],
+    name: "get_spending_by_category",
+    description: "Retorna o total gasto por categoria em um período de datas",
+    parameters: {
+      type: "object",
+      properties: {
+        startDate: { type: "string", description: "Data inicial, formato YYYY-MM-DD" },
+        endDate: { type: "string", description: "Data final, formato YYYY-MM-DD" },
       },
+      required: ["startDate", "endDate"],
     },
   },
   {
-    type: "function",
-    function: {
-      name: "get_account_balance",
-      description: "Retorna o saldo (receitas - despesas) de cada conta financeira do usuário",
-      parameters: { type: "object", properties: {} },
-    },
+    name: "get_account_balance",
+    description: "Retorna o saldo (receitas - despesas) de cada conta financeira do usuário",
+    parameters: { type: "object", properties: {} },
   },
   {
-    type: "function",
-    function: {
-      name: "get_budget_status",
-      description:
-        "Retorna a situação dos orçamentos do mês atual: limite, gasto até agora e percentual usado",
-      parameters: { type: "object", properties: {} },
-    },
+    name: "get_budget_status",
+    description:
+      "Retorna a situação dos orçamentos do mês atual: limite, gasto até agora e percentual usado",
+    parameters: { type: "object", properties: {} },
   },
   {
-    type: "function",
-    function: {
-      name: "get_monthly_summary",
-      description: "Retorna o total de receitas e despesas de um mês específico",
-      parameters: {
-        type: "object",
-        properties: {
-          year: { type: "number", description: "Ano, ex: 2026" },
-          month: { type: "number", description: "Mês de 1 a 12" },
-        },
-        required: ["year", "month"],
+    name: "get_monthly_summary",
+    description: "Retorna o total de receitas e despesas de um mês específico",
+    parameters: {
+      type: "object",
+      properties: {
+        year: { type: "number", description: "Ano, ex: 2026" },
+        month: { type: "number", description: "Mês de 1 a 12" },
       },
+      required: ["year", "month"],
     },
   },
   {
-    type: "function",
-    function: {
-      name: "get_upcoming_bills",
-      description:
-        "Retorna as contas recorrentes ativas (assinaturas, boletos) e sua próxima data de vencimento e valor esperado",
-      parameters: { type: "object", properties: {} },
-    },
+    name: "get_upcoming_bills",
+    description:
+      "Retorna as contas recorrentes ativas (assinaturas, boletos) e sua próxima data de vencimento e valor esperado",
+    parameters: { type: "object", properties: {} },
   },
 ];
 
-/**
- * Nomes válidos — usados para validar a seleção de ferramentas de um agente.
- * O `ChatCompletionTool` do SDK tipa `function` como opcional (é união com
- * outros tipos de tool), daí o filtro.
- */
-export const TOOL_NAMES = TOOLS.map((tool) => tool.function?.name).filter(
-  (name): name is string => Boolean(name)
-);
+/** Nomes válidos — usados para validar a seleção de ferramentas de um agente. */
+export const TOOL_NAMES = TOOLS.map((tool) => tool.name);
 
 /** Rótulos em PT-BR para a tela de configuração de agentes. */
 export const TOOL_LABELS: Record<string, string> = {
@@ -91,9 +70,9 @@ export const TOOL_LABELS: Record<string, string> = {
  * Recorta o conjunto de ferramentas para um agente. Lista vazia = todas, que é
  * o padrão de um agente recém-criado e do assistente sem agente selecionado.
  */
-export function selectTools(enabledTools: string[]): Groq.Chat.Completions.ChatCompletionTool[] {
+export function selectTools(enabledTools: string[]): ToolDef[] {
   if (enabledTools.length === 0) return TOOLS;
-  return TOOLS.filter((tool) => tool.function && enabledTools.includes(tool.function.name));
+  return TOOLS.filter((tool) => enabledTools.includes(tool.name));
 }
 
 async function getSpendingByCategory(userId: string, startDate: string, endDate: string) {

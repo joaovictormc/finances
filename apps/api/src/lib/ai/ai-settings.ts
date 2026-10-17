@@ -1,5 +1,6 @@
 import { db } from "@finances/db";
-import type { CompletionUsage } from "groq-sdk/resources/completions";
+import type { ChatUsage } from "./chat";
+import { isAiProviderId, type AiProviderId } from "./providers";
 
 const SINGLETON_ID = "singleton";
 
@@ -18,7 +19,27 @@ export async function getAiSettings() {
   });
 }
 
+/**
+ * Três funções, cada uma com provedor e modelo próprios: texto (insights,
+ * perguntas e sugestão de categoria), imagem (leitura de cupom) e assistente.
+ */
+export type AiSlot = "text" | "vision" | "assistant";
+
+type SettingsRow = Awaited<ReturnType<typeof getAiSettings>>;
+
+export function slotModel(settings: SettingsRow, slot: AiSlot): { provider: AiProviderId; model: string } {
+  const provider = settings[`${slot}Provider`];
+  return {
+    // Valor fora da lista (edição manual no banco) cai na Groq, que é o padrão.
+    provider: isAiProviderId(provider) ? provider : "groq",
+    model: settings[`${slot}Model`],
+  };
+}
+
 export async function updateAiSettings(data: {
+  textProvider?: AiProviderId;
+  visionProvider?: AiProviderId;
+  assistantProvider?: AiProviderId;
   textModel?: string;
   visionModel?: string;
   assistantModel?: string;
@@ -63,16 +84,18 @@ export async function isWithinUsageLimit(
 export async function logAiUsage(input: {
   userId?: string;
   feature: AiFeature;
+  provider: AiProviderId;
   model: string;
-  usage?: CompletionUsage | null;
+  usage?: ChatUsage | null;
 }) {
   await db.aiUsageLog.create({
     data: {
       userId: input.userId,
       feature: input.feature,
+      provider: input.provider,
       model: input.model,
-      promptTokens: input.usage?.prompt_tokens,
-      completionTokens: input.usage?.completion_tokens,
+      promptTokens: input.usage?.promptTokens,
+      completionTokens: input.usage?.completionTokens,
     },
   });
 }

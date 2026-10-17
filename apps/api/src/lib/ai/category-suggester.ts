@@ -1,5 +1,5 @@
-import { groq } from "./groq-client";
-import { getAiSettings, isWithinUsageLimit, logAiUsage } from "./ai-settings";
+import { chat } from "./chat";
+import { getAiSettings, isWithinUsageLimit, logAiUsage, slotModel } from "./ai-settings";
 import type { CategorySuggestion } from "@finances/validations";
 
 type SuggestableTransaction = {
@@ -46,8 +46,10 @@ export async function suggestCategories(
     }));
   }
 
-  const response = await groq.chat.completions.create({
-    model: settings.textModel,
+  const { provider, model } = slotModel(settings, "text");
+  const response = await chat({
+    provider,
+    model,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       {
@@ -63,17 +65,12 @@ export async function suggestCategories(
         }),
       },
     ],
-    response_format: { type: "json_object" },
+    json: true,
     temperature: 0.1,
   });
-  await logAiUsage({
-    userId,
-    feature: "category_suggestion",
-    model: settings.textModel,
-    usage: response.usage,
-  });
+  await logAiUsage({ userId, feature: "category_suggestion", provider, model, usage: response.usage });
 
-  const raw = response.choices[0]?.message?.content;
+  const raw = response.content;
   if (!raw) {
     return transactions.map((t) => ({
       transactionId: t.id,

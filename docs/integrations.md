@@ -51,31 +51,29 @@ Schema já preparado: `OpenFinanceConsent`, `OpenFinanceAccount`. Quando aprovad
 
 ---
 
-## Groq (NLP / IA)
+## IA: Groq, Claude e Ollama Cloud
 
-**Status:** Implementado — `apps/api/src/lib/ai/groq-client.ts`
+**Status:** Implementado — camada única em `apps/api/src/lib/ai/chat.ts`
 
-**Modelos usados (configuráveis em runtime via `AiSettings`, editável em `/admin/ai`):**
-- `openai/gpt-oss-120b` (default `textModel`) — assistente de IA, insights mensais, detecção de recorrências, forecast de orçamento, NL queries
-- `qwen/qwen3.8-27b` (default `visionModel`) — leitura de cupom fiscal/NF-e por foto (multimodal, aceita imagem + JSON mode)
+Três funções, cada uma com provedor e modelo escolhidos em `/admin/ai` (`AiSettings`):
 
-**⚠️ A Groq aposenta modelos com frequência.** Toda a família `llama-3.x` saiu do catálogo em 08/2026 e passou a responder `404` / `model_decommissioned` — o que derruba *todas* as features de IA de uma vez. Antes de acusar bug no código, confira os ids vigentes na conta:
+| Função | Campos | Usada por |
+|---|---|---|
+| Texto | `textProvider` / `textModel` | insight mensal, pergunta avulsa (`POST /api/ai/query`), sugestão de categoria |
+| Imagem | `visionProvider` / `visionModel` | leitura de cupom fiscal (precisa de modelo que aceite imagem) |
+| Assistente | `assistantProvider` / `assistantModel` | conversa com histórico e ferramentas (`/api/assistant`) |
 
-```bash
-curl -s https://api.groq.com/openai/v1/models -H "Authorization: Bearer $GROQ_API_KEY" | jq -r '.data[].id'
-```
+**Provedores** (`lib/ai/providers.ts`):
+- **Groq** e **Ollama Cloud** pelo endpoint compatível com OpenAI (`https://api.groq.com/openai/v1`, `https://ollama.com/v1`).
+- **Claude** pela Messages API da Anthropic (`https://api.anthropic.com/v1`). O adaptador converte system, ferramentas (`tool_use`/`tool_result`) e imagem (base64); o modo JSON vira instrução no system.
 
-Os três ids são editáveis em `/admin/ai` sem deploy.
+**Chaves** (`lib/ai/credentials.ts`): cadastradas em `/admin/ai`, validadas listando os modelos antes de gravar e guardadas criptografadas (`AiProviderCredential`, `APP_ENCRYPTION_KEY`). Sem chave no painel, vale a do `.env` (`GROQ_API_KEY`, `ANTHROPIC_API_KEY`, `OLLAMA_API_KEY`). A chave nunca volta para a tela, só o final mascarado.
 
-**Pontos de chamada:**
-1. `lib/ai/financial-insights.ts` — insight mensal (worker `ai-analysis`)
-2. `routes/ai.ts` (`POST /api/ai/query`) — NL query com tool calling
-3. `lib/ai/category-suggester.ts` — sugestão de categoria
-4. `lib/ai/receipt-parser.ts` — leitura de cupom fiscal (modelo de visão)
+**Modelos gratuitos primeiro:** nenhum provedor informa pela API se um modelo é gratuito. A classificação em `providers.ts` vem das páginas de preço: Groq libera todos no plano Free (com limite), Claude é todo pago, e na Ollama só conta como gratuito o que estiver em `OLLAMA_FREE_MODELS` (a Ollama não publica a lista do plano Free).
 
-Cada chamada passa por `getAiSettings()` (kill-switch + modelo) e grava uso em `AiUsageLog` via `logAiUsage()`. `monthlyTokenLimit` (opcional) corta o uso quando excedido (`isWithinUsageLimit()`).
+**⚠️ Provedores aposentam modelos.** A família `llama-3.x` saiu da Groq em 08/2026 e passou a responder `404` / `model_decommissioned`. Em `/admin/ai`, "Atualizar modelos" busca a lista vigente da chave.
 
-**Técnica:** `tool_use`/function calling com JSON schema estruturado para saída determinística. Prompt em PT-BR com contexto financeiro brasileiro, gírias, datas relativas ("ontem", "semana passada"), moeda BRL. Threshold de confiança: 0.7.
+**Custo:** `lib/ai/pricing.ts` tem preço por provedor e modelo (mantido à mão). Modelo sem preço aparece como "preço não cadastrado" e o total vira um piso. `AiUsageLog` grava provedor e modelo de cada chamada; `monthlyTokenLimit` corta o uso quando excedido.
 
 ---
 

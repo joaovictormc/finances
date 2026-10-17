@@ -1,15 +1,46 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { ExternalLink, RefreshCw } from "lucide-react";
 import { BackButton } from "@/components/ui/back-button";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast-provider";
 import { api } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
+
+type ProviderId = "groq" | "anthropic" | "ollama";
+
+type ModelInfo = { id: string; label: string; tier: "free" | "paid" };
+
+type ProviderStatus = {
+  id: ProviderId;
+  name: string;
+  keyUrl: string;
+  pricingNote: string;
+  /** De onde vem a chave em uso: painel, .env ou nenhuma. */
+  source: "admin" | "env" | null;
+  maskedKey: string | null;
+  verifiedAt: string | null;
+  lastError: string | null;
+  models: ModelInfo[];
+};
+
+type Slot = "text" | "vision" | "assistant";
+
+const SLOTS: { id: Slot; label: string; description: string }[] = [
+  { id: "text", label: "Texto", description: "Insights mensais, perguntas na Visão Geral e sugestão de categoria" },
+  { id: "vision", label: "Imagem", description: "Leitura de cupom fiscal por foto. Escolha um modelo que aceite imagem." },
+  { id: "assistant", label: "Assistente", description: "Conversa com histórico e consulta aos dados (usa ferramentas)" },
+];
 
 type AiSettings = {
+  textProvider: ProviderId;
+  visionProvider: ProviderId;
+  assistantProvider: ProviderId;
   textModel: string;
   visionModel: string;
   assistantModel: string;
@@ -68,6 +99,7 @@ const FEATURE_LABELS: Record<string, string> = {
 export default function AdminAiPage() {
   const { toast } = useToast();
   const [settings, setSettings] = useState<AiSettings | null>(null);
+  const [providers, setProviders] = useState<ProviderStatus[]>([]);
   const [usage, setUsage] = useState<AiUsage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -75,11 +107,13 @@ export default function AdminAiPage() {
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [s, u] = await Promise.all([
+      const [s, p, u] = await Promise.all([
         api.get<AiSettings>("/api/admin/ai/settings"),
+        api.get<ProviderStatus[]>("/api/admin/ai/providers"),
         api.get<AiUsage>("/api/admin/ai/usage"),
       ]);
       setSettings(s);
+      setProviders(p);
       setUsage(u);
     } catch {
       toast({ title: "Erro ao carregar configurações de IA", variant: "error" });
@@ -97,12 +131,15 @@ export default function AdminAiPage() {
       const updated = await api.patch<AiSettings>("/api/admin/ai/settings", settings);
       setSettings(updated);
       toast({ title: "Configurações salvas", variant: "success" });
-    } catch {
-      toast({ title: "Erro ao salvar configurações", variant: "error" });
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Erro ao salvar configurações", variant: "error" });
     } finally {
       setSaving(false);
     }
   }
+
+  const updateProvider = (status: ProviderStatus) =>
+    setProviders((list) => list.map((p) => (p.id === status.id ? status : p)));
 
   if (isLoading || !settings) {
     return (
@@ -117,28 +154,41 @@ export default function AdminAiPage() {
       <BackButton href="/admin" label="Administração" />
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Modelos de IA</h1>
-        <p className="text-muted-foreground text-sm mt-1">Configure o modelo Groq ativo e features de IA</p>
+        <p className="text-muted-foreground text-sm mt-1">Provedores, modelo de cada função e features de IA</p>
       </div>
 
       <div className="space-y-6">
         <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
-          <h2 className="text-base font-semibold mb-4">Modelos</h2>
+          <h2 className="text-base font-semibold mb-1">Provedores</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            A chave é validada antes de salvar e fica guardada criptografada. Sem chave no painel, vale a do .env.
+          </p>
           <div className="space-y-4">
-            <Input
-              label="Modelo de texto (Groq)"
-              value={settings.textModel}
-              onChange={(e) => setSettings({ ...settings, textModel: e.target.value })}
-            />
-            <Input
-              label="Modelo de visão (Groq)"
-              value={settings.visionModel}
-              onChange={(e) => setSettings({ ...settings, visionModel: e.target.value })}
-            />
-            <Input
-              label="Modelo do assistente (Groq)"
-              value={settings.assistantModel}
-              onChange={(e) => setSettings({ ...settings, assistantModel: e.target.value })}
-            />
+            {providers.map((provider) => (
+              <ProviderCard key={provider.id} provider={provider} onChange={updateProvider} />
+            ))}
+          </div>
+        </section>
+
+        <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6">
+          <h2 className="text-base font-semibold mb-1">Modelo de cada função</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Só aparecem provedores com chave. Na lista, os modelos gratuitos vêm primeiro.
+          </p>
+          <div className="space-y-5">
+            {SLOTS.map((slot) => (
+              <SlotPicker
+                key={slot.id}
+                slot={slot}
+                providers={providers}
+                provider={settings[`${slot.id}Provider`]}
+                model={settings[`${slot.id}Model`]}
+                onChange={(provider, model) =>
+                  setSettings({ ...settings, [`${slot.id}Provider`]: provider, [`${slot.id}Model`]: model })
+                }
+                onRefreshed={updateProvider}
+              />
+            ))}
           </div>
         </section>
 
@@ -226,7 +276,7 @@ export default function AdminAiPage() {
             <h2 className="text-base font-semibold mb-1">Consumo de IA</h2>
             <p className="text-sm text-muted-foreground mb-5">
               Todas as features, todos os usuários. Custo estimado em dólar a partir da tabela de
-              preços da Groq.
+              preços cadastrada; modelo sem preço aparece como &quot;preço não cadastrado&quot;.
             </p>
 
             <div className="rounded-xl border border-border/60 p-5 mb-5">
@@ -293,6 +343,221 @@ export default function AdminAiPage() {
               {formatUsd(usage.allTime.costUsd)}
             </p>
           </section>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const PROVIDER_STATUS: Record<NonNullable<ProviderStatus["source"]>, string> = {
+  admin: "chave do painel",
+  env: "chave do .env",
+};
+
+function ProviderCard({ provider, onChange }: { provider: ProviderStatus; onChange: (s: ProviderStatus) => void }) {
+  const { toast } = useToast();
+  const [apiKey, setApiKey] = useState("");
+  const [busy, setBusy] = useState<"save" | "refresh" | "remove" | null>(null);
+
+  async function run(kind: "save" | "refresh" | "remove", action: () => Promise<ProviderStatus & { warning?: string }>, success: string) {
+    setBusy(kind);
+    try {
+      const status = await action();
+      onChange(status);
+      toast({ title: status.warning ?? success, variant: status.warning ? "error" : "success" });
+      if (kind === "save") setApiKey("");
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Não foi possível falar com o provedor", variant: "error" });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const free = provider.models.filter((m) => m.tier === "free").length;
+
+  return (
+    <div className="rounded-xl border border-border/60 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <p className="font-medium text-foreground">{provider.name}</p>
+          {provider.source ? (
+            <Badge variant={provider.lastError ? "warning" : "success"}>
+              {provider.lastError ? "Erro na última verificação" : "Conectado"}
+            </Badge>
+          ) : (
+            <Badge variant="default">Sem chave</Badge>
+          )}
+        </div>
+        <a
+          href={provider.keyUrl}
+          target="_blank"
+          rel="noopener"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+        >
+          Gerar chave <ExternalLink size={12} />
+        </a>
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">{provider.pricingNote}</p>
+      {provider.source && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          <span className="font-mono">{provider.maskedKey}</span> · {PROVIDER_STATUS[provider.source]}
+          {provider.models.length > 0 &&
+            ` · ${provider.models.length} modelos${free > 0 ? ` (${free} gratuitos)` : ""}`}
+        </p>
+      )}
+      {provider.lastError && <p className="mt-1 text-xs text-destructive">{provider.lastError}</p>}
+
+      <div className="mt-3 flex flex-wrap items-end gap-2">
+        <div className="min-w-[220px] flex-1">
+          <Input
+            type="password"
+            autoComplete="off"
+            label={provider.source ? "Trocar chave" : "Chave de API"}
+            placeholder="Cole a chave aqui"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+          />
+        </div>
+        <Button
+          type="button"
+          className="h-10"
+          disabled={apiKey.trim().length < 8}
+          loading={busy === "save"}
+          onClick={() =>
+            void run("save", () => api.patch(`/api/admin/ai/providers/${provider.id}`, { apiKey: apiKey.trim() }), "Chave validada e salva")
+          }
+        >
+          Validar e salvar
+        </Button>
+        {provider.source && (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10"
+            loading={busy === "refresh"}
+            onClick={() => void run("refresh", () => api.post(`/api/admin/ai/providers/${provider.id}/refresh`, {}), "Modelos atualizados")}
+          >
+            <RefreshCw size={14} /> Atualizar modelos
+          </Button>
+        )}
+        {provider.source === "admin" && (
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-10"
+            loading={busy === "remove"}
+            onClick={() => void run("remove", () => api.delete(`/api/admin/ai/providers/${provider.id}`), "Chave do painel removida")}
+          >
+            Remover chave
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const selectClass =
+  "h-10 w-full rounded-md border border-border bg-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50";
+
+function SlotPicker({
+  slot,
+  providers,
+  provider,
+  model,
+  onChange,
+  onRefreshed,
+}: {
+  slot: (typeof SLOTS)[number];
+  providers: ProviderStatus[];
+  provider: ProviderId;
+  model: string;
+  onChange: (provider: ProviderId, model: string) => void;
+  onRefreshed: (status: ProviderStatus) => void;
+}) {
+  const { toast } = useToast();
+  const [refreshing, setRefreshing] = useState(false);
+  const available = providers.filter((p) => p.source || p.id === provider);
+  const current = providers.find((p) => p.id === provider);
+  const models = current?.models ?? [];
+  const free = models.filter((m) => m.tier === "free");
+  const paid = models.filter((m) => m.tier === "paid");
+  const known = models.some((m) => m.id === model);
+
+  async function refresh() {
+    setRefreshing(true);
+    try {
+      onRefreshed(await api.post<ProviderStatus>(`/api/admin/ai/providers/${provider}/refresh`, {}));
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Não foi possível buscar os modelos", variant: "error" });
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  return (
+    <div className="border-b border-border/40 pb-5 last:border-0 last:pb-0">
+      <p className="text-sm font-medium text-foreground">{slot.label}</p>
+      <p className="mb-2 text-xs text-muted-foreground">{slot.description}</p>
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+        <select
+          aria-label={`Provedor — ${slot.label}`}
+          className={selectClass}
+          value={provider}
+          onChange={(e) => {
+            const next = providers.find((p) => p.id === e.target.value);
+            if (!next) return;
+            // Troca de provedor: começa no primeiro modelo da lista (gratuito, se houver).
+            onChange(next.id, next.models[0]?.id ?? "");
+          }}
+        >
+          {available.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+              {!p.source ? " (sem chave)" : ""}
+            </option>
+          ))}
+        </select>
+        {models.length > 0 ? (
+          <select
+            aria-label={`Modelo — ${slot.label}`}
+            className={selectClass}
+            value={model}
+            onChange={(e) => onChange(provider, e.target.value)}
+          >
+            {!known && model && <option value={model}>{model} (atual, fora da lista)</option>}
+            {free.length > 0 && (
+              <optgroup label="Gratuitos">
+                {free.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {paid.length > 0 && (
+              <optgroup label="Pagos">
+                {paid.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+        ) : (
+          <div className={cn("flex items-center justify-between gap-2 rounded-md border border-dashed border-border px-3 text-xs text-muted-foreground", "h-10")}>
+            <span className="truncate">{model || "Sem modelos carregados"}</span>
+            {current?.source && (
+              <button
+                type="button"
+                onClick={() => void refresh()}
+                disabled={refreshing}
+                className="inline-flex shrink-0 items-center gap-1 font-medium text-foreground hover:underline disabled:opacity-50"
+              >
+                <RefreshCw size={12} className={refreshing ? "animate-spin" : undefined} /> Buscar modelos
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>

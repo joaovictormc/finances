@@ -2,9 +2,8 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { db } from "@finances/db";
-import type Groq from "groq-sdk";
-import { groq } from "../lib/ai/groq-client";
-import { getAiSettings, isWithinUsageLimit, logAiUsage } from "../lib/ai/ai-settings";
+import { chat, type ChatMessage } from "../lib/ai/chat";
+import { getAiSettings, isWithinUsageLimit, logAiUsage, slotModel } from "../lib/ai/ai-settings";
 import { TOOLS, executeTool, buildDateContext } from "../lib/ai/finance-tools";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { isAiInsightsAllowed } from "../lib/plan-limits";
@@ -35,7 +34,7 @@ app.patch("/insights/:id/dismiss", async (c) => {
   return c.json({ success: true });
 });
 
-// ── Consultas em linguagem natural via tool-calling (Groq) ───────────────────
+// ── Consultas em linguagem natural via tool-calling ─────────────────────────
 //
 // Pergunta avulsa, sem histórico — usada pela caixa de perguntas da Visão Geral.
 // As ferramentas de consulta vivem em `lib/ai/finance-tools.ts`, compartilhadas
@@ -59,7 +58,7 @@ app.post("/query", zValidator("json", QuerySchema), async (c) => {
       403
     );
   }
-  // Cada pergunta vira uma ou mais chamadas à Groq (o laço de ferramentas roda
+  // Cada pergunta vira uma ou mais chamadas à IA (o laço de ferramentas roda
   // até 4 rodadas), então o custo não é limitado pelo tamanho do pedido.
   if (!(await checkRateLimit({ key: "ai-query", userId, max: 20, windowSeconds: 15 * 60 }))) {
     return c.json({ error: "Muitas consultas seguidas. Tente novamente em alguns minutos." }, 429);
@@ -75,39 +74,31 @@ app.post("/query", zValidator("json", QuerySchema), async (c) => {
 
   const { question } = c.req.valid("json");
 
-  const messages: Groq.Chat.Completions.ChatCompletionMessageParam[] = [
+  const messages: ChatMessage[] = [
     { role: "system", content: buildQuerySystemPrompt() },
     { role: "user", content: question },
   ];
+  const { provider, model } = slotModel(settings, "text");
 
   for (let i = 0; i < 4; i++) {
-    const response = await groq.chat.completions.create({
-      model: settings.textModel,
-      messages,
-      tools: TOOLS,
-      tool_choice: "auto",
-      temperature: 0.2,
-    });
-    await logAiUsage({ userId, feature: "nl_query", model: settings.textModel, usage: response.usage });
+    const response = await chat({ provider, model, messages, tools: TOOLS, temperature: 0.2 });
+    await logAiUsage({ userId, feature: "nl_query", provider, model, usage: response.usage });
 
-    const message = response.choices[0]?.message;
-    if (!message) break;
-
-    if (!message.tool_calls || message.tool_calls.length === 0) {
-      return c.json({ answer: message.content ?? "Não consegui gerar uma resposta." });
+    if (response.toolCalls.length === 0) {
+      return c.json({ answer: response.content ?? "Não consegui gerar uma resposta." });
     }
 
-    messages.push({ role: "assistant", content: message.content, tool_calls: message.tool_calls });
+    messages.push({ role: "assistant", content: response.content, toolCalls: response.toolCalls });
 
-    for (const call of message.tool_calls) {
+    for (const call of response.toolCalls) {
       let args: Record<string, unknown> = {};
       try {
-        args = JSON.parse(call.function.arguments);
+        args = JSON.parse(call.arguments);
       } catch {
         // mantém args vazio se o modelo enviar argumentos inválidos
       }
-      const result = await executeTool(userId, call.function.name, args);
-      messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
+      const result = await executeTool(userId, call.name, args);
+      messages.push({ role: "tool", toolCallId: call.id, content: JSON.stringify(result) });
     }
   }
 

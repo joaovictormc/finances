@@ -5,6 +5,14 @@ import { db, EncryptionKeyMissingError } from "@finances/db";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { requireAdmin } from "../middleware/admin";
 import { getAiSettings, updateAiSettings } from "../lib/ai/ai-settings";
+import { AI_PROVIDER_IDS, AiProviderError, isAiProviderId } from "../lib/ai/providers";
+import {
+  getProviderApiKey,
+  listProviderStatuses,
+  refreshProviderModels,
+  removeProviderKey,
+  saveProviderKey,
+} from "../lib/ai/credentials";
 import { estimateCostUsd, costUnavailableReason } from "../lib/ai/pricing";
 import { getGamificationSettings, updateGamificationSettings } from "../lib/gamification-settings";
 import { simulateSpins, getGamificationStats } from "../lib/gamification";
@@ -320,6 +328,9 @@ app.get("/ai/settings", async (c) => {
 // chave desconhecida em silêncio, então o que faltar nesta lista simplesmente
 // não salva — sem erro visível na tela.
 const AiSettingsSchema = z.object({
+  textProvider: z.enum(AI_PROVIDER_IDS).optional(),
+  visionProvider: z.enum(AI_PROVIDER_IDS).optional(),
+  assistantProvider: z.enum(AI_PROVIDER_IDS).optional(),
   textModel: z.string().min(1).optional(),
   visionModel: z.string().min(1).optional(),
   assistantModel: z.string().min(1).optional(),
@@ -334,11 +345,67 @@ const AiSettingsSchema = z.object({
 
 app.patch("/ai/settings", zValidator("json", AiSettingsSchema), async (c) => {
   const data = c.req.valid("json");
+  // Função apontada para um provedor sem chave falharia em toda chamada.
+  for (const provider of new Set([data.textProvider, data.visionProvider, data.assistantProvider])) {
+    if (provider && !(await getProviderApiKey(provider))) {
+      return c.json({ error: `Cadastre a chave de API deste provedor (${provider}) antes de usá-lo.` }, 400);
+    }
+  }
   const settings = await updateAiSettings(data);
   return c.json(settings);
 });
 
+// ── Provedores de IA: chave, validação e modelos ─────────────────────────────
+
+app.get("/ai/providers", async (c) => c.json(await listProviderStatuses()));
+
+const ProviderKeySchema = z.object({ apiKey: z.string().trim().min(8).max(500) });
+
+/** Mensagem da falha do provedor para a tela (chave recusada, sem conexão...). */
+function providerFailure(error: unknown): string {
+  if (!(error instanceof AiProviderError)) return (error as Error).message;
+  if (error.status === 401 || error.status === 403) return "Chave recusada pelo provedor. Confira se copiou a chave inteira.";
+  if (error.status === 0) return error.message;
+  return `O provedor respondeu ${error.status}: ${error.message}`;
+}
+
+app.patch("/ai/providers/:id", zValidator("json", ProviderKeySchema), async (c) => {
+  const id = c.req.param("id");
+  if (!isAiProviderId(id)) return c.json({ error: "Provedor desconhecido" }, 404);
+  try {
+    // Valida listando os modelos antes de gravar: chave recusada não é salva.
+    return c.json(await saveProviderKey(id, c.req.valid("json").apiKey));
+  } catch (error) {
+    if (error instanceof EncryptionKeyMissingError) return c.json({ error: error.message }, 503);
+    return c.json({ error: providerFailure(error) }, 400);
+  }
+});
+
+app.post("/ai/providers/:id/refresh", async (c) => {
+  const id = c.req.param("id");
+  if (!isAiProviderId(id)) return c.json({ error: "Provedor desconhecido" }, 404);
+  try {
+    return c.json(await refreshProviderModels(id));
+  } catch (error) {
+    return c.json({ error: providerFailure(error) }, 400);
+  }
+});
+
+app.delete("/ai/providers/:id", async (c) => {
+  const id = c.req.param("id");
+  if (!isAiProviderId(id)) return c.json({ error: "Provedor desconhecido" }, 404);
+  const settings = await getAiSettings();
+  const inUse = [settings.textProvider, settings.visionProvider, settings.assistantProvider].includes(id);
+  const status = await removeProviderKey(id);
+  // Sem chave no painel e sem reserva no .env, a função que usa este provedor para.
+  if (inUse && !status.source) {
+    return c.json({ ...status, warning: "Uma função de IA ainda usa este provedor e ficou sem chave." });
+  }
+  return c.json(status);
+});
+
 type UsageRow = {
+  provider: string;
   model: string;
   _count: number;
   _sum: { promptTokens: number | null; completionTokens: number | null };
@@ -357,7 +424,7 @@ function summarizeUsage(rows: UsageRow[]) {
     calls += row._count;
     tokens += promptTokens + completionTokens;
 
-    const cost = estimateCostUsd(row.model, promptTokens, completionTokens);
+    const cost = estimateCostUsd(row.provider, row.model, promptTokens, completionTokens);
     // `null` = modelo sem preço conhecido. Some zero, mas sinaliza — assim a
     // tela deixa claro que o total é um piso, não o valor fechado.
     if (cost === null) hasUnpricedUsage = true;
@@ -375,7 +442,7 @@ app.get("/ai/usage", async (c) => {
 
   const byModel = (gte?: Date) =>
     db.aiUsageLog.groupBy({
-      by: ["model"],
+      by: ["provider", "model"],
       where: gte ? { createdAt: { gte } } : undefined,
       _count: true,
       _sum: { promptTokens: true, completionTokens: true },
@@ -386,7 +453,7 @@ app.get("/ai/usage", async (c) => {
     // Agrupado por feature E modelo: dá pra montar os dois recortes da tela a
     // partir da mesma consulta, e o custo depende do modelo, não da feature.
     db.aiUsageLog.groupBy({
-      by: ["feature", "model"],
+      by: ["feature", "provider", "model"],
       where: { createdAt: { gte: startOfMonth } },
       _count: true,
       _sum: { promptTokens: true, completionTokens: true },
@@ -397,10 +464,12 @@ app.get("/ai/usage", async (c) => {
     byModel(),
   ]);
 
-  const foldBy = <K extends "feature" | "model">(key: K) => {
+  // Por modelo, o id junta provedor e modelo: o mesmo nome pode existir em
+  // dois provedores, com preços diferentes.
+  const foldBy = (key: "feature" | "model") => {
     const groups = new Map<string, UsageRow[]>();
     for (const row of monthDetail) {
-      const id = row[key];
+      const id = key === "feature" ? row.feature : `${row.provider} · ${row.model}`;
       const bucket = groups.get(id) ?? [];
       bucket.push(row);
       groups.set(id, bucket);
@@ -425,7 +494,7 @@ app.get("/ai/usage", async (c) => {
       byFeature: foldBy("feature"),
       byModel: foldBy("model").map((entry) => ({
         ...entry,
-        costNote: entry.hasUnpricedUsage ? costUnavailableReason(entry.id) : null,
+        costNote: entry.hasUnpricedUsage ? costUnavailableReason(entry.id.split(" · ")[1] ?? entry.id) : null,
       })),
     },
     windows: {

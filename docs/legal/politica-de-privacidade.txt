@@ -45,7 +45,7 @@ Não vendemos seus dados e não usamos seus dados financeiros para publicidade.
 
 ## Inteligência artificial
 
-Os recursos de IA usam modelos da Groq, Inc. (Estados Unidos). Enviamos só o necessário para cada recurso:
+Os recursos de IA usam modelos de um destes provedores, conforme a configuração do ControlAI: Groq, Inc., Anthropic, PBC (Claude) ou Ollama, todos nos Estados Unidos. Enviamos só o necessário para cada recurso:
 
 - Sugestão de categoria: descrição, valor e tipo da transação
 - Insights do mês: totais de receitas, despesas, taxa de economia e as maiores categorias, sem as transações uma a uma
@@ -58,7 +58,7 @@ Você pode desligar os insights com IA nas configurações. Os outros recursos d
 
 Só com os serviços que fazem o app funcionar, cada um limitado ao que precisa:
 
-- Groq (Estados Unidos): recursos de IA, como descrito acima
+- Groq, Anthropic e Ollama (Estados Unidos): recursos de IA, como descrito acima. [DEIXAR SÓ OS PROVEDORES ATIVOS NO PAINEL]
 - Brevo (França): envio dos e-mails. Recebe seu nome, e-mail e o conteúdo da mensagem
 - Mercado Pago (Brasil): cobrança da assinatura no cartão. Recebe seu e-mail e o valor; os dados do cartão você informa direto ao Mercado Pago
 - Expo, Apple e Google: entrega das notificações no celular, se você permitir
@@ -71,7 +71,7 @@ Em grupos (Família), os outros participantes veem as transações, orçamentos 
 
 ## Transferência para outros países
 
-Groq, Brevo, Expo e Google tratam dados fora do Brasil. Essas transferências seguem o art. 33 da LGPD, com base nas garantias contratuais desses serviços e na execução do contrato com você.
+Os provedores de IA, Brevo, Expo e Google tratam dados fora do Brasil. Essas transferências seguem o art. 33 da LGPD, com base nas garantias contratuais desses serviços e na execução do contrato com você.
 
 ## Cookies e armazenamento no aparelho
 

@@ -283,9 +283,13 @@ PATCH /api/admin/gamification/settings   { spinPrizes?: [{ label, type: "points"
                                          só atualiza o que vier; `days` até 365, `rewardDays` 1–60, `rewardPoints` 1–10.000
 PATCH /api/admin/plan-prices   { prices: [{ plan, interval, priceCents, active }] }   não altera quem já assina
 
-GET   /api/admin/ai/settings
-PATCH /api/admin/ai/settings   { textModel?, audioModel?, expenseParsingEnabled?, monthlyInsightsEnabled?, nlQueryEnabled?, monthlyTokenLimit? }
-GET   /api/admin/ai/usage      uso agregado por feature + contagens 1d/7d/30d + uso de tokens do mês
+GET    /api/admin/ai/settings
+PATCH  /api/admin/ai/settings   { textProvider?, visionProvider?, assistantProvider?: "groq"|"anthropic"|"ollama", textModel?, visionModel?, assistantModel?, *Enabled?, monthlyTokenLimit?, monthlyBudgetUsd? }   400 se o provedor não tiver chave
+GET    /api/admin/ai/usage      uso agregado por feature e por provedor · modelo + janelas 1d/7d/30d + uso do mês
+GET    /api/admin/ai/providers  → [{ id, name, keyUrl, pricingNote, source: "admin"|"env"|null, maskedKey, verifiedAt, lastError, models: [{ id, label, tier: "free"|"paid" }] }]
+PATCH  /api/admin/ai/providers/:id           { apiKey }   valida listando os modelos e só então grava (criptografada); 400 com o motivo se recusada
+POST   /api/admin/ai/providers/:id/refresh   busca de novo os modelos com a chave em uso
+DELETE /api/admin/ai/providers/:id           remove a chave do painel (a do .env volta a valer)
 ```
 
 ## Bots

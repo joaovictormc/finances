@@ -1,6 +1,6 @@
 import { db } from "@finances/db";
-import { groq } from "./groq-client";
-import { getAiSettings, isWithinUsageLimit, logAiUsage } from "./ai-settings";
+import { chat } from "./chat";
+import { getAiSettings, isWithinUsageLimit, logAiUsage, slotModel } from "./ai-settings";
 import { sendNotification } from "../notifications";
 
 const SYSTEM_PROMPT = `Você é um consultor financeiro pessoal que escreve resumos mensais curtos e diretos em português brasileiro.
@@ -72,18 +72,20 @@ export async function generateMonthlyInsight(userId: string) {
     topCategories,
   };
 
-  const response = await groq.chat.completions.create({
-    model: settings.textModel,
+  const { provider, model } = slotModel(settings, "text");
+  const response = await chat({
+    provider,
+    model,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: `Dados dos últimos 30 dias:\n${JSON.stringify(stats)}` },
     ],
-    response_format: { type: "json_object" },
+    json: true,
     temperature: 0.3,
   });
-  await logAiUsage({ userId, feature: "monthly_insight", model: settings.textModel, usage: response.usage });
+  await logAiUsage({ userId, feature: "monthly_insight", provider, model, usage: response.usage });
 
-  const raw = response.choices[0]?.message?.content;
+  const raw = response.content;
   if (!raw) return null;
 
   let parsed: { title?: string; body?: string; severity?: string };
