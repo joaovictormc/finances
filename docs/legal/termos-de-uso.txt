@@ -1,0 +1,81 @@
+Última atualização: [DATA DA PUBLICAÇÃO]
+
+Estes termos valem para o uso do ControlAI no site, no app web e no app para celular. Ao criar uma conta, você concorda com eles e com a Política de Privacidade.
+
+O ControlAI é oferecido por [RAZÃO SOCIAL OU NOME DO RESPONSÁVEL], [CNPJ OU CPF], [ENDEREÇO]. Contato: [E-MAIL DE CONTATO].
+
+## O que é o ControlAI
+
+Um app para organizar as finanças pessoais e da família: registrar receitas e despesas, importar extratos, montar orçamentos, acompanhar metas e contas a pagar, dividir gastos em grupo e tirar dúvidas com um assistente de IA.
+
+O ControlAI não é banco, não movimenta seu dinheiro e não se conecta à sua conta bancária. Os números do app são os que você registra ou importa.
+
+## Sua conta
+
+- Você precisa ter 18 anos ou mais. [CONFIRMAR A IDADE MÍNIMA]
+- Use dados verdadeiros e mantenha sua senha em segredo. O que for feito com sua conta é responsabilidade sua, salvo falha nossa
+- Uma conta é de uma pessoa. Para dividir com a família, use os grupos
+- Você pode excluir sua conta quando quiser, em Configurações
+
+## Planos e pagamento
+
+- Free: gratuito, com os limites mostrados na página de planos
+- Pro e Família: pagos, com cobrança mensal, semestral ou anual
+
+Os preços e o que cada plano inclui estão na página de planos e podem mudar. Mudança de preço não afeta o período que você já pagou; se valer para a renovação, avisamos antes.
+
+Formas de pagamento:
+
+- Cartão, pelo Mercado Pago: a cobrança se renova sozinha a cada período até você cancelar
+- Pix: pagamento de um período por vez, sem renovação automática. O plano é liberado quando o pagamento é confirmado, e avisamos antes de o período acabar. Renovando antes do vencimento, o novo período começa quando o atual termina
+
+Se uma cobrança no cartão falhar, avisamos e você tem alguns dias para resolver antes de o plano voltar para o Free.
+
+## Cancelamento e reembolso
+
+Você pode cancelar a assinatura a qualquer momento em Configurações → Planos. A renovação para, e o plano continua valendo até o fim do período já pago. Depois disso a conta volta para o Free, e seus dados continuam lá.
+
+Direito de arrependimento: se você assinou e se arrependeu, pode pedir o reembolso integral em até 7 dias da contratação (art. 49 do Código de Defesa do Consumidor). Escreva para [E-MAIL DE CONTATO].
+
+Fora desse prazo, não devolvemos valores proporcionais de um período já iniciado, salvo falha nossa que impeça o uso do app.
+
+## Cupons e indicações
+
+- Cupom de desconto: vale nas condições informadas nele (planos, prazo, quantidade). Cada pessoa usa um mesmo cupom uma vez. No cartão, o desconto vale em todas as renovações automáticas enquanto a assinatura durar; no Pix, vale só no pagamento em que o cupom foi usado. Toda cobrança é de no mínimo R$ 1,00
+- Indicação: quem indica ganha a recompensa da campanha válida no dia em que o indicado se cadastrou, depois que o indicado fizer o primeiro pagamento
+- Pontos e prêmios da gamificação não valem dinheiro e não podem ser trocados por dinheiro
+
+Podemos cancelar cupons, recompensas e prêmios obtidos por fraude, como contas falsas criadas para se autoindicar.
+
+## Inteligência artificial
+
+Sugestões de categoria, insights, previsões e respostas do assistente são geradas por IA e podem conter erros. Elas servem para ajudar você a se organizar e não são recomendação de investimento, consultoria financeira, contábil ou jurídica. Confira antes de tomar decisões.
+
+## Grupos
+
+Em um grupo, os participantes veem o que é lançado no grupo. O dono do grupo convida, remove participantes e pode excluir o grupo. Só convide pessoas de confiança.
+
+## Uso permitido
+
+Não é permitido:
+
+- Usar o ControlAI para atividades ilegais, inclusive lavagem de dinheiro
+- Tentar acessar contas ou dados de outras pessoas
+- Atacar, sobrecarregar ou tentar burlar a segurança e os limites do app
+- Copiar, revender ou explorar o app comercialmente sem autorização
+
+Se isso acontecer, podemos suspender ou encerrar a conta.
+
+## Disponibilidade e responsabilidade
+
+Trabalhamos para o app ficar no ar e seus dados seguros, mas podem acontecer interrupções para manutenção ou por falhas. Recomendamos exportar seus dados de vez em quando (Configurações → exportar dados).
+
+Não respondemos por decisões financeiras tomadas com base nos números do app, nem por dados registrados errado. Nada nestes termos afasta os direitos que o Código de Defesa do Consumidor garante a você.
+
+## Mudanças nos termos
+
+Se mudarmos algo importante, avisamos por e-mail ou dentro do app antes de a mudança valer. Continuar usando o app depois disso significa aceitar os novos termos; se não concordar, você pode cancelar e excluir a conta.
+
+## Lei e foro
+
+Estes termos seguem as leis do Brasil. Fica eleito o foro do seu domicílio para resolver qualquer disputa.

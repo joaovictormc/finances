@@ -7,16 +7,27 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "env": { "EXPO_PUBLIC_API_URL": "http://192.168.1.4:3011" }
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://192.168.1.4:3011",
+        "EXPO_PUBLIC_LANDING_URL": "http://192.168.1.4:3012"
+      }
     },
     "preview": {
       "distribution": "internal",
-      "android": { "buildType": "apk" },
-      "env": { "EXPO_PUBLIC_API_URL": "http://100.84.104.128:3011" }
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://100.84.104.128:3011",
+        "EXPO_PUBLIC_LANDING_URL": "http://100.84.104.128:3012"
+      }
     },
     "production": {
       "autoIncrement": true,
-      "env": { "EXPO_PUBLIC_API_URL": "https://api.SEUDOMINIO.com.br" }
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.SEUDOMINIO.com.br",
+        "EXPO_PUBLIC_LANDING_URL": "https://SEUDOMINIO.com.br"
+      }
     }
   }
 }

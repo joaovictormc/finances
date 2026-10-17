@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
 import { Link } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import { signUp } from "@/lib/auth-client";
 import { useTheme } from "@/lib/theme";
 import { PasswordInput } from "@/components/password-input";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
+import { PRIVACY_URL, TERMS_URL } from "@/lib/legal-links";
 import { PasswordPolicySchema } from "@finances/validations";
 
 export default function RegisterScreen() {
@@ -96,6 +98,18 @@ export default function RegisterScreen() {
           <Text className="font-medium text-primary-foreground dark:text-primary-foreground-dark">Criar conta</Text>
         )}
       </Pressable>
+
+      <Text className="mt-3 text-center text-xs text-muted-foreground dark:text-muted-foreground-dark">
+        Ao criar a conta, você concorda com os{" "}
+        <Text className="underline" onPress={() => void WebBrowser.openBrowserAsync(TERMS_URL)}>
+          Termos de Uso
+        </Text>{" "}
+        e a{" "}
+        <Text className="underline" onPress={() => void WebBrowser.openBrowserAsync(PRIVACY_URL)}>
+          Política de Privacidade
+        </Text>
+        .
+      </Text>
 
       <Link href="/(auth)/login" asChild>
         <Pressable className="mt-6">

@@ -1,0 +1,114 @@
+Última atualização: [DATA DA PUBLICAÇÃO]
+
+Esta política explica quais dados o ControlAI guarda, para que usamos, com quem compartilhamos e como você exerce seus direitos pela Lei Geral de Proteção de Dados (Lei 13.709/2018, LGPD). Vale para o site, o app web e o app para celular.
+
+## Quem cuida dos seus dados
+
+O controlador dos dados é [RAZÃO SOCIAL OU NOME DO RESPONSÁVEL], [CNPJ OU CPF], com endereço em [ENDEREÇO]. O encarregado pelo tratamento de dados (DPO) é [NOME DO ENCARREGADO], pelo e-mail [E-MAIL DE PRIVACIDADE].
+
+## Quais dados guardamos
+
+Dados da conta:
+
+- Nome, e-mail e senha (guardada só em formato criptografado, que nem nós conseguimos ler)
+- Foto e identificação da conta Google, se você entrar com o Google
+- Configurações da verificação em duas etapas, se você ativar
+- Preferências: moeda, fuso horário, avisos por e-mail e insights com IA
+
+Dados financeiros que você mesmo registra ou importa:
+
+- Contas, transações (valor, data, descrição, observações, forma de pagamento), categorias, orçamentos, metas e contas a pagar
+- Transações vindas de extratos OFX ou CSV. O arquivo é lido e descartado; guardamos só as transações que saem dele
+- Grupos (Família): nome do grupo, quem participa e o papel de cada um
+
+Dados de uso do app:
+
+- Sessões de acesso, com endereço IP e navegador ou aparelho usado, para manter você conectado e proteger a conta
+- Avisos enviados a você (lembretes de contas, metas, assinatura)
+- Identificador do aparelho para notificações no celular, se você permitir
+- Conversas com o assistente de IA e as instruções que você der a ele
+- Pontos, sequência de check-in e prêmios da gamificação
+- Assinatura: plano, período, forma de pagamento e situação. Não guardamos número de cartão
+
+Não pedimos CPF nem telefone, e não conectamos o app à sua conta bancária. Os dados financeiros são só os que você registra ou importa.
+
+## Para que usamos
+
+- Mostrar suas finanças, gerar relatórios, gráficos, previsões e alertas de orçamento (execução do contrato, art. 7º, V)
+- Sugerir categorias, gerar insights mensais e responder ao assistente de IA, quando você usa esses recursos (execução do contrato)
+- Enviar e-mails da conta: confirmação, troca de senha, lembretes de contas e avisos da assinatura (execução do contrato)
+- Cobrar a assinatura e aplicar cupons e recompensas de indicação (execução do contrato)
+- Manter a segurança da conta e evitar fraudes, com base nas sessões e no IP (legítimo interesse, art. 7º, IX)
+- Cumprir obrigações legais e fiscais ligadas aos pagamentos (art. 7º, II)
+
+Não vendemos seus dados e não usamos seus dados financeiros para publicidade.
+
+## Inteligência artificial
+
+Os recursos de IA usam modelos da Groq, Inc. (Estados Unidos). Enviamos só o necessário para cada recurso:
+
+- Sugestão de categoria: descrição, valor e tipo da transação
+- Insights do mês: totais de receitas, despesas, taxa de economia e as maiores categorias, sem as transações uma a uma
+- Assistente e perguntas em linguagem natural: sua mensagem e os resumos que o assistente consulta para responder (gastos por categoria, saldos, orçamentos, contas a vencer)
+- Leitura de nota fiscal: a foto que você enviar. A foto não fica guardada no ControlAI
+
+Você pode desligar os insights com IA nas configurações. Os outros recursos de IA só rodam quando você os usa.
+
+## Com quem compartilhamos
+
+Só com os serviços que fazem o app funcionar, cada um limitado ao que precisa:
+
+- Groq (Estados Unidos): recursos de IA, como descrito acima
+- Brevo (França): envio dos e-mails. Recebe seu nome, e-mail e o conteúdo da mensagem
+- Mercado Pago (Brasil): cobrança da assinatura no cartão. Recebe seu e-mail e o valor; os dados do cartão você informa direto ao Mercado Pago
+- Expo, Apple e Google: entrega das notificações no celular, se você permitir
+- Google: login com conta Google, só se você escolher essa opção
+- [PROVEDOR DE HOSPEDAGEM] ([PAÍS]): servidores onde o ControlAI roda
+
+Também podemos compartilhar dados quando a lei ou uma ordem judicial exigir.
+
+Em grupos (Família), os outros participantes veem as transações, orçamentos e metas que você lança no grupo. O que você lança fora do grupo continua só seu.
+
+## Transferência para outros países
+
+Groq, Brevo, Expo e Google tratam dados fora do Brasil. Essas transferências seguem o art. 33 da LGPD, com base nas garantias contratuais desses serviços e na execução do contrato com você.
+
+## Cookies e armazenamento no aparelho
+
+O app web usa só o cookie de sessão, que mantém você conectado. Ele não rastreia você em outros sites. O navegador guarda também preferências como tema claro ou escuro. O site de apresentação não usa cookies. Não usamos ferramentas de análise de tráfego nem de publicidade.
+
+No celular, a sessão fica guardada no armazenamento seguro do aparelho.
+
+## Por quanto tempo guardamos
+
+Enquanto sua conta existir. Quando você exclui a conta, apagamos na hora seus dados de conta, transações, contas, categorias, orçamentos, metas, contas a pagar, grupos de que participa, avisos, conversas com o assistente, gamificação e assinatura.
+
+Ficam guardados depois da exclusão, pelo prazo que a lei exige:
+
+- Registros de pagamento recebidos do Mercado Pago e usos de cupom (obrigações fiscais e de defesa em eventuais disputas)
+- Registros de consumo de IA, sem ligação com você (só contagem de uso)
+
+## Seus direitos
+
+Pela LGPD (art. 18), você pode:
+
+- Confirmar que tratamos seus dados e acessá-los
+- Corrigir dados incompletos ou errados
+- Baixar uma cópia dos seus dados, inclusive conversas com o assistente, gamificação e histórico de acessos: em Configurações, opção de exportar dados
+- Excluir sua conta e seus dados: em Configurações, opção de excluir conta. Se você for dono de um grupo, transfira ou exclua o grupo antes. Se tiver assinatura no cartão, ela é cancelada junto
+- Saber com quem compartilhamos seus dados (lista acima)
+- Revogar consentimentos e se opor a tratamentos baseados em legítimo interesse
+
+Para qualquer pedido que o app não resolva sozinho, escreva para [E-MAIL DE PRIVACIDADE]. Respondemos em até 15 dias. Você também pode reclamar à Autoridade Nacional de Proteção de Dados (ANPD).
+
+## Segurança
+
+Senhas são guardadas criptografadas, a conexão com o app é protegida (HTTPS) e você pode ativar a verificação em duas etapas. Nenhum sistema é totalmente imune a falhas; se acontecer um incidente que traga risco a você, avisamos você e a ANPD como a lei manda.
+
+## Menores de idade
+
+O ControlAI é para maiores de 18 anos. [CONFIRMAR A IDADE MÍNIMA]
+
+## Mudanças nesta política
+
+Se mudarmos algo importante, avisamos por e-mail ou dentro do app antes de a mudança valer. A data no topo mostra a última atualização.

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordStrengthMeter } from "@/components/ui/password-strength-meter";
 import { api } from "@/lib/api-client";
+import { PRIVACY_URL, TERMS_URL } from "@/lib/legal-links";
 import { PasswordPolicySchema } from "@finances/validations";
 
 function RegisterForm() {
@@ -104,6 +105,18 @@ function RegisterForm() {
         <Button type="submit" loading={loading} className="w-full">
           Criar conta
         </Button>
+
+        <p className="text-center text-xs text-muted-foreground">
+          Ao criar a conta, você concorda com os{" "}
+          <a href={TERMS_URL} target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-foreground">
+            Termos de Uso
+          </a>{" "}
+          e a{" "}
+          <a href={PRIVACY_URL} target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-foreground">
+            Política de Privacidade
+          </a>
+          .
+        </p>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted-foreground">

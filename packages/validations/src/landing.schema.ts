@@ -164,6 +164,13 @@ export const LandingSectionsSchema = z.array(LandingSectionSchema).max(30);
 /** Página "inicio" é a raiz do site (/); as demais ficam em /<slug>. */
 export const LANDING_HOME_SLUG = "inicio";
 
+/**
+ * Endereços fixos dos Termos e da Política de Privacidade na landing: o
+ * cadastro (web e app) aponta para eles. As páginas são criadas no editor do
+ * admin com exatamente estes endereços.
+ */
+export const LANDING_LEGAL_SLUGS = { terms: "termos-de-uso", privacy: "politica-de-privacidade" } as const;
+
 export const LandingSlugSchema = z
   .string()
   .trim()

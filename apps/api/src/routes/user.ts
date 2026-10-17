@@ -27,10 +27,10 @@ async function parallel<T extends Record<string, Promise<unknown>>>(
 }
 
 // Exporta todos os dados pessoais do usuário em JSON (LGPD, art. 18, IV/V).
-// Exclui deliberadamente sessões, contas OAuth/senha e segredos de 2FA — não
-// são "dados pessoais" que fazem sentido num export de portabilidade, e
-// incluí-los vazaria credenciais ativas. Tokens do Open Finance também saem
-// redigidos pelo mesmo motivo.
+// Credenciais ficam de fora: senha, contas OAuth, segredos de 2FA e os tokens
+// de sessão e de push (incluí-los vazaria acessos ativos). Das sessões e dos
+// aparelhos sai só o que é dado pessoal — IP, navegador, aparelho e datas.
+// Tokens do Open Finance também saem redigidos pelo mesmo motivo.
 app.get("/export", async (c) => {
   const userId = c.get("userId");
 
@@ -60,10 +60,46 @@ app.get("/export", async (c) => {
       orderBy: { generatedAt: "desc" },
       take: EXPORT_LIST_LIMIT,
     }),
+    assistantAgents: db.assistantAgent.findMany({ where: { userId } }),
+    assistantConversations: db.assistantConversation.findMany({
+      where: { userId },
+      orderBy: { lastMessageAt: "desc" },
+      take: EXPORT_LIST_LIMIT,
+      include: {
+        messages: {
+          orderBy: { createdAt: "asc" },
+          select: { role: true, content: true, toolCalls: true, createdAt: true },
+        },
+      },
+    }),
+    gamificationProfile: db.gamificationProfile.findUnique({ where: { userId } }),
+    gamificationSpins: db.gamificationSpinLog.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
     subscription: db.subscription.findUnique({ where: { userId } }),
+    couponRedemptions: db.couponRedemption.findMany({
+      where: { userId },
+      select: {
+        coupon: { select: { code: true } },
+        plan: true,
+        interval: true,
+        originalCents: true,
+        finalCents: true,
+        status: true,
+        createdAt: true,
+        confirmedAt: true,
+      },
+    }),
     referralCode: db.referralCode.findUnique({ where: { userId } }),
     referralsMade: db.referral.findMany({ where: { referrerId: userId } }),
     referredBy: db.referral.findUnique({ where: { referredId: userId } }),
+    sessions: db.session.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true, expiresAt: true, ipAddress: true, userAgent: true },
+    }),
+    pushDevices: db.pushToken.findMany({
+      where: { userId },
+      select: { platform: true, deviceName: true, createdAt: true, lastUsedAt: true },
+    }),
     groupMemberships: db.groupMember.findMany({
       where: { userId },
       include: { group: { select: { id: true, name: true } } },
