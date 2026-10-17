@@ -155,6 +155,8 @@ export type Subscription = {
   status: string;
   currentPeriodEnd: string | null;
   canceledAt: string | null;
+  interval?: BillingInterval | null;
+  paymentMethod?: "pix" | "card" | null;
   hasIntegrationsModule?: boolean;
   hasFamilyModule?: boolean;
 };

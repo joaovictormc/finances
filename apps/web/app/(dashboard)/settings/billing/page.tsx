@@ -52,11 +52,20 @@ interface Subscription {
   status: string;
   currentPeriodEnd: string | null;
   canceledAt: string | null;
+  interval: Interval | null;
+  paymentMethod: "pix" | "card" | null;
 }
 
 interface AvailablePaymentMethods {
   mercadopago: boolean;
   pix: boolean;
+}
+
+/** O cupom acompanha a recorrência do cartão; no Pix vale só no pagamento em que foi usado. */
+function couponNote(code: string, methods: AvailablePaymentMethods): string {
+  if (methods.mercadopago && methods.pix) return `Com o cupom ${code}: no cartão, em todas as cobranças; no Pix, neste pagamento`;
+  if (methods.pix) return `Com o cupom ${code}, neste pagamento`;
+  return `Com o cupom ${code}, em todas as cobranças`;
 }
 
 interface PixCheckout {
@@ -140,7 +149,10 @@ export default function BillingPage() {
       .then(([p, s, pm]) => {
         setPlans(p);
         const available = p.flatMap((plan) => plan.prices).map((price) => price.interval);
-        if (available.length > 0 && !available.includes("monthly")) {
+        // Quem paga por Pix volta aqui para renovar: abre no período que já paga.
+        if (s.paymentMethod === "pix" && s.interval && available.includes(s.interval)) {
+          setSelectedInterval(s.interval);
+        } else if (available.length > 0 && !available.includes("monthly")) {
           setSelectedInterval(available[0]!);
         }
         setSubscription(s);
@@ -220,7 +232,7 @@ export default function BillingPage() {
         interval: selectedInterval,
         couponCode: couponFor(plan),
       });
-      window.location.href = checkoutUrl;
+      window.location.assign(checkoutUrl);
     } catch {
       toast({ title: "Erro ao iniciar checkout", variant: "error" });
       setActionPlan(null);
@@ -378,15 +390,19 @@ export default function BillingPage() {
                   <>
                     {(() => {
                       const withCoupon = coupon?.byPlan[plan.id];
-                      if (withCoupon && "finalCents" in withCoupon) {
+                      const discounted =
+                        withCoupon && "finalCents" in withCoupon
+                          ? { finalCents: withCoupon.finalCents, note: couponNote(coupon!.code, paymentMethods) }
+                          : null;
+                      if (discounted) {
                         return (
                           <>
                             <p className="text-sm text-muted-foreground line-through">{formatBRL(price.priceCents / 100)}</p>
                             <p className="text-2xl font-bold">
-                              {formatBRL(withCoupon.finalCents / 100)}
+                              {formatBRL(discounted.finalCents / 100)}
                               <span className="text-sm font-normal text-muted-foreground">{PERIOD_SUFFIX[price.interval]}</span>
                             </p>
-                            <p className="mt-1 text-xs font-medium text-foreground">Com o cupom {coupon!.code}, em todas as cobranças</p>
+                            <p className="mt-1 text-xs font-medium text-foreground">{discounted.note}</p>
                           </>
                         );
                       }
@@ -429,14 +445,22 @@ export default function BillingPage() {
               </ul>
               {isCurrent ? (
                 plan.id !== "free" && subscription?.status === "active" ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCancel}
-                    loading={actionPlan === plan.id}
-                  >
-                    Cancelar assinatura
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    {/* Pix não renova sozinho: renovar antes do vencimento soma o período ao atual. */}
+                    {subscription.paymentMethod === "pix" && paymentMethods.pix && (
+                      <Button size="sm" onClick={() => handlePix(plan.id)} loading={actionPlan === plan.id} disabled={unavailable}>
+                        Renovar com Pix
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancel}
+                      loading={actionPlan === plan.id}
+                    >
+                      Cancelar assinatura
+                    </Button>
+                  </div>
                 ) : (
                   <Button variant="outline" size="sm" disabled>
                     Plano atual
@@ -529,7 +553,7 @@ export default function BillingPage() {
               Copiar código Pix
             </Button>
             <p className="text-xs text-muted-foreground">
-              Após o pagamento, nossa equipe confirma manualmente e seu plano é ativado em breve.
+              Após o pagamento, nossa equipe confirma manualmente e seu plano é ativado ou renovado em breve. Na renovação, o novo período começa quando o atual termina.
             </p>
           </div>
         )}

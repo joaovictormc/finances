@@ -49,11 +49,20 @@ app.get("/subscription", async (c) => {
   // faria a tela de cobrança contradizer o resto do app.
   const expired = subscription ? isSubscriptionExpired(subscription) : false;
 
+  // Pix não renova sozinho: a tela oferece "Renovar com Pix" no plano atual.
+  const paymentMethod = subscription?.mpPreapprovalId?.startsWith("pix:")
+    ? "pix"
+    : subscription?.mpPreapprovalId
+      ? "card"
+      : null;
+
   return c.json({
     plan: plan.id,
     status: expired ? "past_due" : (subscription?.status ?? "active"),
     currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
     canceledAt: subscription?.canceledAt ?? null,
+    interval: subscription?.interval ?? null,
+    paymentMethod,
     hasIntegrationsModule: planHasIntegrationsModule(plan),
     hasFamilyModule: planHasFamilyModule(plan),
   });
@@ -69,7 +78,13 @@ const CheckoutSchema = z.object({
 });
 
 type PricedCheckout =
-  | { ok: true; originalCents: number; finalCents: number; couponId: string | null; couponCode: string | null }
+  | {
+      ok: true;
+      originalCents: number;
+      finalCents: number;
+      couponId: string | null;
+      couponCode: string | null;
+    }
   | { ok: false; status: 400; error: string };
 
 /** Preço vigente com o cupom (se houver) já aplicado e validado. */

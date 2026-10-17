@@ -60,10 +60,14 @@ tratam compartilhamento como funcionalidade extra; aqui é a espinha dorsal.
   cartão. **Não existem** aviso por gasto lançado no grupo nem por saldo
   negativo — não anunciar.
 - Cancelar a assinatura para a cobrança e mantém o plano até o fim do período
-  já pago; o cancelamento feito pelo admin é imediato.
+  já pago; o cancelamento feito pelo admin é imediato. Excluir a conta cancela
+  a cobrança no cartão antes de apagar os dados.
+- Pix não renova sozinho: o plano atual tem "Renovar com Pix", e renovar antes
+  do vencimento soma o período novo ao fim do atual.
 - Promoções (Admin › Promoções): cupons de desconto que valem para a
-  assinatura inteira (cartão e Pix, mínimo R$ 1,00 por cobrança, um uso por
-  pessoa) e recompensa de indicação configurável — regra padrão e campanhas
+  assinatura (mínimo R$ 1,00 por cobrança, um uso por pessoa; no cartão o
+  desconto vale em todas as cobranças da recorrência, no Pix só no pagamento
+  em que foi usado) e recompensa de indicação configurável — regra padrão e campanhas
   com período; quem indica e já paga ganha dias no próprio plano, quem está no
   Free ganha dias de um plano, pontos ou nada, conforme a regra. Não há
   período de teste.

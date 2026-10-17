@@ -24,6 +24,13 @@ const PERIOD_SUFFIX: Record<BillingInterval, string> = {
   annual: "/ano",
 };
 
+/** O cupom acompanha a recorrência do cartão; no Pix vale só no pagamento em que foi usado. */
+function couponNote(code: string, methods: AvailablePaymentMethods): string {
+  if (methods.mercadopago && methods.pix) return `Com o cupom ${code}: no cartão, em todas as cobranças; no Pix, neste pagamento`;
+  if (methods.pix) return `Com o cupom ${code}, neste pagamento`;
+  return `Com o cupom ${code}, em todas as cobranças`;
+}
+
 const INTERVAL_ORDER: BillingInterval[] = ["monthly", "semiannual", "annual"];
 
 /** Economia do período em relação a pagar o mensal N vezes. */
@@ -131,7 +138,10 @@ export default function BillingScreen() {
         setPlans(p);
         // Abrir no mensal quando o admin o desativou mostraria tudo indisponível.
         const available = p.flatMap((plan) => plan.prices).map((price) => price.interval);
-        if (available.length > 0 && !available.includes("monthly")) {
+        // Quem paga por Pix volta aqui para renovar: abre no período que já paga.
+        if (s.paymentMethod === "pix" && s.interval && available.includes(s.interval)) {
+          setSelectedInterval(s.interval);
+        } else if (available.length > 0 && !available.includes("monthly")) {
           setSelectedInterval(available[0]!);
         }
         setSubscription(s);
@@ -240,7 +250,7 @@ export default function BillingScreen() {
             <Text className="text-sm font-medium text-primary dark:text-primary-dark">Copiar código Pix</Text>
           </Pressable>
           <Text className="text-center text-xs text-muted-foreground dark:text-muted-foreground-dark">
-            Após o pagamento, nossa equipe confirma manualmente e seu plano é ativado em breve.
+            Após o pagamento, nossa equipe confirma manualmente e seu plano é ativado ou renovado em breve. Na renovação, o novo período começa quando o atual termina.
           </Text>
           <Pressable onPress={() => setPixCheckout(null)}>
             <Text className="text-xs text-muted-foreground dark:text-muted-foreground-dark">Fechar</Text>
@@ -336,7 +346,11 @@ export default function BillingScreen() {
                 <>
                   {(() => {
                     const withCoupon = coupon?.byPlan[plan.id];
-                    const hasDiscount = !!withCoupon && "finalCents" in withCoupon;
+                    const discounted =
+                      withCoupon && "finalCents" in withCoupon
+                        ? { finalCents: withCoupon.finalCents, note: couponNote(coupon!.code, paymentMethods) }
+                        : null;
+                    const hasDiscount = !!discounted;
                     return (
                       <>
                         {hasDiscount && (
@@ -345,14 +359,14 @@ export default function BillingScreen() {
                           </Text>
                         )}
                         <Text className="text-2xl font-bold text-foreground dark:text-foreground-dark">
-                          {formatBRL((hasDiscount ? (withCoupon as { finalCents: number }).finalCents : price.priceCents) / 100)}
+                          {formatBRL((discounted ? discounted.finalCents : price.priceCents) / 100)}
                           <Text className="text-sm font-normal text-muted-foreground dark:text-muted-foreground-dark">
                             {PERIOD_SUFFIX[price.interval]}
                           </Text>
                         </Text>
-                        {hasDiscount && (
+                        {discounted && (
                           <Text className="mt-1 text-xs font-medium text-foreground dark:text-foreground-dark">
-                            Com o cupom {coupon!.code}, em todas as cobranças
+                            {discounted.note}
                           </Text>
                         )}
                         {withCoupon && "error" in withCoupon && (
@@ -390,19 +404,33 @@ export default function BillingScreen() {
 
             {isCurrent ? (
               plan.id !== "free" && subscription?.status === "active" ? (
-                <Pressable
-                  onPress={handleCancel}
-                  disabled={actionPlan === plan.id}
-                  className="items-center rounded-md border border-destructive py-3 dark:border-destructive-dark"
-                >
-                  {actionPlan === plan.id ? (
-                    <ActivityIndicator color="#ef4444" />
-                  ) : (
+                <View className="gap-2">
+                  {/* Pix não renova sozinho: renovar antes do vencimento soma o período ao atual. */}
+                  {subscription.paymentMethod === "pix" && paymentMethods.pix && !unavailable && (
+                    <Pressable
+                      onPress={() => handlePix(plan.id)}
+                      disabled={actionPlan === plan.id}
+                      className="items-center rounded-md bg-primary py-3 dark:bg-primary-dark"
+                    >
+                      {actionPlan === plan.id ? (
+                        <ActivityIndicator color="#1C1C1E" />
+                      ) : (
+                        <Text className="text-sm font-medium text-primary-foreground dark:text-primary-foreground-dark">
+                          Renovar com Pix
+                        </Text>
+                      )}
+                    </Pressable>
+                  )}
+                  <Pressable
+                    onPress={handleCancel}
+                    disabled={actionPlan === plan.id}
+                    className="items-center rounded-md border border-destructive py-3 dark:border-destructive-dark"
+                  >
                     <Text className="text-sm font-medium text-destructive dark:text-destructive-dark">
                       Cancelar assinatura
                     </Text>
-                  )}
-                </Pressable>
+                  </Pressable>
+                </View>
               ) : (
                 <View className="items-center rounded-md border border-border py-3 dark:border-border-dark">
                   <Text className="text-sm font-medium text-muted-foreground dark:text-muted-foreground-dark">

@@ -41,6 +41,10 @@ export function couponRuleRejection(coupon: CouponRow, plan: string, now: Date):
 /**
  * Cupom pode ser usado por esta pessoa neste plano? Só usos confirmados contam
  * no limite e no "já usou" — um checkout abandonado não gasta o cupom.
+ *
+ * Um uso por pessoa. No cartão o desconto acompanha todas as cobranças da
+ * assinatura (o Mercado Pago repete o valor); no Pix, que é um pagamento por
+ * período, vale só no pagamento em que foi usado.
  */
 export async function checkCoupon(
   code: string,

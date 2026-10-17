@@ -222,7 +222,17 @@ app.post("/payment-events/:id/confirm-pix", async (c) => {
   // gerado antes dos períodos existirem não tem o campo, e era mensal.
   const interval =
     payload.interval && isBillingInterval(payload.interval) ? payload.interval : "monthly";
-  const currentPeriodEnd = addRecurrence(new Date(), intervalRecurrence(interval));
+  // Renovação antecipada (o lembrete pede para renovar 5 dias antes): o
+  // período novo começa onde o atual termina, sem perder os dias que faltam.
+  // Troca de plano começa hoje, porque o plano novo vale a partir de agora.
+  const now = new Date();
+  const renewsCurrent =
+    existing?.status === "active" &&
+    existing.plan === payload.plan &&
+    !!existing.currentPeriodEnd &&
+    existing.currentPeriodEnd.getTime() > now.getTime();
+  const periodStart = renewsCurrent ? existing.currentPeriodEnd! : now;
+  const currentPeriodEnd = addRecurrence(periodStart, intervalRecurrence(interval));
 
   const subscription = await db.subscription.upsert({
     where: { userId: payload.userId },

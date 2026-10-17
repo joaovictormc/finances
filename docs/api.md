@@ -156,9 +156,9 @@ GET  /api/referrals           → { total, rewardsGranted, referrals[] }
 ```
 GET  /api/billing/plans              → PlanDefinition[] (free/pro/familia); `priceCents` é o mensal (vitrine) e `prices[]` traz um item por período ativo com { interval, label, months, priceCents, monthlyEquivalentCents }
 GET  /api/billing/payment-methods    → { mercadopago: boolean, pix: boolean } (habilitados)
-GET  /api/billing/subscription       → { plan, status, currentPeriodEnd, canceledAt, hasIntegrationsModule, hasFamilyModule }
+GET  /api/billing/subscription       → { plan, status, currentPeriodEnd, canceledAt, interval, paymentMethod: "pix"|"card"|null, hasIntegrationsModule, hasFamilyModule }
 POST /api/billing/checkout           { plan: "pro"|"familia", interval?: "monthly"|"semiannual"|"annual", couponCode? } → { checkoutUrl } (Mercado Pago). `interval` default "monthly"; 400 se o período estiver desativado no admin ou o cupom não valer
-POST /api/billing/checkout-pix       { plan: "pro"|"familia", interval?, couponCode? } → { payload, txid, amount } (BR Code Pix)
+POST /api/billing/checkout-pix       { plan: "pro"|"familia", interval?, couponCode? } → { payload, txid, amount } (BR Code Pix). Cupom vale só neste pagamento (um uso por pessoa); renovar antes do vencimento soma o período novo ao fim do atual quando o admin confirma
 POST /api/billing/coupon/preview     { code, plan, interval? } → { code, description, percentOff, amountOffCents, originalCents, finalCents }   400 com o motivo se não valer
 POST /api/billing/cancel             → { success: true, accessUntil }   para a recorrência; o plano continua até `accessUntil` (fim do período pago)
 ```
