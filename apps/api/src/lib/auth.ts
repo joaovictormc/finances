@@ -5,6 +5,7 @@ import { twoFactor } from "better-auth/plugins/two-factor";
 import { APIError } from "better-auth/api";
 import { MIN_PASSWORD_LENGTH } from "@finances/validations";
 import { db } from "@finances/db";
+import { stopRecurringBilling } from "./account-deletion";
 
 // O handler de auth roda na API (porta 3001), então o baseURL precisa apontar para ela.
 const API_URL = process.env.BETTER_AUTH_URL ?? "http://localhost:3001";
@@ -45,6 +46,17 @@ const betterAuthResult = betterAuth({
           throw new APIError("BAD_REQUEST", {
             message:
               "Você é dono de um ou mais grupos compartilhados. Exclua ou transfira esses grupos antes de excluir sua conta.",
+          });
+        }
+        // Depois da checagem de grupos: não cancelar a assinatura de quem
+        // ainda não pode excluir a conta.
+        try {
+          await stopRecurringBilling(user.id);
+        } catch (err) {
+          console.error("[auth] falha ao cancelar a assinatura antes de excluir a conta:", err);
+          throw new APIError("BAD_REQUEST", {
+            message:
+              "Não conseguimos cancelar sua assinatura no Mercado Pago agora, e sem isso a cobrança continuaria. Tente de novo em alguns minutos.",
           });
         }
       },
