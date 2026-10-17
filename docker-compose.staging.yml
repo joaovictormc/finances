@@ -23,6 +23,8 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_LANDING_URL: ${NEXT_PUBLIC_LANDING_URL:-http://localhost:3012}
     env_file: .env.staging
     environment:
       API_INTERNAL_URL: http://api-staging:3001
