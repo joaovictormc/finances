@@ -370,6 +370,46 @@ No painel do EasyPanel:
 6. Atualizar `apps/mobile/eas.json` (perfil `preview`/`production`) com o
    mesmo domínio da API e gerar um novo build (Parte A).
 
+### C.6 — Landing page (`apps/landing`)
+
+Com a landing no ar, o domínio principal passa a ser dela e o app vai para
+um subdomínio:
+
+| Serviço | Domínio | Porta interna | Dockerfile |
+|---|---|---|---|
+| Landing | `seudominio.com.br` (e `www`) | `3002` | `apps/landing/Dockerfile` |
+| Web (app) | `app.seudominio.com.br` | `3000` | `apps/web/Dockerfile` |
+| API | `api.seudominio.com.br` | `3001` | `apps/api/Dockerfile` |
+
+1. DNS: `A @`, `A www`, `A app` e `A api` apontando para o IP da VPS.
+2. No EasyPanel, novo serviço "App" igual aos outros (branch `main`, contexto
+   `.`), Dockerfile `apps/landing/Dockerfile`, porta interna `3002`.
+3. **Build args** da landing (entram no JavaScript do navegador, então mudar
+   exige rebuild):
+   - `NEXT_PUBLIC_APP_URL=https://app.seudominio.com.br` (botões Criar conta/Entrar)
+   - `NEXT_PUBLIC_API_URL=https://api.seudominio.com.br` (preços atualizados no navegador)
+4. **Variáveis de ambiente da landing** (runtime):
+   - `API_INTERNAL_URL` = endereço interno da API no EasyPanel (como no item 5 do C.5)
+   - `LANDING_REVALIDATE_SECRET` = mesmo valor da API (`openssl rand -hex 32`)
+5. **Variáveis novas na API**:
+   - `LANDING_URL=https://seudominio.com.br` (CORS e aviso de publicação)
+   - `LANDING_REVALIDATE_SECRET` = o mesmo da landing
+   - `LANDING_PREVIEW_SECRET` (opcional; sem ele usa o `BETTER_AUTH_SECRET`)
+6. **Variável nova no web**: `NEXT_PUBLIC_LANDING_URL=https://seudominio.com.br`
+   (botões Pré-visualizar e Ver no site do editor).
+7. Mudar no web e na API o endereço do app para o subdomínio:
+   `NEXT_PUBLIC_APP_URL=https://app.seudominio.com.br`. O `BETTER_AUTH_URL`
+   continua sendo o da API.
+
+O build da imagem não alcança a API, então as páginas saem com o conteúdo de
+fábrica. Assim que o container sobe, `apps/landing/instrumentation.ts` pede a
+revalidação de todas as páginas (por isso o `LANDING_REVALIDATE_SECRET` é
+obrigatório na landing) e o primeiro visitante já recebe o conteúdo publicado
+no admin.
+
+Conferir: abrir o domínio, ver os preços carregados na seção de planos e, no
+admin, publicar uma alteração e confirmar que aparece no site sem esperar.
+
 ---
 
 ## Parte D — Alternativa self-hosted em LAN (ZimaOS ou servidor Linux)
@@ -528,6 +568,22 @@ Confirme que o Docker Compose instalado suporta `profiles` (Compose V2,
 `docker compose version` ≥ 2.x) — tanto ZimaOS quanto uma instalação padrão
 de Docker Engine em Ubuntu/Debian já atendem isso.
 
+### D.8 — Landing page
+
+O serviço `landing` (porta `3002`) usa o mesmo `.env.selfhosted`. Preencha as
+variáveis `LANDING_*` e `NEXT_PUBLIC_LANDING_URL` (ver
+`.env.selfhosted.example`). Diferente do `web`, a landing embute
+`NEXT_PUBLIC_APP_URL` e `NEXT_PUBLIC_API_URL` no build. Para o compose ler
+esses valores do `.env.selfhosted` na hora do build, passe `--env-file`:
+
+```bash
+docker compose --env-file .env.selfhosted -f docker-compose.selfhosted.yml up -d --build landing
+```
+
+Mudou uma dessas duas URLs? Rebuild da landing. As demais variáveis valem
+com `--force-recreate`. Homologação segue igual, com `--env-file .env.staging`
+e o serviço `landing-staging` na porta `3012`.
+
 ---
 
 ## Parte E — Alternativas gratuitas para testar antes de produção
@@ -565,6 +621,50 @@ aplicação builda e roda em produção antes de decidir sobre infra própria.
 6. **Parte A** (build mobile) — fica melhor por último, depois que a API de
    produção já estiver com domínio real, pra gerar o APK já apontando pro
    endereço definitivo.
+
+## Publicar uma versão com migrations novas
+
+A ordem importa: **banco primeiro, código depois.** O código novo consulta
+tabelas e colunas que só existem depois da migration; o código antigo convive
+bem com o banco já migrado, desde que as migrations só acrescentem (tabela,
+coluna com valor padrão, índice). Antes de rodar, confira:
+
+```bash
+# Nada de DROP/RENAME nas migrations pendentes
+grep -inE "drop|rename" packages/db/prisma/migrations/<pendentes>/migration.sql
+```
+
+1. **Homologação:** `migrate status` para ver o que falta e `migrate deploy`
+   para aplicar (comandos da B.2, com o `DATABASE_URL` de homologação). Subir
+   os containers de homologação e testar.
+2. **Produção:** os mesmos dois comandos com o `DATABASE_URL` de produção.
+   Faça um backup antes (`pg_dump -Fc`).
+3. Merge na `main`: o EasyPanel publica a API, o web e a landing.
+4. Variáveis e painéis externos novos da versão (lista abaixo).
+
+### Versão de outubro/2026 (assinatura, landing e promoções)
+
+Migrations novas, todas só acrescentam:
+
+| Migration | O que cria |
+|---|---|
+| `20261013120000_performance_indexes` | índices nos filtros mais usados |
+| `20261014120000_daily_checkin` | colunas do check-in diário (gamificação) |
+| `20261015120000_landing_pages` | páginas editáveis da landing |
+| `20261015180000_landing_menu` | menu editável da landing |
+| `20261016120000_promotions` | cupons, usos de cupom, regras de indicação |
+
+Fora do código:
+
+- **Mercado Pago:** em Suas integrações → Webhooks, deixar marcados os dois
+  eventos de assinatura: o da assinatura em si (`subscription_preapproval`) e
+  o da cobrança recorrente (`subscription_authorized_payment`, *Pagamentos de
+  assinatura*). Sem o segundo, as renovações mensais não chegam e quem
+  continua pagando perde o plano no primeiro vencimento
+  (`docs/integrations.md`).
+- **Landing:** novo serviço e variáveis da C.6.
+- **Brevo:** os lembretes de conta, Pix e meta usam o mesmo remetente dos
+  e-mails atuais. Nada novo a configurar.
 
 ## Verificação
 

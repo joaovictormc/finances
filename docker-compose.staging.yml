@@ -31,3 +31,21 @@ services:
     ports:
       - "3010:3000"
     restart: unless-stopped
+
+  # NEXT_PUBLIC_* entram no bundle no build: suba com
+  #   docker compose --env-file .env.staging -f docker-compose.staging.yml up -d --build
+  landing-staging:
+    build:
+      context: .
+      dockerfile: apps/landing/Dockerfile
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3010}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3011}
+    env_file: .env.staging
+    environment:
+      API_INTERNAL_URL: http://api-staging:3001
+    depends_on:
+      - api-staging
+    ports:
+      - "3012:3002"
+    restart: unless-stopped

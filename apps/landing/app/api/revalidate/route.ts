@@ -12,7 +12,12 @@ export async function POST(request: Request) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const body = (await request.json().catch(() => null)) as { paths?: unknown } | null;
+  const body = (await request.json().catch(() => null)) as { paths?: unknown; all?: unknown } | null;
+  // Todas as páginas de uma vez (servidor recém-iniciado, ver instrumentation.ts).
+  if (body?.all === true) {
+    revalidatePath("/", "layout");
+    return Response.json({ revalidated: "all" });
+  }
   const paths = Array.isArray(body?.paths) ? body.paths.filter((p): p is string => typeof p === "string" && p.startsWith("/")) : [];
   for (const path of paths) revalidatePath(path);
   return Response.json({ revalidated: paths });

@@ -60,6 +60,26 @@ services:
     restart: unless-stopped
     networks: [finances]
 
+  # Landing page. NEXT_PUBLIC_* entram no bundle no build: para os args abaixo
+  # lerem o .env.selfhosted, suba com --env-file (ver docs/deploy.md D.8):
+  #   docker compose --env-file .env.selfhosted -f docker-compose.selfhosted.yml up -d --build landing
+  landing:
+    build:
+      context: .
+      dockerfile: apps/landing/Dockerfile
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+    env_file: .env.selfhosted
+    environment:
+      API_INTERNAL_URL: http://api:3001
+    depends_on:
+      - api
+    ports:
+      - "${LANDING_PORT:-3002}:3002"
+    restart: unless-stopped
+    networks: [finances]
+
   # --- Fallback opcional, só sobe com --profile local-db ---
   postgres:
     image: timescale/timescaledb:latest-pg16
