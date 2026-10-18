@@ -1,5 +1,5 @@
 import { Worker, type Job } from "bullmq";
-import { redis } from "../../lib/redis";
+import { quietRedisErrors, redis } from "../../lib/redis";
 import { deliverEmail, type EmailJob } from "../../lib/email";
 
 // Consome a fila "email" (alimentada por sendEmail) e entrega via Brevo.
@@ -14,3 +14,5 @@ export const emailWorker = new Worker<EmailJob>(
 emailWorker.on("failed", (job, err) => {
   console.error(`[email] Job ${job?.id} (${job?.data.template}) falhou:`, err.message);
 });
+
+quietRedisErrors(emailWorker);

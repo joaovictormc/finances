@@ -1,6 +1,6 @@
 import { Worker, type Job } from "bullmq";
 import { db } from "@finances/db";
-import { redis } from "../../lib/redis";
+import { quietRedisErrors, redis } from "../../lib/redis";
 import { sendNotification } from "../../lib/notifications";
 import { isUniqueViolation } from "../../lib/prisma-errors";
 import { listPendingPixCheckouts, type PixCheckoutStage } from "../../lib/pix-checkout";
@@ -114,3 +114,5 @@ export const billingWorker = new Worker(
 billingWorker.on("failed", (job, err) => {
   console.error(`[billing] Job ${job?.id} (${job?.name}) falhou:`, err.message);
 });
+
+quietRedisErrors(billingWorker);

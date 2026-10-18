@@ -1,5 +1,5 @@
 import { Worker, type Job } from "bullmq";
-import { redis } from "../../lib/redis";
+import { quietRedisErrors, redis } from "../../lib/redis";
 import { db } from "@finances/db";
 import { fetchTransactions, type PluggyTransaction } from "../../lib/pluggy/client";
 import { billDetectorQueue } from "../queues";
@@ -75,3 +75,5 @@ export const openFinanceSyncWorker = new Worker<SyncJob>(
 openFinanceSyncWorker.on("failed", (job, err) => {
   console.error(`[open-finance-sync] Job ${job?.id} failed:`, err.message);
 });
+
+quietRedisErrors(openFinanceSyncWorker);

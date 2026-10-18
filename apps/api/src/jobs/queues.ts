@@ -1,5 +1,5 @@
 import { Queue } from "bullmq";
-import { redis } from "../lib/redis";
+import { quietRedisErrors, redis } from "../lib/redis";
 
 const connection = redis;
 
@@ -20,3 +20,5 @@ export const allQueues = [
   gamificationQueue,
   billingQueue,
 ];
+
+for (const queue of allQueues) quietRedisErrors(queue);

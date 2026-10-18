@@ -1,5 +1,5 @@
 import { Worker, type Job } from "bullmq";
-import { redis } from "../../lib/redis";
+import { quietRedisErrors, redis } from "../../lib/redis";
 import { db } from "@finances/db";
 import { detectRecurringBills } from "../../lib/ai/recurring-detector";
 import { billDetectorQueue } from "../queues";
@@ -36,3 +36,5 @@ export const billDetectorWorker = new Worker(
 billDetectorWorker.on("failed", (job, err) => {
   console.error(`[bill-detector] Job ${job?.id} (${job?.name}) falhou:`, err.message);
 });
+
+quietRedisErrors(billDetectorWorker);

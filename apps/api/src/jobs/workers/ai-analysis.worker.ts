@@ -1,5 +1,5 @@
 import { Worker, type Job } from "bullmq";
-import { redis } from "../../lib/redis";
+import { quietRedisErrors, redis } from "../../lib/redis";
 import { db } from "@finances/db";
 import { generateMonthlyInsight } from "../../lib/ai/financial-insights";
 import { checkBudgetForecasts } from "../../lib/ai/budget-forecast";
@@ -56,3 +56,5 @@ export const aiAnalysisWorker = new Worker(
 aiAnalysisWorker.on("failed", (job, err) => {
   console.error(`[ai-analysis] Job ${job?.id} (${job?.name}) falhou:`, err.message);
 });
+
+quietRedisErrors(aiAnalysisWorker);

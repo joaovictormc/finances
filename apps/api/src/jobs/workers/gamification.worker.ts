@@ -1,5 +1,5 @@
 import { Worker, type Job } from "bullmq";
-import { redis } from "../../lib/redis";
+import { quietRedisErrors, redis } from "../../lib/redis";
 import { db } from "@finances/db";
 import { generateWeeklyRecap } from "../../lib/gamification";
 import { gamificationQueue } from "../queues";
@@ -34,3 +34,5 @@ export const gamificationWorker = new Worker(
 gamificationWorker.on("failed", (job, err) => {
   console.error(`[gamification] Job ${job?.id} (${job?.name}) falhou:`, err.message);
 });
+
+quietRedisErrors(gamificationWorker);
