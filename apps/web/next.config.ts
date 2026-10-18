@@ -9,6 +9,11 @@ import type { NextConfig } from "next";
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL ?? "http://localhost:3001";
 
 const nextConfig: NextConfig = {
+  // Só vale no `next dev`: o Next 16 recusa (403) os arquivos de
+  // desenvolvimento pedidos de outro host que não localhost. Sem isto, abrir o
+  // web no celular pelo IP do Mac carrega a tela mas não o JavaScript, e nada
+  // responde (nem o botão Entrar). Rede de casa e Tailscale (100.x).
+  allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "100.*.*.*"],
   // desligado: o double-effect do Strict Mode em dev destrói o iframe do
   // widget Pluggy Connect (baseado em zoid) assim que ele é montado,
   // deixando o botão "Conectar Banco" sem efeito visível e sem erro no console
