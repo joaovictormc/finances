@@ -1,10 +1,67 @@
+# Homologação no servidor joaosrv (Ubuntu Server) — tudo num compose só:
+# Postgres e Redis próprios, migrations automáticas, API, web e landing.
+# Passo a passo em docs/deploy.md, Parte B.
+#
+# Subir (o --env-file é obrigatório: as senhas e as URLs embutidas no build
+# vêm do .env.staging):
+#   docker compose --env-file .env.staging -f docker-compose.staging.yml up -d --build
+#
+# Portas no servidor: web 3010 · API 3011 · landing 3012 · Postgres 5434 · Redis 6380
+# (escolhidas para não colidir com o postgres_server da 5433 nem com outros serviços).
+
+name: controlai-homolog
+
 services:
-  db-init-staging:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-controlai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env.staging}
+      POSTGRES_DB: ${POSTGRES_DB:-controlai_homolog}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Aberto na rede para o desenvolvimento local e ferramentas de banco
+    # (acesso pelo Tailscale). Protegido pela senha acima.
+    ports:
+      - "${HOMOLOG_DB_PORT:-5434}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?defina REDIS_PASSWORD no .env.staging}
+    # appendonly: as filas (e-mails, rotinas agendadas) sobrevivem a um restart.
+    command: ["sh", "-c", 'exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes']
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${HOMOLOG_REDIS_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD-SHELL", 'redis-cli -a "$$REDIS_PASSWORD" --no-auth-warning ping | grep -q PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # Roda uma vez a cada `up`: aplica as migrations pendentes e o seed das
+  # categorias padrão (os dois são idempotentes). A API só sobe depois dele.
+  migrate:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
     env_file: .env.staging
-    command: ["pnpm", "--filter", "@finances/db", "db:seed"]
+    environment: &db_urls
+      DATABASE_URL: postgresql://${POSTGRES_USER:-controlai}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-controlai_homolog}?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+    command: ["sh", "-c", "pnpm --filter @finances/db exec prisma migrate deploy && pnpm --filter @finances/db db:seed"]
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: "no"
 
   api-staging:
@@ -12,9 +69,12 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
     env_file: .env.staging
+    environment: *db_urls
     depends_on:
-      db-init-staging:
+      migrate:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     ports:
       - "3011:3001"
     restart: unless-stopped
@@ -24,6 +84,9 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
       args:
+        # O destino do proxy /api/* é fixado no build do Next: sem este arg a
+        # imagem apontaria para http://api:3001, que não existe neste compose.
+        API_INTERNAL_URL: http://api-staging:3001
         NEXT_PUBLIC_LANDING_URL: ${NEXT_PUBLIC_LANDING_URL:-http://localhost:3012}
     env_file: .env.staging
     environment:
@@ -34,8 +97,6 @@ services:
       - "3010:3000"
     restart: unless-stopped
 
-  # NEXT_PUBLIC_* entram no bundle no build: suba com
-  #   docker compose --env-file .env.staging -f docker-compose.staging.yml up -d --build
   landing-staging:
     build:
       context: .
@@ -51,3 +112,7 @@ services:
     ports:
       - "3012:3002"
     restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:

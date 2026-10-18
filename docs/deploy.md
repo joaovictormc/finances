@@ -2,16 +2,16 @@
 
 ## Contexto e decisões já tomadas
 
-Hoje (`docs/setup.md`) só existe o fluxo de desenvolvimento: tudo roda local
-(`pnpm dev`), conectando no PostgreSQL/Redis que já vivem no ZimaOS via
-Tailscale (`100.104.200.37`). Não existe nenhum ambiente publicado — nem
-homologação, nem produção — e o mobile só foi testado via Expo Go.
+O desenvolvimento roda local (`pnpm dev`), conectando no Postgres e no Redis
+da homologação pelo Tailscale. A homologação roda no servidor joaosrv
+(Parte B); a produção vai para uma VPS com domínio (Parte C e
+`docs/deploy-vps.html`).
 
 Decisões tomadas antes de escrever este plano:
 
-- **Homologação roda no ZimaOS local**, com banco de dados separado do de
-  produção. Acesso só pela rede Tailscale (não precisa de domínio público
-  nem certificado — é ambiente interno).
+- **Homologação roda no servidor joaosrv** (Ubuntu Server), em Docker
+  Compose, com Postgres e Redis próprios. Acesso só pela rede Tailscale (não
+  precisa de domínio público nem certificado — é ambiente interno).
 - **Produção roda numa VPS nova** (a provisionar) com **EasyPanel**, com
   **domínio próprio** (a registrar) apontando para ela.
 - O banco de dados de **produção continua no ZimaOS** (mesma máquina que já
@@ -27,13 +27,13 @@ Decisões tomadas antes de escrever este plano:
 
 | Ambiente | Código | Banco | Acesso |
 |---|---|---|---|
-| **Dev** (hoje) | Máquina local (`pnpm dev`) | Postgres/Redis no ZimaOS (Tailscale) | `localhost` |
-| **Homologação** | Containers Docker no ZimaOS | Postgres/Redis no ZimaOS (banco separado) | Só via Tailscale |
+| **Dev** | Máquina local (`pnpm dev`) | Postgres/Redis da homologação (Tailscale) | `localhost` |
+| **Homologação** | Docker Compose no joaosrv | Postgres/Redis no mesmo compose | Só via Tailscale (`100.84.104.128`) |
 | **Produção** | Containers Docker na VPS (EasyPanel) | Postgres/Redis no ZimaOS (banco de produção) | Domínio público (HTTPS) |
 
-Branch sugerida: `main` = produção, `staging` = homologação. Toda feature
-nova vai pra `staging` primeiro, é testada em homologação, e só depois vira
-PR/merge pra `main` (que dispara o deploy de produção no EasyPanel).
+Branches: `develop` = homologação, `main` = produção. Toda feature nova vai
+para a `develop`, é testada na homologação e só depois vai para a `main`
+(que dispara o deploy de produção no EasyPanel).
 
 ---
 
@@ -183,135 +183,224 @@ EXPO_PUBLIC_LANDING_URL="https://SEUDOMINIO.com.br" \
 
 ---
 
-## Parte B — Homologação no ZimaOS
+## Parte B — Homologação no servidor joaosrv (Ubuntu Server + Docker Compose)
 
-### B.1 — Banco de dados de homologação
+A homologação roda no servidor **joaosrv** (Ubuntu Server), num único
+`docker-compose.staging.yml` com tudo o que o sistema precisa: Postgres e
+Redis próprios, migrations automáticas, API, web e landing. Acesso pela rede
+Tailscale, pelo IP do servidor (`100.84.104.128`).
 
-Mais simples: um banco novo **no mesmo Postgres** que já roda no ZimaOS (não
-precisa de um segundo container Postgres).
+### B.1 — O que sobe
 
-```bash
-ssh usuario@100.104.200.37
-docker exec -it finances_postgres psql -U finances -c "CREATE DATABASE finances_staging;"
-```
+| Serviço | Imagem / Dockerfile | Porta no servidor | Para |
+|---|---|---|---|
+| `postgres` | `postgres:16-alpine` | `5434` | banco da homologação |
+| `redis` | `redis:7-alpine` | `6380` | filas, e-mails, rotinas e limites de uso |
+| `migrate` | `apps/api/Dockerfile` | — | roda uma vez por `up`: migrations + categorias padrão |
+| `api-staging` | `apps/api/Dockerfile` | `3011` | API e workers |
+| `web-staging` | `apps/web/Dockerfile` | `3010` | app web |
+| `landing-staging` | `apps/landing/Dockerfile` | `3012` | landing page |
 
-Redis: usar o mesmo container, mas outro índice lógico (Redis tem 16 bancos
-por padrão) — não precisa instalar nada novo, só trocar a URL:
+As portas foram escolhidas para não colidir com o que já roda no joaosrv: o
+container `postgres_server` (porta `5433`, que também guarda bancos de outros
+projetos: **não pare nem remova**) e eventuais Postgres/Redis na `5432`/`6379`.
+As portas `3011` e `3012` são as que o perfil `preview` do `apps/mobile/eas.json` usa.
 
-```
-# Produção/dev:    redis://100.104.200.37:6379
-# Homologação:      redis://100.104.200.37:6379/1
-```
+Os dados ficam em volumes do Docker (`controlai-homolog_postgres_data` e
+`controlai-homolog_redis_data`): sobrevivem a `down`, rebuild e reinício do
+servidor. Só `docker compose down -v` apaga.
 
-### B.2 — Rodar a migration no banco de homologação
-
-**Atualizado em 24/08/2026:** o projeto passou a versionar migrations em
-`packages/db/prisma/migrations/` (ver `docs/database.md`, "Padrão de
-migração usado neste projeto") depois de um schema drift real ter causado
-erros `P2022: column does not exist` em homolog (`docs/ajustes-pos-teste.md`).
-Use `prisma migrate deploy`, não `db push`, pra aplicar em qualquer ambiente
-com dado real — `deploy` só roda as migrations pendentes já versionadas,
-sem gerar SQL novo nem prompt interativo.
-
-O Prisma CLI **não** carrega o `.env` da raiz do monorepo automaticamente —
-só a API faz isso na mão (`process.loadEnvFile` em `apps/api/src/env.ts`).
-É preciso definir `DATABASE_URL` na sessão do shell antes do comando.
-
-No PowerShell (Windows, shell padrão deste projeto):
-
-```powershell
-$env:DATABASE_URL = "postgresql://finances:SENHA@100.104.200.37:5432/finances_staging?schema=public"
-pnpm --filter @finances/db exec prisma migrate deploy
-```
-
-No bash/zsh (ex.: rodando direto no ZimaOS via SSH):
+### B.2 — Preparar o servidor (uma vez)
 
 ```bash
-DATABASE_URL="postgresql://finances:SENHA@100.104.200.37:5432/finances_staging?schema=public" \
-  pnpm --filter @finances/db exec prisma migrate deploy
+ssh joaosrv@100.84.104.128
+
+# Docker Engine + plugin compose (pule se `docker compose version` já responde)
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER      # sair e entrar de novo no SSH para valer
+
+# Tailscale (pule se `tailscale ip -4` já responde)
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
+
+# Código
+git clone https://github.com/joaovictormc/finances.git ~/controlai
+cd ~/controlai && git checkout develop
 ```
 
-Se `migrate deploy` acusar drift (banco com schema fora do histórico de
-migrations — ex.: um ambiente que nunca rodou `migrate deploy` antes),
-rodar primeiro `prisma migrate diff` pra ver exatamente o que mudaria
-(sem aplicar nada) e só então decidir entre `migrate resolve --applied`
-(se o banco já tem o shape esperado) ou `db push` como correção pontual —
-nunca `db push` como fluxo padrão, só pra destravar um drift já existente.
+### B.3 — `.env.staging` (só no servidor, nunca commitado)
 
-### B.3 — `.env.staging` (fica só no ZimaOS, nunca commitado)
+Na raiz do repositório no joaosrv. Gere as senhas e segredos com
+`openssl rand -hex 24` (hexadecimal: entram em URLs de conexão sem precisar
+de escape) e `openssl rand -base64 32` onde indicado.
 
-Copiar `.env.example` pra `.env.staging` e ajustar:
+```bash
+# ── Banco e Redis do compose ─────────────────────────────────────────────────
+# O compose monta DATABASE_URL e REDIS_URL a partir destes valores: não
+# defina essas duas variáveis aqui.
+POSTGRES_USER="controlai"
+POSTGRES_PASSWORD="..."            # openssl rand -hex 24
+POSTGRES_DB="controlai_homolog"
+REDIS_PASSWORD="..."               # openssl rand -hex 24
 
-```
-DATABASE_URL="postgresql://finances:SENHA@100.104.200.37:5432/finances_staging?schema=public"
-REDIS_URL="redis://100.104.200.37:6379/1"
-BETTER_AUTH_URL="http://100.104.200.37:3011"      # porta dedicada pra API de staging
-NEXT_PUBLIC_API_URL="http://100.104.200.37:3011"
-NEXT_PUBLIC_APP_URL="http://100.104.200.37:3010"  # porta dedicada pro web de staging
+# ── Endereços (IP Tailscale do joaosrv, sem barra no final) ──────────────────
+BETTER_AUTH_URL="http://100.84.104.128:3011"
+NEXT_PUBLIC_API_URL="http://100.84.104.128:3011"
+NEXT_PUBLIC_APP_URL="http://100.84.104.128:3010"
+LANDING_URL="http://100.84.104.128:3012"
+NEXT_PUBLIC_LANDING_URL="http://100.84.104.128:3012"
+# Outras origens de onde o web é aberto (ex.: IP da LAN), separadas por vírgula
+LAN_ORIGINS="http://100.84.104.128:3010"
+
+# ── Segredos ─────────────────────────────────────────────────────────────────
+BETTER_AUTH_SECRET="..."           # openssl rand -base64 32
+APP_ENCRYPTION_KEY="..."           # openssl rand -base64 32 (ver nota abaixo)
+LANDING_REVALIDATE_SECRET="..."    # openssl rand -hex 32
+
+# ── Comportamento de homologação ─────────────────────────────────────────────
 AUTH_REQUIRE_EMAIL_VERIFICATION="false"
-ADMIN_BOOTSTRAP="true"                             # útil pra sempre ter uma conta de teste
-APP_ENCRYPTION_KEY="..."                           # openssl rand -base64 32
+ADMIN_BOOTSTRAP="true"             # mantém sempre uma conta admin de teste
+ADMIN_EMAIL="admin@controlai.local"
+ADMIN_PASSWORD="..."
+
+# ── Opcionais (também podem ser cadastrados em /admin) ──────────────────────
+BREVO_API_KEY=""
+EMAIL_FROM_ADDRESS=""
+GROQ_API_KEY=""
 ```
 
-> **`APP_ENCRYPTION_KEY` é obrigatória.** Os segredos de meio de pagamento
-> (access token e webhook secret do Mercado Pago) são gravados criptografados
-> em repouso — AES-256-GCM, `packages/db/src/crypto.ts`. Gere uma chave por
+> **`APP_ENCRYPTION_KEY` é obrigatória.** Os segredos de meio de pagamento e
+> as chaves de IA cadastradas no painel são gravados criptografados em
+> repouso — AES-256-GCM, `packages/db/src/crypto.ts`. Gere uma chave por
 > ambiente com `openssl rand -base64 32` e **nunca troque depois que houver
-> segredo salvo**: sem ela o valor no banco é irrecuperável, e
-> `/admin/payment-methods` recusa salvar com `503` em vez de cair pra texto
-> puro. Migrar de servidor mantendo os dados exige copiar esse valor junto.
->
-> Se o ambiente já tinha credencial gravada antes dessa mudança, converta uma
-> vez com `pnpm --filter @finances/api secrets:encrypt` (idempotente — salvar
-> o método de novo pela tela do admin tem o mesmo efeito).
+> segredo salvo**: sem ela o valor no banco é irrecuperável, e as telas do
+> admin recusam salvar com `503` em vez de cair para texto puro. Migrar de
+> servidor mantendo os dados exige copiar esse valor junto.
 
-Ideia das portas: produção/dev usam 3000/3001; homologação usa 3010/3011 —
-só uma convenção pra não colidir se algum dia rodar os dois ao mesmo tempo
-na mesma rede.
-
-### B.4 — `docker-compose.staging.yml` (na raiz do repo, ou direto no ZimaOS)
-
-```yaml
-services:
-  api-staging:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    env_file: .env.staging
-    ports:
-      - "3011:3001"
-    restart: unless-stopped
-
-  web-staging:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-    env_file: .env.staging
-    ports:
-      - "3010:3000"
-    restart: unless-stopped
-```
-
-(Os `Dockerfile`s referenciados aqui são os mesmos da Parte C — ver C.2.
-Não precisa duplicar nada, o mesmo Dockerfile serve pra homologação e
-produção; o que muda é só o `.env`.)
+### B.4 — Subir
 
 ```bash
-# No ZimaOS, dentro de uma cópia do repo (git clone/pull da branch `staging`)
-docker compose -f docker-compose.staging.yml up -d --build
+cd ~/controlai
+docker compose --env-file .env.staging -f docker-compose.staging.yml up -d --build
 ```
 
-Depois disso, homologação fica acessível em `http://100.104.200.37:3010`
-(web) e `:3011` (API) — só pra quem estiver na rede Tailscale.
+O `--env-file` é obrigatório: as senhas do Postgres e do Redis e os endereços
+que entram no build do web e da landing são lidos dele.
 
-### B.5 — Fluxo de trabalho
+O que acontece, em ordem: Postgres e Redis sobem e ficam saudáveis →
+`migrate` aplica as migrations pendentes e o seed das categorias → API sobe
+(e cria o admin, com `ADMIN_BOOTSTRAP`) → web e landing.
 
-1. Nova feature → branch a partir de `staging`.
-2. Merge na `staging` → `git pull` no ZimaOS → `docker compose -f
-   docker-compose.staging.yml up -d --build` → testar em
-   `100.104.200.37:3010`.
-3. Aprovado → PR de `staging` pra `main` → deploy de produção (Parte C)
-   acontece automaticamente via EasyPanel.
+Conferir:
+
+```bash
+docker compose -f docker-compose.staging.yml ps            # tudo "running"; migrate "exited (0)"
+docker compose -f docker-compose.staging.yml logs migrate  # migrations aplicadas
+curl http://100.84.104.128:3011/health                     # {"status":"ok",...}
+```
+
+Abrir `http://100.84.104.128:3010` (app) e `http://100.84.104.128:3012`
+(landing) com o Tailscale ligado.
+
+### B.5 — Migrations
+
+Automáticas: o serviço `migrate` roda `prisma migrate deploy` a cada `up`.
+Para rodar na mão (ex.: conferir antes de subir a versão nova):
+
+```bash
+docker compose --env-file .env.staging -f docker-compose.staging.yml run --rm migrate \
+  pnpm --filter @finances/db exec prisma migrate status
+```
+
+Use sempre `migrate deploy` (aplica só o que já está versionado em
+`packages/db/prisma/migrations/`), nunca `db push`. Se acusar drift (banco
+com schema fora do histórico), compare sem aplicar nada:
+
+```bash
+DATABASE_URL="postgresql://controlai:SENHA@100.84.104.128:5434/controlai_homolog?schema=public" \
+  pnpm --filter @finances/db exec prisma migrate diff \
+  --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma
+```
+
+> **Nunca passe o banco da homologação (nem o de produção) como
+> `--shadow-database-url`.** O Prisma apaga o banco de rascunho: foi assim que
+> a homologação perdeu os dados em 17/10/2026.
+
+### B.6 — Trazer os dados do banco antigo (opcional)
+
+Até aqui a homologação usava o banco `finance` dentro do container
+`postgres_server` (porta `5433`). Para levar os dados para o Postgres do
+compose (com o compose já no ar, no joaosrv):
+
+```bash
+cd ~/controlai
+set -a; . ./.env.staging; set +a
+
+# 1. Parar a API para nada gravar durante a cópia
+docker compose -f docker-compose.staging.yml stop api-staging
+
+# 2. Copiar (dados + histórico de migrations) do banco antigo para o novo
+docker exec postgres_server pg_dump -U postgres -Fc finance > /tmp/finance.dump
+docker compose -f docker-compose.staging.yml exec -T postgres \
+  pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner < /tmp/finance.dump
+
+# 3. Subir de novo (o migrate aplica o que faltar)
+docker compose --env-file .env.staging -f docker-compose.staging.yml up -d
+```
+
+Confira o usuário do `postgres_server` (`postgres` acima) antes de rodar. O
+`postgres_server` continua no ar servindo os outros projetos; o banco
+`finance` pode ser apagado depois que a homologação nova estiver validada.
+
+### B.7 — Desenvolvimento local apontando para a homologação
+
+No `.env` da raiz do seu Mac (com o Tailscale ligado):
+
+```
+DATABASE_URL="postgresql://controlai:POSTGRES_PASSWORD@100.84.104.128:5434/controlai_homolog?schema=public"
+REDIS_URL="redis://:REDIS_PASSWORD@100.84.104.128:6380"
+```
+
+Sem o Tailscale ligado, a API local não alcança nem o banco nem o Redis e
+todas as telas falham com erro 500.
+
+### B.8 — Backup do banco
+
+```bash
+mkdir -p ~/backups
+crontab -e
+# todo dia às 3h, guarda 14 dias
+0 3 * * * cd ~/controlai && docker compose -f docker-compose.staging.yml exec -T postgres pg_dump -U controlai -Fc controlai_homolog > ~/backups/homolog-$(date +\%F).dump && find ~/backups -name 'homolog-*.dump' -mtime +14 -delete
+```
+
+### B.9 — Fluxo de trabalho
+
+1. Feature nova → commit na `develop` (ou branch a partir dela) e push.
+2. No joaosrv: `git pull` e
+   `docker compose --env-file .env.staging -f docker-compose.staging.yml up -d --build`.
+3. Testar em `http://100.84.104.128:3010`.
+4. Aprovado → merge da `develop` na `main` → produção (Parte C) via EasyPanel.
+
+Comandos do dia a dia:
+
+```bash
+C="docker compose --env-file .env.staging -f docker-compose.staging.yml"
+$C logs -f api-staging      # acompanhar a API
+$C restart api-staging      # reiniciar só a API (variável nova no .env.staging)
+$C down                     # parar tudo (os dados ficam nos volumes)
+```
+
+### B.10 — Desligar a homologação antiga
+
+Se ainda estiver rodando o compose antigo (`docker-compose.selfhosted.yml`,
+containers `finances-*`), pare-o depois que a nova estiver no ar, para liberar
+memória e portas:
+
+```bash
+docker compose -f docker-compose.selfhosted.yml --profile local-db down
+```
+
+Sem `-v`, os volumes antigos ficam guardados caso precise de algo deles.
 
 ---
 
@@ -452,6 +541,11 @@ admin, publicar uma alteração e confirmar que aparece no site sem esperar.
 ---
 
 ## Parte D — Alternativa self-hosted em LAN (ZimaOS ou servidor Linux)
+
+> **Referência antiga.** A homologação atual é a da Parte B
+> (`docker-compose.staging.yml` no joaosrv, com Postgres e Redis próprios).
+> Esta parte descreve o `docker-compose.selfhosted.yml`, que aponta para um
+> Postgres/Redis externo; fica como alternativa.
 
 Caminho **paralelo** à Parte C (VPS + EasyPanel + domínio), pra quem quer só
 rodar API+Web em rede local, sem VPS nem domínio público. Usa um único
@@ -649,7 +743,7 @@ aplicação builda e roda em produção antes de decidir sobre infra própria.
 
 ## Ordem de execução recomendada
 
-1. **Parte B** (homologação no ZimaOS) — não depende de VPS/domínio, dá pra
+1. **Parte B** (homologação no joaosrv) — não depende de VPS/domínio, dá pra
    fazer já e validar o fluxo de deploy via Docker num ambiente de baixo
    risco.
 2. **Parte C.1-C.2** (VPS + EasyPanel + Tailscale) — provisionamento.
@@ -674,8 +768,8 @@ grep -inE "drop|rename" packages/db/prisma/migrations/<pendentes>/migration.sql
 ```
 
 1. **Homologação:** `migrate status` para ver o que falta e `migrate deploy`
-   para aplicar (comandos da B.2, com o `DATABASE_URL` de homologação). Subir
-   os containers de homologação e testar.
+   para aplicar (B.5: na homologação o serviço `migrate` faz isso a cada `up`).
+   Subir os containers de homologação e testar.
 2. **Produção:** os mesmos dois comandos com o `DATABASE_URL` de produção.
    Faça um backup antes (`pg_dump -Fc`).
 3. Merge na `main`: o EasyPanel publica a API, o web e a landing.
@@ -707,8 +801,8 @@ Fora do código:
 
 ## Verificação
 
-- Homologação: `curl http://100.104.200.37:3011/health` deve responder
-  `{"status":"ok"}`; abrir `100.104.200.37:3010` no navegador (com Tailscale
+- Homologação: `curl http://100.84.104.128:3011/health` deve responder
+  `{"status":"ok"}`; abrir `100.84.104.128:3010` no navegador (com Tailscale
   ativo) deve carregar a tela de login.
 - Produção: `curl https://api.seudominio.com.br/health` e abrir
   `https://seudominio.com.br` no navegador, confirmar certificado HTTPS
