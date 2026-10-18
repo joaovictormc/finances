@@ -39,9 +39,12 @@ export async function bootstrapAdmin(port: number) {
   }
 }
 
+// E-mail já verificado: a conta vem da configuração do servidor, não de um
+// cadastro. Com AUTH_REQUIRE_EMAIL_VERIFICATION="true" e o e-mail ainda não
+// configurado, o admin ficava sem conseguir entrar num banco novo.
 async function ensureAdminRole(email: string) {
   const { db } = await import("@finances/db");
-  await db.user.updateMany({ where: { email }, data: { role: "admin" } });
+  await db.user.updateMany({ where: { email }, data: { role: "admin", emailVerified: true } });
 }
 
 async function syncAdminPassword(email: string, password: string) {
