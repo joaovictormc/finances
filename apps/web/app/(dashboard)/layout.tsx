@@ -22,7 +22,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <DashboardSidebar />
 
                   {/* Main content */}
-                  <main className="flex-1 overflow-auto pb-20 lg:pb-0">
+                  {/* Espaço da barra inferior + a linha de gesto do iPhone. */}
+                  <main className="flex-1 overflow-auto pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
                     <div className="max-w-7xl mx-auto p-6">{children}</div>
                   </main>
 

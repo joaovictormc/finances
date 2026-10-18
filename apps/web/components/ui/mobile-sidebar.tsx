@@ -41,7 +41,9 @@ export function MobileSidebar() {
   return (
     <>
       {/* Mobile top bar */}
-      <header className="lg:hidden flex h-14 items-center justify-between px-4 border-b border-border bg-card">
+      {/* box-content: os 3.5rem continuam para o conteúdo; o padding do topo
+          é a faixa do relógio no iPhone (zero nos outros aparelhos). */}
+      <header className="lg:hidden box-content flex h-14 items-center justify-between px-4 pt-[env(safe-area-inset-top)] border-b border-border bg-card">
         <button
           onClick={() => setOpen(true)}
           className="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:bg-accent transition-colors"
@@ -72,6 +74,7 @@ export function MobileSidebar() {
       <div
         className={cn(
           "lg:hidden fixed left-0 top-0 bottom-0 z-50 w-64 bg-card border-r border-border flex flex-col",
+          "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
           "transition-transform duration-200",
           open ? "translate-x-0" : "-translate-x-full"
         )}

@@ -35,7 +35,21 @@ export const viewport = {
   // Grafite quase-preto da direção "Fechamento de Caixa" (ver DESIGN.md) —
   // substitui o indigo #6366f1 da identidade anterior.
   themeColor: "#1C1C1E",
+  // Ocupa a tela inteira do iPhone (atrás do relógio e da linha de gesto) e
+  // libera os env(safe-area-inset-*) que o layout usa para não ficar por baixo.
+  viewportFit: "cover",
 };
+
+const THEME_SCRIPT = `(function(){var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}})();`;
+
+// Service worker só em produção. Ele serve /_next/static/ do cache (cache-first),
+// o que é seguro com os nomes com hash do build, mas no `next dev` os arquivos
+// não têm hash: o navegador ficava com o JavaScript antigo e o React acusava
+// hydration mismatch. Em dev, remove o que tiver sido registrado antes.
+const SW_SCRIPT =
+  process.env.NODE_ENV === "production"
+    ? `if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js')})}`
+    : `if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){if(k.indexOf('finances-static')===0)caches.delete(k)})})}}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -47,11 +61,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}})();if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js')})}`,
+            __html: THEME_SCRIPT + SW_SCRIPT,
           }}
         />
       </head>
       <body className="min-h-full bg-background text-foreground">
+        {/* App instalado no iPhone (barra "black-translucent"): relógio e
+            bateria são sempre brancos e ficam por cima do app. Esta faixa
+            grafite garante o contraste nos dois temas. Fora do app instalado
+            a área segura do topo é zero e a faixa some. */}
+        <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-[100] h-[env(safe-area-inset-top)] bg-[#1C1C1E]" />
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

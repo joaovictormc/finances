@@ -29,6 +29,9 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Protege tudo exceto assets estáticos e o próprio /api (proxied à API externa)
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api).*)"],
+  // Protege tudo exceto assets estáticos e o próprio /api (proxied à API externa).
+  // Service worker, manifesto e ícones precisam abrir sem sessão: o iPhone lê
+  // manifesto e ícone ao "Adicionar à Tela de Início" ainda na tela de login,
+  // e o navegador recusa service worker servido atrás de redirecionamento.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api|sw\\.js|manifest\\.json|icons/).*)"],
 };

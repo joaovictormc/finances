@@ -475,7 +475,7 @@ export default function AdminLandingEditorPage() {
 
       {/* Barra de ações: sticky (não fixed) para ter a largura e o alinhamento
           da coluna do editor, com a sidebar aberta ou recolhida. */}
-      <div className="sticky bottom-[5.5rem] z-20 mt-8 rounded-2xl lg:bottom-4 border border-border bg-card shadow-[0_12px_32px_-12px_rgba(0,0,0,0.35)]">
+      <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 mt-8 rounded-2xl lg:bottom-4 border border-border bg-card shadow-[0_12px_32px_-12px_rgba(0,0,0,0.35)]">
         <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <span className="text-sm text-muted-foreground">
             {dirty ? "Alterações não salvas" : page.hasUnpublishedChanges ? "Rascunho salvo, não publicado" : "Tudo publicado"}
