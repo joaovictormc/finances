@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Alert, View, Text, TextInput, Pressable, ScrollView, ActivityIndicator } from "react-native";
+import { Alert, View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
+import { FormScrollView } from "@/components/form-scroll-view";
 import { router, useLocalSearchParams } from "expo-router";
 import { api } from "@/lib/api-client";
 import { DateField } from "@/components/date-field";
@@ -86,7 +87,7 @@ export default function EditGoalScreen() {
   }
 
   return (
-    <ScrollView
+    <FormScrollView
       className="flex-1 bg-background dark:bg-background-dark"
       contentContainerStyle={{ padding: 16 }}
     >
@@ -150,6 +151,6 @@ export default function EditGoalScreen() {
           <Text className="font-medium text-destructive dark:text-destructive-dark">Excluir meta</Text>
         )}
       </Pressable>
-    </ScrollView>
+    </FormScrollView>
   );
 }

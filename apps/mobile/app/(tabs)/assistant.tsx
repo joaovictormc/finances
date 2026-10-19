@@ -6,8 +6,6 @@ import {
   Pressable,
   ScrollView,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   Modal,
   Alert,
 } from "react-native";
@@ -15,6 +13,7 @@ import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api-client";
 import { Screen } from "@/components/screen";
+import { KeyboardAvoidingArea } from "@/components/form-scroll-view";
 import { formatDate } from "@/lib/format";
 import { useTheme } from "@/lib/theme";
 import type { Subscription } from "@/lib/types";
@@ -244,11 +243,9 @@ export default function AssistantScreen() {
         </View>
       )}
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={90}
-      >
+      {/* Medida real na tela, nos dois sistemas: com behavior indefinido no
+          Android (edge-to-edge) a caixa de mensagem ficava atrás do teclado. */}
+      <KeyboardAvoidingArea>
         <ScrollView
           ref={scrollRef}
           className="flex-1"
@@ -371,7 +368,7 @@ export default function AssistantScreen() {
             <Ionicons name="send" size={18} color="#1C1C1E" />
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingArea>
 
       <Modal
         visible={historyOpen}

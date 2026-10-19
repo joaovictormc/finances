@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Alert } from "react-native";
+import { View, Text, TextInput, Pressable, ActivityIndicator, Alert } from "react-native";
+import { FormScrollView } from "@/components/form-scroll-view";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
@@ -218,7 +219,7 @@ export default function NewTransactionScreen() {
     : BASE_PAYMENT_METHOD_TABS;
 
   return (
-    <ScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16 }}>
+    <FormScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16 }}>
       <Pressable
         onPress={handleScanReceipt}
         disabled={scanning}
@@ -393,6 +394,6 @@ export default function NewTransactionScreen() {
           <Text className="font-medium text-primary-foreground dark:text-primary-foreground-dark">Salvar</Text>
         )}
       </Pressable>
-    </ScrollView>
+    </FormScrollView>
   );
 }

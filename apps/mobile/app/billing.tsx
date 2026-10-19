@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Alert } from "react-native";
+import { View, Text, TextInput, Pressable, ActivityIndicator, Alert } from "react-native";
+import { FormScrollView } from "@/components/form-scroll-view";
 import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as WebBrowser from "expo-web-browser";
@@ -229,7 +230,7 @@ export default function BillingScreen() {
   }).filter((option): option is { interval: BillingInterval; label: string } => option !== null);
 
   return (
-    <ScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16, gap: 12 }}>
+    <FormScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16, gap: 12 }}>
       {pixCheckout && (
         <View className="mb-2 items-center gap-3 rounded-2xl border border-primary bg-card p-5 dark:border-primary-dark dark:bg-card-dark">
           <Text className="text-lg font-bold text-foreground dark:text-foreground-dark">
@@ -496,6 +497,6 @@ export default function BillingScreen() {
         </Text>
       )}
       {error && <Text className="text-center text-sm text-destructive dark:text-destructive-dark">{error}</Text>}
-    </ScrollView>
+    </FormScrollView>
   );
 }

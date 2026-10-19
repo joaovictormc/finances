@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, Switch, ScrollView, ActivityIndicator, Platform, Share } from "react-native";
+import { View, Text, TextInput, Pressable, Switch, ActivityIndicator, Platform, Share } from "react-native";
+import { FormScrollView } from "@/components/form-scroll-view";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import * as Sharing from "expo-sharing";
@@ -174,7 +175,7 @@ export default function SettingsScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16, gap: 16 }}>
+    <FormScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16, gap: 16 }}>
       <View className="rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
         <Text className="mb-4 text-base font-semibold text-foreground dark:text-foreground-dark">Perfil</Text>
 
@@ -386,7 +387,7 @@ export default function SettingsScreen() {
           <DeleteAccountSection />
         </View>
       </View>
-    </ScrollView>
+    </FormScrollView>
   );
 }
 

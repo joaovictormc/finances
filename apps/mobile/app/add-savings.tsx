@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
+import { FormScrollView } from "@/components/form-scroll-view";
 import { router, useLocalSearchParams } from "expo-router";
 import { api } from "@/lib/api-client";
 import { useTheme } from "@/lib/theme";
@@ -39,7 +40,7 @@ export default function AddSavingsScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16 }}>
+    <FormScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16 }}>
       <Text className="mb-4 text-sm text-muted-foreground dark:text-muted-foreground-dark">
         Poupado atualmente: {formatBRL(currentAmount)}
       </Text>
@@ -68,6 +69,6 @@ export default function AddSavingsScreen() {
           <Text className="font-medium text-primary-foreground dark:text-primary-foreground-dark">Adicionar</Text>
         )}
       </Pressable>
-    </ScrollView>
+    </FormScrollView>
   );
 }

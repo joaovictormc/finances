@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Alert } from "react-native";
+import { View, Text, TextInput, Pressable, ActivityIndicator, Alert } from "react-native";
+import { FormScrollView } from "@/components/form-scroll-view";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api-client";
 import { useTheme } from "@/lib/theme";
@@ -128,7 +129,7 @@ export default function AssistantAgentsScreen() {
   }
 
   return (
-    <ScrollView
+    <FormScrollView
       className="flex-1 bg-background dark:bg-background-dark"
       contentContainerStyle={{ padding: 16 }}
     >
@@ -329,6 +330,6 @@ export default function AssistantAgentsScreen() {
           )}
         </View>
       )}
-    </ScrollView>
+    </FormScrollView>
   );
 }

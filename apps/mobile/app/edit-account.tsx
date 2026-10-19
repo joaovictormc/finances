@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Alert, View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Switch } from "react-native";
+import { Alert, View, Text, TextInput, Pressable, ActivityIndicator, Switch } from "react-native";
+import { FormScrollView } from "@/components/form-scroll-view";
 import { router, useLocalSearchParams } from "expo-router";
 import { api } from "@/lib/api-client";
 import { useTheme } from "@/lib/theme";
@@ -96,7 +97,7 @@ export default function EditAccountScreen() {
   }
 
   return (
-    <ScrollView
+    <FormScrollView
       className="flex-1 bg-background dark:bg-background-dark"
       contentContainerStyle={{ padding: 16 }}
     >
@@ -190,6 +191,6 @@ export default function EditAccountScreen() {
           <Text className="font-medium text-destructive dark:text-destructive-dark">Excluir conta</Text>
         )}
       </Pressable>
-    </ScrollView>
+    </FormScrollView>
   );
 }

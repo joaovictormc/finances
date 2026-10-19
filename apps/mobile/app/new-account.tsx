@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Switch } from "react-native";
+import { View, Text, TextInput, Pressable, ActivityIndicator, Switch } from "react-native";
+import { FormScrollView } from "@/components/form-scroll-view";
 import { router } from "expo-router";
 import { api } from "@/lib/api-client";
 import { useTheme } from "@/lib/theme";
@@ -59,7 +60,7 @@ export default function NewAccountScreen() {
 
   if (step === "import" && createdAccount) {
     return (
-      <ScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16 }}>
+      <FormScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16 }}>
         <Text className="mb-1 text-lg font-semibold text-foreground dark:text-foreground-dark">
           Conta &quot;{createdAccount.name}&quot; criada!
         </Text>
@@ -72,12 +73,12 @@ export default function NewAccountScreen() {
         >
           <Text className="text-sm font-medium text-foreground dark:text-foreground-dark">Concluir</Text>
         </Pressable>
-      </ScrollView>
+      </FormScrollView>
     );
   }
 
   return (
-    <ScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16 }}>
+    <FormScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16 }}>
       <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Nome</Text>
       <TextInput
         className="mb-4 rounded-md border border-border bg-card px-3 py-3 text-foreground dark:border-border-dark dark:bg-card-dark dark:text-foreground-dark"
@@ -161,6 +162,6 @@ export default function NewAccountScreen() {
           <Text className="font-medium text-primary-foreground dark:text-primary-foreground-dark">Salvar</Text>
         )}
       </Pressable>
-    </ScrollView>
+    </FormScrollView>
   );
 }
