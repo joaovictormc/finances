@@ -224,8 +224,8 @@ curl -fsSL https://tailscale.com/install.sh | sh
 sudo tailscale up
 
 # Código
-git clone https://github.com/joaovictormc/finances.git ~/controlai
-cd ~/controlai && git checkout develop
+git clone https://github.com/joaovictormc/finances.git /home/joaosrv/finances
+cd /home/joaosrv/finances && git checkout develop
 ```
 
 ### B.3 — `.env.staging` (só no servidor, nunca commitado)
@@ -280,12 +280,20 @@ GROQ_API_KEY=""
 ### B.4 — Subir
 
 ```bash
-cd ~/controlai
+cd /home/joaosrv/finances
 docker compose --env-file .env.staging -f docker-compose.staging.yml up -d --build
 ```
 
-O `--env-file` é obrigatório: as senhas do Postgres e do Redis e os endereços
-que entram no build do web e da landing são lidos dele.
+O `--env-file` é obrigatório **em todo comando** (`up`, `ps`, `logs`, `exec`,
+`down`...), não só no `up`: o compose relê o arquivo inteiro a cada comando e
+para com "required variable REDIS_PASSWORD is missing a value" sem ele. Para
+não repetir, crie um atalho no servidor:
+
+```bash
+echo "alias dch='docker compose --env-file /home/joaosrv/finances/.env.staging -f /home/joaosrv/finances/docker-compose.staging.yml'" >> ~/.bashrc
+source ~/.bashrc
+dch ps
+```
 
 O que acontece, em ordem: Postgres e Redis sobem e ficam saudáveis →
 `migrate` aplica as migrations pendentes e o seed das categorias → API sobe
@@ -294,8 +302,8 @@ O que acontece, em ordem: Postgres e Redis sobem e ficam saudáveis →
 Conferir:
 
 ```bash
-docker compose -f docker-compose.staging.yml ps            # tudo "running"; migrate "exited (0)"
-docker compose -f docker-compose.staging.yml logs migrate  # migrations aplicadas
+docker compose --env-file .env.staging -f docker-compose.staging.yml ps            # tudo "running"; migrate "exited (0)"
+docker compose --env-file .env.staging -f docker-compose.staging.yml logs migrate  # migrations aplicadas
 curl http://100.84.104.128:3011/health                     # {"status":"ok",...}
 ```
 
@@ -333,15 +341,15 @@ Até aqui a homologação usava o banco `finance` dentro do container
 compose (com o compose já no ar, no joaosrv):
 
 ```bash
-cd ~/controlai
+cd /home/joaosrv/finances
 set -a; . ./.env.staging; set +a
 
 # 1. Parar a API para nada gravar durante a cópia
-docker compose -f docker-compose.staging.yml stop api-staging
+docker compose --env-file .env.staging -f docker-compose.staging.yml stop api-staging
 
 # 2. Copiar (dados + histórico de migrations) do banco antigo para o novo
 docker exec postgres_server pg_dump -U postgres -Fc finance > /tmp/finance.dump
-docker compose -f docker-compose.staging.yml exec -T postgres \
+docker compose --env-file .env.staging -f docker-compose.staging.yml exec -T postgres \
   pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner < /tmp/finance.dump
 
 # 3. Subir de novo (o migrate aplica o que faltar)
@@ -370,7 +378,7 @@ todas as telas falham com erro 500.
 mkdir -p ~/backups
 crontab -e
 # todo dia às 3h, guarda 14 dias
-0 3 * * * cd ~/controlai && docker compose -f docker-compose.staging.yml exec -T postgres pg_dump -U controlai -Fc controlai_homolog > ~/backups/homolog-$(date +\%F).dump && find ~/backups -name 'homolog-*.dump' -mtime +14 -delete
+0 3 * * * cd /home/joaosrv/finances && docker compose --env-file .env.staging -f docker-compose.staging.yml exec -T postgres pg_dump -U controlai -Fc controlai_homolog > ~/backups/homolog-$(date +\%F).dump && find ~/backups -name 'homolog-*.dump' -mtime +14 -delete
 ```
 
 ### B.9 — Fluxo de trabalho

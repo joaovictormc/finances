@@ -2,9 +2,10 @@
 # Postgres e Redis próprios, migrations automáticas, API, web e landing.
 # Passo a passo em docs/deploy.md, Parte B.
 #
-# Subir (o --env-file é obrigatório: as senhas e as URLs embutidas no build
-# vêm do .env.staging):
+# O --env-file é obrigatório em TODO comando (up, ps, logs, exec, down): as
+# senhas e as URLs embutidas no build vêm do .env.staging.
 #   docker compose --env-file .env.staging -f docker-compose.staging.yml up -d --build
+#   docker compose --env-file .env.staging -f docker-compose.staging.yml ps
 #
 # Portas no servidor: web 3010 · API 3011 · landing 3012 · Postgres 5434 · Redis 6380
 # (escolhidas para não colidir com o postgres_server da 5433 nem com outros serviços).
