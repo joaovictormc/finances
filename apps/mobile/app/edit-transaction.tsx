@@ -6,7 +6,7 @@ import { api } from "@/lib/api-client";
 import { DateField } from "@/components/date-field";
 import { useTheme } from "@/lib/theme";
 import { BASE_PAYMENT_METHOD_TABS, type PaymentMethod } from "@/lib/payment-methods";
-import { NewCategoryChip } from "@/components/new-category-chip";
+import { CategoryPicker } from "@/components/category-picker";
 import type { Category, FinancialAccount, Transaction } from "@/lib/types";
 
 type TxType = "expense" | "income" | "transfer";
@@ -16,15 +16,6 @@ const TYPE_TABS: { value: TxType; label: string }[] = [
   { value: "income", label: "Receita" },
   { value: "transfer", label: "Transferência" },
 ];
-
-function flattenCategories(cats: Category[]): Category[] {
-  const result: Category[] = [];
-  for (const c of cats) {
-    result.push(c);
-    if (c.children?.length) result.push(...flattenCategories(c.children));
-  }
-  return result;
-}
 
 export default function EditTransactionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -133,8 +124,6 @@ export default function EditTransactionScreen() {
     );
   }
 
-  const flatCategories = flattenCategories(categories);
-
   const paymentMethodTabs = selectedAccount?.hasCreditCard
     ? [...BASE_PAYMENT_METHOD_TABS, { value: "credit" as const, label: "Crédito" }]
     : BASE_PAYMENT_METHOD_TABS;
@@ -203,35 +192,15 @@ export default function EditTransactionScreen() {
         ))}
       </View>
 
-      <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Categoria</Text>
-      <View className="mb-4 flex-row flex-wrap gap-2">
-        <Pressable
-          onPress={() => setCategoryId("")}
-          className={`rounded-full border px-3 py-1.5 ${!categoryId ? "border-primary bg-primary/10" : "border-border dark:border-border-dark"}`}
-        >
-          <Text className="text-xs font-medium text-foreground dark:text-foreground-dark">Sem categoria</Text>
-        </Pressable>
-        {flatCategories.map((c) => (
-          <Pressable
-            key={c.id}
-            onPress={() => setCategoryId(c.id)}
-            className={`rounded-full border px-3 py-1.5 ${categoryId === c.id ? "border-primary bg-primary/10" : "border-border dark:border-border-dark"}`}
-          >
-            <Text className="text-xs font-medium text-foreground dark:text-foreground-dark">
-              {c.icon ?? ""} {c.name}
-            </Text>
-          </Pressable>
-        ))}
-        {type !== "transfer" && (
-          <NewCategoryChip
-            type={type}
-            onCreated={(category) => {
-              setCategories((prev) => [...prev, category]);
-              setCategoryId(category.id);
-            }}
-          />
-        )}
-      </View>
+      <CategoryPicker
+        label="Categoria"
+        categories={categories}
+        value={categoryId || undefined}
+        onChange={(id) => setCategoryId(id ?? "")}
+        emptyLabel="Sem categoria"
+        createType={type !== "transfer" ? type : undefined}
+        onCreated={(category) => setCategories((prev) => [...prev, category])}
+      />
 
       <DateField label="Data" value={date} onChange={setDate} />
 

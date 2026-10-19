@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
 import { FormScrollView } from "@/components/form-scroll-view";
+import { CategoryPicker } from "@/components/category-picker";
 import { router } from "expo-router";
 import { api } from "@/lib/api-client";
 import { useTheme } from "@/lib/theme";
@@ -105,30 +106,14 @@ export default function NewBudgetScreen() {
         })}
       </View>
 
-      <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Categoria (opcional)</Text>
-      <View className="mb-4 flex-row flex-wrap gap-2">
-        <Pressable
-          onPress={() => setCategoryId(undefined)}
-          className={`rounded-full border px-3 py-1.5 ${!categoryId ? "border-primary bg-primary/10" : "border-border dark:border-border-dark"}`}
-        >
-          <Text className="text-xs font-medium text-foreground dark:text-foreground-dark">Geral</Text>
-        </Pressable>
-        {categories.map((c) => {
-          const active = categoryId === c.id;
-          return (
-            <Pressable
-              key={c.id}
-              onPress={() => setCategoryId(c.id)}
-              className={`rounded-full border px-3 py-1.5 ${active ? "border-primary bg-primary/10" : "border-border dark:border-border-dark"}`}
-            >
-              <Text className="text-xs font-medium text-foreground dark:text-foreground-dark">
-                {c.icon ? `${c.icon} ` : ""}
-                {c.name}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {/* Orçamento conta só a categoria escolhida (sem as subcategorias): por isso a lista tem só as principais. */}
+      <CategoryPicker
+        label="Categoria (opcional)"
+        categories={categories.map((c) => ({ ...c, children: [] }))}
+        value={categoryId}
+        onChange={setCategoryId}
+        emptyLabel="Geral (todas as categorias)"
+      />
 
       {error && <Text className="mb-3 text-sm text-destructive dark:text-destructive-dark">{error}</Text>}
 

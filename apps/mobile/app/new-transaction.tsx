@@ -9,7 +9,7 @@ import { DateField } from "@/components/date-field";
 import { formatBRL } from "@/lib/format";
 import { useTheme } from "@/lib/theme";
 import { BASE_PAYMENT_METHOD_TABS, type PaymentMethod } from "@/lib/payment-methods";
-import { NewCategoryChip } from "@/components/new-category-chip";
+import { CategoryPicker } from "@/components/category-picker";
 import type { Category, FinancialAccount } from "@/lib/types";
 
 type ParsedReceipt = {
@@ -346,29 +346,15 @@ export default function NewTransactionScreen() {
             ))}
           </View>
 
-          <Text className="mb-1 text-sm font-medium text-foreground dark:text-foreground-dark">Categoria</Text>
-          <View className="mb-4 flex-row flex-wrap gap-2">
-            {flatCategories.map((c) => (
-              <Pressable
-                key={c.id}
-                onPress={() => setCategoryId(c.id)}
-                className={`rounded-full border px-3 py-1.5 ${categoryId === c.id ? "border-primary bg-primary/10 dark:border-primary-dark" : "border-border dark:border-border-dark"}`}
-              >
-                <Text className="text-xs font-medium text-foreground dark:text-foreground-dark">
-                  {c.icon ?? ""} {c.name}
-                </Text>
-              </Pressable>
-            ))}
-            {type !== "transfer" && (
-              <NewCategoryChip
-                type={type}
-                onCreated={(category) => {
-                  setCategories((prev) => [...prev, category]);
-                  setCategoryId(category.id);
-                }}
-              />
-            )}
-          </View>
+          <CategoryPicker
+            label="Categoria"
+            categories={categories}
+            value={categoryId || undefined}
+            onChange={(id) => setCategoryId(id ?? "")}
+            emptyLabel="Sem categoria"
+            createType={type !== "transfer" ? type : undefined}
+            onCreated={(category) => setCategories((prev) => [...prev, category])}
+          />
         </>
       )}
 
