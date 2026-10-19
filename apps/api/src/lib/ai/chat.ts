@@ -29,6 +29,7 @@ export type ChatRequest = {
   tools?: ToolDef[];
   /** Pede a resposta como um objeto JSON. */
   json?: boolean;
+  /** Groq e Ollama; ignorada no Claude, que não aceita mais o parâmetro. */
   temperature?: number;
   maxTokens?: number;
   /** Chave usada no lugar da cadastrada (teste de conexão no admin). */
@@ -214,7 +215,8 @@ export function toAnthropicBody(request: ChatRequest) {
         input_schema: tool.parameters,
       })),
     }),
-    ...(request.temperature !== undefined && { temperature: request.temperature }),
+    // Sem temperature: os modelos Claude atuais recusam o parâmetro ("temperature
+    // is deprecated for this model") e a chamada inteira falhava com 400.
   };
 }
 

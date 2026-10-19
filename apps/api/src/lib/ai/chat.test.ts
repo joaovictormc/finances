@@ -29,6 +29,8 @@ describe("toAnthropicBody", () => {
       { role: "user", content: [{ type: "tool_result", tool_use_id: "t1", content: '{"expense":100}' }] },
     ]);
     expect(body.tools).toEqual([{ name: "get_monthly_summary", description: "Resumo", input_schema: { type: "object", properties: {} } }]);
+    // Claude atual recusa temperature (400); o pedido não pode levar o parâmetro.
+    expect(body).not.toHaveProperty("temperature");
   });
 
   it("junta resultados de ferramentas seguidos numa só mensagem do usuário", () => {
