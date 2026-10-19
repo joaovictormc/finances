@@ -174,6 +174,10 @@ GET    /api/admin/changelog                             → rascunhos e publicad
 POST   /api/admin/changelog       { version, title, items: [{ kind: "new"|"improvement"|"fix", text }], platforms[] }   cria rascunho
 PATCH  /api/admin/changelog/:id   (mesmo corpo)         edita; publicada pode ser editada, o aviso não é refeito
 DELETE /api/admin/changelog/:id
+GET    /api/admin/changelog/automation              → { repo, branch, enabled, lastCommitSha, lastCheckedAt, lastError }
+PATCH  /api/admin/changelog/automation   { enabled }    liga/desliga os rascunhos automáticos
+POST   /api/admin/changelog/automation/run              "Verificar agora": lê os commits novos da branch (CHANGELOG_BRANCH) e cria o rascunho → { result: { status, message, releaseId? }, state }
+GET    /api/admin/pending                               → { total, changelogDrafts, pixCheckouts } (contador do painel)
 POST   /api/admin/changelog/:id/publish { notifyInApp, notifyEmail }   publica; o aviso roda na fila "broadcast" (sininho para todos + e-mail para quem não desligou), uma vez por novidade. 409 se já publicada
 ```
 

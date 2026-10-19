@@ -263,6 +263,9 @@ ADMIN_BOOTSTRAP="true"             # mantém sempre uma conta admin de teste
 ADMIN_EMAIL="admin@controlai.local"
 ADMIN_PASSWORD="..."
 
+# ── Rascunhos automáticos de Novidades: homologação acompanha a develop ─────
+CHANGELOG_BRANCH="develop"
+
 # ── Opcionais (também podem ser cadastrados em /admin) ──────────────────────
 BREVO_API_KEY=""
 EMAIL_FROM_ADDRESS=""

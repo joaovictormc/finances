@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { PencilLine, Plus, Trash2, X } from "lucide-react";
+import { GitCommitHorizontal, PencilLine, Plus, RefreshCw, Sparkles, Trash2, X } from "lucide-react";
 import {
   CHANGELOG_ITEM_KINDS,
   CHANGELOG_KIND_LABELS,
@@ -34,6 +34,23 @@ type AdminRelease = {
   publishedAt: string | null;
   notifiedAt: string | null;
   createdAt: string;
+  /** manual | ai | commits (IA indisponível: títulos dos commits) */
+  source: string;
+  commits: { sha: string; message: string }[];
+};
+
+type AutomationState = {
+  repo: string;
+  branch: string;
+  enabled: boolean;
+  lastCommitSha: string | null;
+  lastCheckedAt: string | null;
+  lastError: string | null;
+};
+
+const SOURCE_LABEL: Record<string, string> = {
+  ai: "Gerado pela IA",
+  commits: "Títulos dos commits",
 };
 
 type Draft = { version: string; title: string; items: ChangelogItem[]; platforms: ChangelogPlatform[] };
@@ -54,7 +71,11 @@ export default function AdminChangelogPage() {
     queryKey: ["admin", "changelog"],
     queryFn: () => api.get<AdminRelease[]>("/api/admin/changelog"),
   });
-  const load = () => queryClient.invalidateQueries({ queryKey: ["admin", "changelog"] });
+  const load = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin", "changelog"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin", "pending"] }),
+    ]);
 
   async function remove(release: AdminRelease) {
     const ok = await confirm({
@@ -99,6 +120,8 @@ export default function AdminChangelogPage() {
         </Button>
       </div>
 
+      <AutomationCard onChanged={() => void load()} />
+
       {releases.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
           Nenhuma novidade ainda. Crie a primeira com o que mudou na última atualização.
@@ -119,6 +142,11 @@ export default function AdminChangelogPage() {
                   {release.publishedAt && ` · publicada em ${formatDate(release.publishedAt)}`}
                 </p>
               </div>
+              {SOURCE_LABEL[release.source] && !release.publishedAt && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-foreground">
+                  <Sparkles size={12} /> {SOURCE_LABEL[release.source]}
+                </span>
+              )}
               {release.publishedAt ? (
                 <Badge variant="success">Publicada</Badge>
               ) : (
@@ -222,6 +250,23 @@ function ReleaseForm({ initial, onSaved }: { initial?: AdminRelease; onSaved: ()
 
   return (
     <div className="space-y-5">
+      {initial && initial.commits.length > 0 && (
+        <details className="rounded-lg border border-border/60 px-3 py-2 text-sm">
+          <summary className="cursor-pointer text-muted-foreground">
+            {SOURCE_LABEL[initial.source] ?? "Rascunho"} a partir de {initial.commits.length} commit(s): confira antes de publicar
+          </summary>
+          <ul className="mt-2 space-y-1">
+            {initial.commits.map((commit) => (
+              <li key={commit.sha} className="flex gap-2 text-xs text-muted-foreground">
+                <GitCommitHorizontal size={14} className="mt-0.5 shrink-0" />
+                <span>
+                  <span className="font-mono">{commit.sha.slice(0, 7)}</span> {commit.message}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       {initial?.publishedAt && (
         <p className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
           Já publicada: a correção aparece na tela de Novidades, mas o aviso não é enviado de novo.
@@ -296,7 +341,7 @@ function ReleaseForm({ initial, onSaved }: { initial?: AdminRelease; onSaved: ()
                 aria-label={`Texto do item ${index + 1}`}
                 value={item.text}
                 onChange={(e) => setItem(index, { text: e.target.value })}
-                rows={2}
+                rows={3}
                 maxLength={300}
                 placeholder="Escreva para quem usa o app, sem termos técnicos"
                 className="min-h-10 w-full flex-1 rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
@@ -416,5 +461,87 @@ function PublishDialog({
         </div>
       )}
     </Modal>
+  );
+}
+
+/** Rascunhos automáticos: commits novos da branch do ambiente viram rascunho para revisar. */
+function AutomationCard({ onChanged }: { onChanged: () => void }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [running, setRunning] = useState(false);
+  const { data: state } = useQuery({
+    queryKey: ["admin", "changelog", "automation"],
+    queryFn: () => api.get<AutomationState>("/api/admin/changelog/automation"),
+  });
+
+  const setState = (next: AutomationState) => queryClient.setQueryData(["admin", "changelog", "automation"], next);
+
+  async function runNow() {
+    setRunning(true);
+    try {
+      const { result, state: next } = await api.post<{ result: { status: string; message: string }; state: AutomationState }>(
+        "/api/admin/changelog/automation/run",
+        {}
+      );
+      setState(next);
+      toast({ title: result.message, variant: result.status === "error" ? "error" : "success" });
+      if (result.status === "created") onChanged();
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Não foi possível verificar", variant: "error" });
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  async function toggle() {
+    if (!state) return;
+    try {
+      setState(await api.patch<AutomationState>("/api/admin/changelog/automation", { enabled: !state.enabled }));
+    } catch {
+      toast({ title: "Não foi possível alterar", variant: "error" });
+    }
+  }
+
+  if (!state) return null;
+
+  return (
+    <section className="mb-6 rounded-2xl border border-border/60 bg-card p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-2 font-semibold text-foreground">
+            <Sparkles size={16} /> Rascunhos automáticos
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            A cada hora, os commits novos da <span className="font-mono text-foreground">{state.branch}</span> de{" "}
+            <span className="font-mono">{state.repo}</span> viram um rascunho escrito pela IA. Você é avisado e
+            revisa antes de publicar.
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {state.lastCheckedAt ? `Última verificação: ${new Date(state.lastCheckedAt).toLocaleString("pt-BR")}` : "Ainda não verificou."}
+            {state.lastCommitSha && (
+              <>
+                {" "}· último commit lido <span className="font-mono">{state.lastCommitSha.slice(0, 7)}</span>
+              </>
+            )}
+          </p>
+          {state.lastError && <p className="mt-1 text-xs text-destructive">{state.lastError}</p>}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => void runNow()} loading={running}>
+            <RefreshCw size={14} /> Verificar agora
+          </Button>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={state.enabled}
+            aria-label="Rascunhos automáticos ligados"
+            onClick={() => void toggle()}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${state.enabled ? "bg-primary" : "bg-muted"}`}
+          >
+            <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${state.enabled ? "translate-x-6" : "translate-x-1"}`} />
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }

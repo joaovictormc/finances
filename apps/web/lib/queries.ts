@@ -21,6 +21,18 @@ export const queryKeys = {
   gamificationProfile: ["gamification-profile"] as const,
 };
 
+export type AdminPending = { total: number; changelogDrafts: number; pixCheckouts: number };
+
+/** Pendências do painel (rascunhos de novidade, Pix a confirmar). Só para admin. */
+export function useAdminPending(enabled: boolean) {
+  return useQuery({
+    queryKey: ["admin", "pending"],
+    queryFn: () => api.get<AdminPending>("/api/admin/pending"),
+    enabled,
+    refetchInterval: 5 * 60_000,
+  });
+}
+
 export function useGroups() {
   return useQuery({
     queryKey: queryKeys.groups,

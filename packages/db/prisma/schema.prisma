@@ -635,6 +635,10 @@ model AiSettings {
   visionProvider    String @default("groq")
   assistantProvider String @default("groq")
 
+  // Quem lê os commits e escreve o rascunho de Novidades (Admin › Novidades).
+  changelogProvider String @default("groq")
+  changelogModel    String @default("openai/gpt-oss-120b")
+
   monthlyInsightsEnabled    Boolean @default(true) // geração de insight mensal
   assistantEnabled          Boolean @default(true) // kill-switch do assistente de IA
   nlQueryEnabled            Boolean @default(true) // POST /api/ai/query
@@ -933,9 +937,29 @@ model ChangelogRelease {
   platforms   String[]  @default([])
   publishedAt DateTime?
   notifiedAt  DateTime?
+  /// manual | ai (rascunho escrito pela IA a partir dos commits) | commits
+  /// (IA indisponível: rascunho com os títulos dos commits)
+  source      String    @default("manual")
+  /// Commits que originaram o rascunho: [{ sha, message }]
+  commits     Json      @default("[]")
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   @@index([publishedAt])
   @@map("changelog_releases")
+}
+
+/// Rascunhos automáticos de Novidades a partir dos commits da branch do
+/// ambiente (CHANGELOG_BRANCH). Linha única.
+model ChangelogAutomation {
+  id            String    @id @default("singleton")
+  enabled       Boolean   @default(true)
+  /// Último commit já considerado. Nulo = próxima verificação só marca o
+  /// ponto de partida (não resume o histórico inteiro).
+  lastCommitSha String?
+  lastCheckedAt DateTime?
+  lastError     String?
+  updatedAt     DateTime  @updatedAt
+
+  @@map("changelog_automation")
 }

@@ -1,5 +1,5 @@
 import type { Queue } from "bullmq";
-import { aiAnalysisQueue, billDetectorQueue, billingQueue, gamificationQueue } from "./queues";
+import { aiAnalysisQueue, billDetectorQueue, billingQueue, broadcastQueue, gamificationQueue } from "./queues";
 
 /**
  * Horários no fuso de Brasília, não no do servidor: no Docker o relógio é
@@ -25,6 +25,9 @@ export const SCHEDULES: Schedule[] = [
   { queue: billingQueue, id: "send-bill-reminders", pattern: "0 8 * * *" },
   // 9h: assinatura Pix que vence em 5 dias ou hoje (Pix não renova sozinho).
   { queue: billingQueue, id: "send-pix-expiry-reminders", pattern: "0 9 * * *" },
+  // De hora em hora (minuto 15): commits novos da branch viram rascunho de
+  // Novidade para o admin revisar.
+  { queue: broadcastQueue, id: "changelog-from-commits", pattern: "15 * * * *" },
 ];
 
 /**

@@ -9,7 +9,8 @@ export type AiFeature =
   | "nl_query"
   | "category_suggestion"
   | "receipt_scan"
-  | "assistant";
+  | "assistant"
+  | "changelog_draft";
 
 export async function getAiSettings() {
   return db.aiSettings.upsert({
@@ -20,10 +21,11 @@ export async function getAiSettings() {
 }
 
 /**
- * Três funções, cada uma com provedor e modelo próprios: texto (insights,
- * perguntas e sugestão de categoria), imagem (leitura de cupom) e assistente.
+ * Funções com provedor e modelo próprios: texto (insights, perguntas e
+ * sugestão de categoria), imagem (leitura de cupom), assistente e changelog
+ * (lê os commits e escreve o rascunho de Novidades).
  */
-export type AiSlot = "text" | "vision" | "assistant";
+export type AiSlot = "text" | "vision" | "assistant" | "changelog";
 
 type SettingsRow = Awaited<ReturnType<typeof getAiSettings>>;
 
@@ -40,6 +42,8 @@ export async function updateAiSettings(data: {
   textProvider?: AiProviderId;
   visionProvider?: AiProviderId;
   assistantProvider?: AiProviderId;
+  changelogProvider?: AiProviderId;
+  changelogModel?: string;
   textModel?: string;
   visionModel?: string;
   assistantModel?: string;

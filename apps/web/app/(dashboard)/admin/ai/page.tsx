@@ -29,18 +29,25 @@ type ProviderStatus = {
   models: ModelInfo[];
 };
 
-type Slot = "text" | "vision" | "assistant";
+type Slot = "text" | "vision" | "assistant" | "changelog";
 
 const SLOTS: { id: Slot; label: string; description: string }[] = [
   { id: "text", label: "Texto", description: "Insights mensais, perguntas na Visão Geral e sugestão de categoria" },
   { id: "vision", label: "Imagem", description: "Leitura de cupom fiscal por foto. Escolha um modelo que aceite imagem." },
   { id: "assistant", label: "Assistente", description: "Conversa com histórico e consulta aos dados (usa ferramentas)" },
+  {
+    id: "changelog",
+    label: "Novidades (commits)",
+    description: "Lê os commits do GitHub e escreve o rascunho de Novidades para você revisar em Admin › Novidades",
+  },
 ];
 
 type AiSettings = {
   textProvider: ProviderId;
   visionProvider: ProviderId;
   assistantProvider: ProviderId;
+  changelogProvider: ProviderId;
+  changelogModel: string;
   textModel: string;
   visionModel: string;
   assistantModel: string;
@@ -94,6 +101,7 @@ const FEATURE_LABELS: Record<string, string> = {
   category_suggestion: "Sugestão de categoria",
   receipt_scan: "Leitura de cupom fiscal",
   assistant: "Assistente de IA",
+  changelog_draft: "Rascunho de novidades",
 };
 
 export default function AdminAiPage() {

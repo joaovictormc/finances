@@ -55,13 +55,14 @@ Schema já preparado: `OpenFinanceConsent`, `OpenFinanceAccount`. Quando aprovad
 
 **Status:** Implementado — camada única em `apps/api/src/lib/ai/chat.ts`
 
-Três funções, cada uma com provedor e modelo escolhidos em `/admin/ai` (`AiSettings`):
+Quatro funções, cada uma com provedor e modelo escolhidos em `/admin/ai` (`AiSettings`). A API recusa provedor sem chave e modelo que não está na lista do provedor:
 
 | Função | Campos | Usada por |
 |---|---|---|
 | Texto | `textProvider` / `textModel` | insight mensal, pergunta avulsa (`POST /api/ai/query`), sugestão de categoria |
 | Imagem | `visionProvider` / `visionModel` | leitura de cupom fiscal (precisa de modelo que aceite imagem) |
 | Assistente | `assistantProvider` / `assistantModel` | conversa com histórico e ferramentas (`/api/assistant`) |
+| Novidades (commits) | `changelogProvider` / `changelogModel` | rascunho de Novidades a partir dos commits da branch (`lib/changelog-automation.ts`) |
 
 **Provedores** (`lib/ai/providers.ts`):
 - **Groq** e **Ollama Cloud** pelo endpoint compatível com OpenAI (`https://api.groq.com/openai/v1`, `https://ollama.com/v1`).

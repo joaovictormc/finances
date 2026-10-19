@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/auth-client";
 import { useModuleLinks } from "@/lib/use-plan-access";
 import { useHydrated } from "@/lib/use-hydrated";
+import { useAdminPending } from "@/lib/queries";
 
 const baseNavItems = [
   { href: "/overview", label: "Visão Geral", icon: LayoutDashboard },
@@ -48,6 +49,7 @@ export function NavLinks({ collapsed = false }: { collapsed?: boolean }) {
   // A sessão só existe no navegador: o item Admin entra depois da hidratação.
   const hydrated = useHydrated();
   const isAdmin = hydrated && (session?.user as { role?: string } | undefined)?.role === "admin";
+  const adminPending = useAdminPending(isAdmin).data?.total ?? 0;
 
   const items: NavItem[] = [
     ...baseNavItems,
@@ -77,11 +79,25 @@ export function NavLinks({ collapsed = false }: { collapsed?: boolean }) {
                 : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             )}
           >
-            <item.icon size={16} className="shrink-0" />
+            <span className="relative shrink-0">
+              <item.icon size={16} />
+              {/* Recolhido: um ponto avisa que há pendência no painel. */}
+              {collapsed && item.href === "/admin" && adminPending > 0 && (
+                <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive" />
+              )}
+            </span>
             {!collapsed && (
               <>
                 <span className="flex-1">{item.label}</span>
                 {locked && <Lock size={12} className="shrink-0 opacity-60" />}
+                {item.href === "/admin" && adminPending > 0 && (
+                  <span
+                    aria-label={`${adminPending} pendência(s) para validar`}
+                    className="rounded-full bg-destructive px-1.5 text-[11px] font-semibold leading-5 text-white"
+                  >
+                    {adminPending}
+                  </span>
+                )}
               </>
             )}
           </Link>

@@ -6,6 +6,8 @@ import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { requireAdmin } from "../middleware/admin";
 import { broadcastQueue } from "../jobs/queues";
 import { toPublicRelease } from "../lib/changelog";
+import { getAutomationState, runChangelogAutomation, setAutomationEnabled } from "../lib/changelog-automation";
+import { z } from "zod";
 
 /** Admin › Novidades: rascunho, edição e publicação com aviso. Só admin. */
 const app = new Hono<{ Variables: AuthVariables }>();
@@ -20,8 +22,24 @@ function toAdmin(row: Row) {
     publishedAt: row.publishedAt?.toISOString() ?? null,
     notifiedAt: row.notifiedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
+    source: row.source,
+    commits: (row.commits as Array<{ sha: string; message: string }> | null) ?? [],
   };
 }
+
+// ── Rascunhos automáticos a partir dos commits ───────────────────────────────
+
+app.get("/automation", async (c) => c.json(await getAutomationState()));
+
+app.patch("/automation", zValidator("json", z.object({ enabled: z.boolean() })), async (c) =>
+  c.json(await setAutomationEnabled(c.req.valid("json").enabled))
+);
+
+/** "Verificar agora": roda mesmo com a automação desligada. */
+app.post("/automation/run", async (c) => {
+  const result = await runChangelogAutomation({ force: true });
+  return c.json({ result, state: await getAutomationState() });
+});
 
 app.get("/", async (c) => {
   const rows = await db.changelogRelease.findMany({ orderBy: [{ publishedAt: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }] });

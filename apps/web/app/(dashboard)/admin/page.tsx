@@ -1,7 +1,17 @@
 import Link from "next/link";
+import { AdminPendingBadge } from "@/components/admin/pending-badge";
 import { Users, Receipt, Bot, CreditCard, ArrowRight, Sparkles, Tag, LayoutTemplate, TicketPercent, Megaphone } from "lucide-react";
 
-const sections = [
+type Section = {
+  href: string;
+  title: string;
+  description: string;
+  icon: typeof Users;
+  /** Pendência que aparece como selo no cartão. */
+  pending?: "changelogDrafts" | "pixCheckouts";
+};
+
+const sections: Section[] = [
   {
     href: "/admin/users",
     title: "Usuários e Planos",
@@ -31,6 +41,7 @@ const sections = [
     title: "Checkouts",
     description: "Histórico de eventos de cobrança",
     icon: Receipt,
+    pending: "pixCheckouts",
   },
   {
     href: "/admin/ai",
@@ -55,6 +66,7 @@ const sections = [
     title: "Novidades",
     description: "Escreva o que mudou em cada atualização e avise os usuários",
     icon: Megaphone,
+    pending: "changelogDrafts",
   },
 ];
 
@@ -79,6 +91,7 @@ export default function AdminPage() {
             <div className="flex-1">
               <p className="font-semibold text-foreground">{s.title}</p>
               <p className="text-xs text-muted-foreground mt-1">{s.description}</p>
+              {s.pending && <AdminPendingBadge kind={s.pending} />}
             </div>
             <ArrowRight size={16} className="text-muted-foreground shrink-0 mt-1" />
           </Link>

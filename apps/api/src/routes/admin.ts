@@ -5,6 +5,7 @@ import { db, EncryptionKeyMissingError } from "@finances/db";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { requireAdmin } from "../middleware/admin";
 import { getAiSettings, updateAiSettings } from "../lib/ai/ai-settings";
+import { adminPendingCounts } from "../lib/admin-alerts";
 import { AI_PROVIDER_IDS, AiProviderError, isAiProviderId } from "../lib/ai/providers";
 import {
   getProviderApiKey,
@@ -317,6 +318,10 @@ app.patch("/payment-methods/:id", zValidator("json", PaymentMethodUpdateSchema),
   }
 });
 
+// ── Pendências (contador do painel) ──────────────────────────────────────────
+
+app.get("/pending", async (c) => c.json(await adminPendingCounts()));
+
 // ── IA (configuração e observabilidade) ──────────────────────────────────────
 
 app.get("/ai/settings", async (c) => {
@@ -331,6 +336,8 @@ const AiSettingsSchema = z.object({
   textProvider: z.enum(AI_PROVIDER_IDS).optional(),
   visionProvider: z.enum(AI_PROVIDER_IDS).optional(),
   assistantProvider: z.enum(AI_PROVIDER_IDS).optional(),
+  changelogProvider: z.enum(AI_PROVIDER_IDS).optional(),
+  changelogModel: z.string().min(1).optional(),
   textModel: z.string().min(1).optional(),
   visionModel: z.string().min(1).optional(),
   assistantModel: z.string().min(1).optional(),
@@ -346,9 +353,23 @@ const AiSettingsSchema = z.object({
 app.patch("/ai/settings", zValidator("json", AiSettingsSchema), async (c) => {
   const data = c.req.valid("json");
   // Função apontada para um provedor sem chave falharia em toda chamada.
-  for (const provider of new Set([data.textProvider, data.visionProvider, data.assistantProvider])) {
+  for (const provider of new Set([data.textProvider, data.visionProvider, data.assistantProvider, data.changelogProvider])) {
     if (provider && !(await getProviderApiKey(provider))) {
       return c.json({ error: `Cadastre a chave de API deste provedor (${provider}) antes de usá-lo.` }, 400);
+    }
+  }
+  // Modelo de outro provedor (ex.: id da Groq com provedor Ollama) também
+  // falharia em toda chamada. Confere contra a lista que a chave enxerga;
+  // sem lista carregada ainda, aceita.
+  const current = await getAiSettings();
+  const statuses = await listProviderStatuses();
+  for (const slot of ["text", "vision", "assistant", "changelog"] as const) {
+    const provider = data[`${slot}Provider`] ?? current[`${slot}Provider`];
+    const model = data[`${slot}Model`] ?? current[`${slot}Model`];
+    if (data[`${slot}Provider`] === undefined && data[`${slot}Model`] === undefined) continue;
+    const models = statuses.find((status) => status.id === provider)?.models ?? [];
+    if (models.length > 0 && !models.some((m) => m.id === model)) {
+      return c.json({ error: `O modelo ${model} não está disponível em ${provider}. Escolha um da lista.` }, 400);
     }
   }
   const settings = await updateAiSettings(data);
@@ -395,7 +416,7 @@ app.delete("/ai/providers/:id", async (c) => {
   const id = c.req.param("id");
   if (!isAiProviderId(id)) return c.json({ error: "Provedor desconhecido" }, 404);
   const settings = await getAiSettings();
-  const inUse = [settings.textProvider, settings.visionProvider, settings.assistantProvider].includes(id);
+  const inUse = [settings.textProvider, settings.visionProvider, settings.assistantProvider, settings.changelogProvider].includes(id);
   const status = await removeProviderKey(id);
   // Sem chave no painel e sem reserva no .env, a função que usa este provedor para.
   if (inUse && !status.source) {

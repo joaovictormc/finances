@@ -68,6 +68,11 @@ tratam compartilhamento como funcionalidade extra; aqui é a espinha dorsal.
   painel. Ao publicar, aviso no sininho e, se escolhido, por e-mail (sem push);
   na próxima abertura do web/app aparece a janela "O que há de novo", uma vez
   por novidade. Histórico na tela Novidades (Configurações no web, Mais no app).
+  A cada hora os commits novos da branch do ambiente (main em produção,
+  develop em homologação) viram um rascunho escrito pela IA; o admin é
+  avisado (sininho, push e e-mail) e revisa antes de publicar. O painel e o
+  item Admin do menu mostram o contador de pendências (rascunhos e Pix a
+  confirmar).
 - Promoções (Admin › Promoções): cupons de desconto que valem para a
   assinatura (mínimo R$ 1,00 por cobrança, um uso por pessoa; no cartão o
   desconto vale em todas as cobranças da recorrência, no Pix só no pagamento

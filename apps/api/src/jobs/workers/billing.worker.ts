@@ -1,7 +1,7 @@
 import { Worker, type Job } from "bullmq";
 import { db } from "@finances/db";
 import { quietRedisErrors, redis } from "../../lib/redis";
-import { sendNotification } from "../../lib/notifications";
+import { notifyAdmins } from "../../lib/admin-alerts";
 import { isUniqueViolation } from "../../lib/prisma-errors";
 import { listPendingPixCheckouts, type PixCheckoutStage } from "../../lib/pix-checkout";
 import { sendBillReminders, sendPixExpiryReminders } from "../../lib/reminders";
@@ -23,12 +23,6 @@ const day = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" });
 async function notifyPendingPixCheckouts() {
   const pending = (await listPendingPixCheckouts()).filter((checkout) => checkout.stage !== null);
   if (pending.length === 0) return;
-
-  const admins = await db.user.findMany({ where: { role: "admin" }, select: { id: true } });
-  if (admins.length === 0) {
-    console.warn("[billing] Nenhuma conta admin para avisar sobre Pix pendente.");
-    return;
-  }
 
   for (const checkout of pending) {
     const stage = checkout.stage;
@@ -75,15 +69,13 @@ async function notifyPendingPixCheckouts() {
         : `Vence em ${day.format(checkout.expiresAt)} — confirme em /admin/checkouts antes disso.`,
     ].join("\n");
 
-    for (const admin of admins) {
-      await sendNotification(admin.id, {
-        type: "pix_checkout_pending",
-        link: "/admin/checkouts",
-        title: `${STAGE_TITLE[stage]} — plano ${checkout.plan}`,
-        body,
-        metadata: { txid: checkout.txid, stage, eventId: checkout.eventId },
-      });
-    }
+    await notifyAdmins({
+      type: "pix_checkout_pending",
+      link: "/admin/checkouts",
+      title: `${STAGE_TITLE[stage]} — plano ${checkout.plan}`,
+      body,
+      metadata: { txid: checkout.txid, stage, eventId: checkout.eventId },
+    });
   }
 }
 
