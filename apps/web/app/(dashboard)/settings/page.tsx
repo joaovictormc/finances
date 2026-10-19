@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CreditCard } from "lucide-react";
+import { ArrowRight, CreditCard, Megaphone } from "lucide-react";
 import { ProfileSection } from "@/components/settings/profile-section";
 import { ThemeSection } from "@/components/settings/theme-section";
 import { CategoriesSection } from "@/components/settings/categories-section";
@@ -32,6 +32,20 @@ export default function SettingsPage() {
           <div className="flex-1">
             <h2 className="text-base font-semibold">Planos e Assinatura</h2>
             <p className="text-sm text-muted-foreground">Gerencie seu plano, upgrade ou cancelamento</p>
+          </div>
+          <ArrowRight size={16} className="text-muted-foreground shrink-0" />
+        </Link>
+
+        <Link
+          href="/novidades"
+          className="flex items-center gap-4 bg-card rounded-2xl border border-border/60 shadow-sm p-6 hover:border-foreground/30 transition-colors"
+        >
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-muted text-muted-foreground shrink-0">
+            <Megaphone size={18} />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-base font-semibold">Novidades</h2>
+            <p className="text-sm text-muted-foreground">O que mudou no ControlAI em cada atualização</p>
           </div>
           <ArrowRight size={16} className="text-muted-foreground shrink-0" />
         </Link>

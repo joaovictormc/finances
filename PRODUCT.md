@@ -64,6 +64,10 @@ tratam compartilhamento como funcionalidade extra; aqui é a espinha dorsal.
   a cobrança no cartão antes de apagar os dados.
 - Pix não renova sozinho: o plano atual tem "Renovar com Pix", e renovar antes
   do vencimento soma o período novo ao fim do atual.
+- Novidades (Admin › Novidades): o que mudou em cada atualização, escrito no
+  painel. Ao publicar, aviso no sininho e, se escolhido, por e-mail (sem push);
+  na próxima abertura do web/app aparece a janela "O que há de novo", uma vez
+  por novidade. Histórico na tela Novidades (Configurações no web, Mais no app).
 - Promoções (Admin › Promoções): cupons de desconto que valem para a
   assinatura (mínimo R$ 1,00 por cobrança, um uso por pessoa; no cartão o
   desconto vale em todas as cobranças da recorrência, no Pix só no pagamento

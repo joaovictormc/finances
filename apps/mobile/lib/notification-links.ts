@@ -16,6 +16,7 @@ const WEB_TO_MOBILE: Record<string, string> = {
   "/groups": "/groups",
   "/rewards": "/rewards",
   "/settings/billing": "/billing",
+  "/novidades": "/changelog",
 };
 
 /** Destino por tipo, para avisos gravados antes de os emissores mandarem link. */
@@ -29,6 +30,7 @@ const FALLBACK_LINKS: Record<string, string> = {
   referral_reward: "/rewards",
   subscription_expiring: "/settings/billing",
   subscription_payment_failed: "/settings/billing",
+  changelog: "/novidades",
 };
 
 /** Só caminho interno: URL absoluta viraria redirecionador aberto. */

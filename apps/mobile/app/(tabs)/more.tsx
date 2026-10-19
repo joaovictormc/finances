@@ -13,7 +13,7 @@ const THEME_OPTIONS: { value: ThemePreference; label: string; icon: keyof typeof
 ];
 
 const MENU_ITEMS: {
-  href: "/bills" | "/goals" | "/rewards" | "/groups" | "/billing" | "/settings";
+  href: "/bills" | "/goals" | "/rewards" | "/groups" | "/billing" | "/changelog" | "/settings";
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
@@ -24,6 +24,7 @@ const MENU_ITEMS: {
   { href: "/rewards", label: "Recompensas", icon: "sparkles-outline" },
   { href: "/groups", label: "Grupos", icon: "people-outline" },
   { href: "/billing", label: "Planos e Assinatura", icon: "card-outline" },
+  { href: "/changelog", label: "Novidades", icon: "megaphone-outline" },
   { href: "/settings", label: "Configurações", icon: "settings-outline" },
 ];
 

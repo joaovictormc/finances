@@ -163,6 +163,20 @@ POST /api/billing/coupon/preview     { code, plan, interval? } → { code, descr
 POST /api/billing/cancel             → { success: true, accessUntil }   para a recorrência; o plano continua até `accessUntil` (fim do período pago)
 ```
 
+## Novidades / changelog (`/api/changelog`, `/api/admin/changelog`)
+
+```
+GET    /api/changelog?platform=web|android|ios          → PublishedChangelogRelease[] (publicadas, mais recentes primeiro; sem plataforma marcada = todas)
+GET    /api/changelog/unseen?platform=...               → publicadas depois da última vez que o usuário fechou "O que há de novo" (ou da criação da conta)
+POST   /api/changelog/seen                              marca como visto (UserProfile.changelogSeenAt)
+
+GET    /api/admin/changelog                             → rascunhos e publicadas (admin)
+POST   /api/admin/changelog       { version, title, items: [{ kind: "new"|"improvement"|"fix", text }], platforms[] }   cria rascunho
+PATCH  /api/admin/changelog/:id   (mesmo corpo)         edita; publicada pode ser editada, o aviso não é refeito
+DELETE /api/admin/changelog/:id
+POST   /api/admin/changelog/:id/publish { notifyInApp, notifyEmail }   publica; o aviso roda na fila "broadcast" (sininho para todos + e-mail para quem não desligou), uma vez por novidade. 409 se já publicada
+```
+
 ## Notificações (`/api/notifications`)
 
 ```

@@ -6,6 +6,7 @@ import { DashboardSidebar } from "@/components/ui/dashboard-sidebar";
 import { SidebarProvider } from "@/app/providers/sidebar-provider";
 import { QueryProvider } from "@/app/providers/query-provider";
 import { NotificationsProvider } from "@/components/ui/notification-bell";
+import { WhatsNewDialog } from "@/components/changelog/whats-new-dialog";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -28,6 +29,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </main>
 
                   <MobileBottomNav />
+                  <WhatsNewDialog />
                 </div>
               </SidebarProvider>
           </NotificationsProvider>

@@ -119,6 +119,9 @@ model UserProfile {
   aiInsightsEnabled Boolean @default(true)
   notifyEmail     Boolean   @default(true)
   onboardingCompletedAt DateTime?
+  /// Última vez que fechou a janela "O que há de novo". Nulo = usa a data de
+  /// criação da conta (quem acabou de chegar não vê novidades antigas).
+  changelogSeenAt DateTime?
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -915,4 +918,24 @@ model ReferralRewardRule {
   referrals Referral[]
 
   @@map("referral_reward_rules")
+}
+
+/// Novidades do app (changelog), escritas em Admin › Novidades. Rascunho até
+/// `publishedAt`; ao publicar, o aviso vai pelo sininho e, se escolhido, por
+/// e-mail (`notifiedAt` impede disparar duas vezes).
+model ChangelogRelease {
+  id          String    @id @default(cuid())
+  version     String
+  title       String
+  /// [{ kind: "new" | "improvement" | "fix", text }]
+  items       Json      @default("[]")
+  /// web | android | ios. Vazio = vale para todas.
+  platforms   String[]  @default([])
+  publishedAt DateTime?
+  notifiedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([publishedAt])
+  @@map("changelog_releases")
 }

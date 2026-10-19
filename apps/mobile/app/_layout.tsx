@@ -126,6 +126,7 @@ function RootNavigator() {
           options={{ ...stackHeaderOptions, title: "Notificações" }}
         />
         <Stack.Screen name="settings" options={{ ...stackHeaderOptions, title: "Configurações" }} />
+        <Stack.Screen name="changelog" options={{ ...stackHeaderOptions, title: "Novidades" }} />
         <Stack.Screen name="billing" options={{ ...stackHeaderOptions, title: "Planos e Assinatura" }} />
       </Stack>
     </>

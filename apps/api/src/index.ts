@@ -29,6 +29,8 @@ import settingsRoute from "./routes/settings";
 import notificationsRoute from "./routes/notifications";
 import userRoute from "./routes/user";
 import gamificationRoute from "./routes/gamification";
+import changelogRoute from "./routes/changelog";
+import adminChangelogRoute from "./routes/admin-changelog";
 import { registerRepeatableJobs } from "./jobs/scheduler";
 import { db } from "@finances/db";
 
@@ -39,6 +41,7 @@ import "./jobs/workers/ai-analysis.worker";
 import "./jobs/workers/bill-detector.worker";
 import "./jobs/workers/gamification.worker";
 import "./jobs/workers/billing.worker";
+import "./jobs/workers/broadcast.worker";
 
 const app = new Hono();
 
@@ -111,11 +114,13 @@ app.route("/api/reports", reportsRoute);
 app.route("/api/referrals", referralsRoute);
 app.route("/api/admin/landing", adminLandingRoute);
 app.route("/api/admin/promotions", adminPromotionsRoute);
+app.route("/api/admin/changelog", adminChangelogRoute);
 app.route("/api/admin", adminRoute);
 app.route("/api/settings", settingsRoute);
 app.route("/api/notifications", notificationsRoute);
 app.route("/api/user", userRoute);
 app.route("/api/gamification", gamificationRoute);
+app.route("/api/changelog", changelogRoute);
 
 app.onError((err, c) => {
   const requestId = c.res.headers.get("x-request-id") ?? "unknown";

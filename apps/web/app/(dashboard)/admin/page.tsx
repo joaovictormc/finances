@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, Receipt, Bot, CreditCard, ArrowRight, Sparkles, Tag, LayoutTemplate, TicketPercent } from "lucide-react";
+import { Users, Receipt, Bot, CreditCard, ArrowRight, Sparkles, Tag, LayoutTemplate, TicketPercent, Megaphone } from "lucide-react";
 
 const sections = [
   {
@@ -49,6 +49,12 @@ const sections = [
     title: "Gamificação",
     description: "Prêmios da Roleta Semanal e recompensa do check-in diário",
     icon: Sparkles,
+  },
+  {
+    href: "/admin/changelog",
+    title: "Novidades",
+    description: "Escreva o que mudou em cada atualização e avise os usuários",
+    icon: Megaphone,
   },
 ];
 
