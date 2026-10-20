@@ -104,6 +104,13 @@ describe("formato OpenAI (Groq e Ollama)", () => {
     expect(body.tool_choice).toBe("auto");
   });
 
+  it("no modo JSON tira a cerca de código (ex.: gemma na Ollama)", () => {
+    const body = { choices: [{ message: { content: '```json\n{"title":"x","items":[]}\n```' } }] };
+    expect(fromOpenAiResponse(body, true).content).toBe('{"title":"x","items":[]}');
+    // Fora do modo JSON o texto fica como veio.
+    expect(fromOpenAiResponse(body).content).toContain("```json");
+  });
+
   it("lê a resposta com ferramentas e uso", () => {
     expect(
       fromOpenAiResponse({

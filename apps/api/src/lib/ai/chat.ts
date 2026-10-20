@@ -44,6 +44,17 @@ export { AiProviderError };
 
 const DEFAULT_MAX_TOKENS = 2048;
 
+/**
+ * Tira a cerca de código (```json … ```) que vários modelos põem mesmo pedindo
+ * só JSON (Claude, e na Ollama o gemma, por exemplo). Sem isto o JSON.parse de
+ * quem chamou falha e a feature cai no caminho de erro.
+ */
+function stripCodeFence(text: string): string {
+  const match = text.trim().match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
+  return match ? match[1]! : text;
+}
+
+
 export async function chat(request: ChatRequest): Promise<ChatResponse> {
   const apiKey = request.apiKey ?? (await getProviderApiKey(request.provider));
   if (!apiKey) {
@@ -109,10 +120,11 @@ type OpenAiResponse = {
   usage?: { prompt_tokens?: number; completion_tokens?: number };
 };
 
-export function fromOpenAiResponse(body: OpenAiResponse): ChatResponse {
+export function fromOpenAiResponse(body: OpenAiResponse, json = false): ChatResponse {
   const message = body.choices?.[0]?.message;
+  const content = message?.content ?? null;
   return {
-    content: message?.content ?? null,
+    content: content && json ? stripCodeFence(content) : content,
     toolCalls: (message?.tool_calls ?? []).map((call) => ({
       id: call.id,
       name: call.function.name,
@@ -131,7 +143,7 @@ async function chatOpenAiCompatible(request: ChatRequest, apiKey: string): Promi
     body: JSON.stringify(toOpenAiBody(request)),
   });
   if (!res.ok) throw await readProviderError(request.provider, res);
-  return fromOpenAiResponse((await res.json()) as OpenAiResponse);
+  return fromOpenAiResponse((await res.json()) as OpenAiResponse, request.json);
 }
 
 // ── Claude (Anthropic Messages API) ──────────────────────────────────────────
@@ -225,11 +237,6 @@ type AnthropicResponse = {
   usage?: { input_tokens?: number; output_tokens?: number };
 };
 
-/** Tira a cerca de código (```json … ```) que o modelo às vezes põe mesmo pedindo só JSON. */
-function stripCodeFence(text: string): string {
-  const match = text.trim().match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
-  return match ? match[1]! : text;
-}
 
 export function fromAnthropicResponse(body: AnthropicResponse, json = false): ChatResponse {
   const blocks = body.content ?? [];
