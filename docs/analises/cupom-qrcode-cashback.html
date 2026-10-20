@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cupom por QR Code</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #FAFAF9; --card: #FFFFFF; --ink: #1C1C1E; --muted: #5B5B60; --line: #E4E4E0;
+    --marker: #FFC300; --marker-soft: #FFF4CC; --blue: #2563EB; --danger: #B42318; --danger-soft: #FDECEA;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #141416; --card: #1C1C1E; --ink: #F2F2EF; --muted: #A3A3A8; --line: #2E2E32;
+      --marker-soft: #3A3010; --danger-soft: #3B1714; --danger: #FF8A80; --blue: #8AB4FF;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.6 Inter, system-ui, sans-serif; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 48px 16px 96px; }
+  h1, h2, h3 { font-family: "Plus Jakarta Sans", Inter, sans-serif; line-height: 1.25; }
+  h1 { font-size: clamp(28px, 5vw, 38px); margin: 0 0 12px; }
+  h2 { font-size: 21px; margin: 0 0 8px; }
+  h3 { font-size: 16px; margin: 20px 0 6px; }
+  p { margin: 8px 0; }
+  a { color: var(--blue); }
+  .lede { color: var(--muted); font-size: 18px; max-width: 660px; }
+  code, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 14px; }
+  :not(pre) > code { background: var(--marker-soft); color: var(--ink); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 24px; margin: 20px 0; }
+  .flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 14px 0; }
+  .flow div { border: 1px solid var(--line); border-radius: 10px; padding: 12px; font-size: 14px; }
+  .flow b { display: block; font-family: "Plus Jakarta Sans", sans-serif; margin-bottom: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 10px 0; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; }
+  .scroll { overflow-x: auto; }
+  .phase { border-left: 0; display: grid; grid-template-columns: 34px 1fr; gap: 14px; }
+  .num { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: var(--ink); color: var(--paper); font: 700 15px "Plus Jakarta Sans", sans-serif; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 99px; background: var(--marker); color: #1C1C1E; margin-left: 6px; vertical-align: middle; }
+  .tag.off { background: var(--line); color: var(--ink); }
+  .note { background: var(--marker-soft); border-radius: 10px; padding: 12px 14px; margin: 12px 0; font-size: 15px; }
+  .warn { background: var(--danger-soft); border-radius: 10px; padding: 12px 14px; margin: 12px 0; font-size: 15px; }
+  .warn::before { content: "Atenção"; display: block; font: 700 12px "Plus Jakarta Sans", sans-serif; letter-spacing: .04em; text-transform: uppercase; color: var(--danger); margin-bottom: 4px; }
+  ul { padding-left: 20px; } li { margin: 4px 0; }
+  .sources { font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Cupom fiscal por QR Code</h1>
+<p class="lede">Como funcionam os apps que pagam centavos por nota escaneada, quem banca esse dinheiro e o que faz sentido trazer para o ControlAI.</p>
+
+<section>
+  <h2>1. O que o QR Code do cupom carrega</h2>
+  <p>O cupom de supermercado e farmácia é a <b>NFC-e</b> (Nota Fiscal de Consumidor Eletrônica). O QR Code impresso é um link para a consulta pública da SEFAZ do estado, com a <b>chave de acesso</b> de 44 dígitos e um código de verificação, no formato <code>…/qrcode?p=CHAVE|2|1|…</code> (versão 2 do QR, obrigatória desde 2018).</p>
+  <p>Abrindo esse link, o portal da SEFAZ mostra a nota completa: loja (CNPJ e nome), data e hora, <b>cada item</b> (descrição, quantidade, valor, às vezes o código de barras), total e forma de pagamento. Não precisa de foto nem de IA: o dado vem do governo, já estruturado.</p>
+  <div class="note">A chave de acesso é única por nota. É ela que impede a mesma nota de ser enviada duas vezes, por você ou por outra pessoa.</div>
+</section>
+
+<section>
+  <h2>2. Como os apps de "R$ 0,20 por nota" funcionam</h2>
+  <div class="flow">
+    <div><b>1. Usuário escaneia</b>Lê o QR do cupom no app depois da compra.</div>
+    <div><b>2. App consulta a SEFAZ</b>Busca os itens pela chave de acesso e confere se a nota é válida e nova.</div>
+    <div><b>3. Paga centavos</b>R$ 0,10 a 0,20 por nota, ou um percentual em produtos de campanha.</div>
+    <div><b>4. Vende o conjunto</b>Milhões de notas viram painéis de consumo vendidos a indústria e varejo.</div>
+  </div>
+  <h3>Quem banca o dinheiro</h3>
+  <ul>
+    <li><b>Venda de inteligência de mercado.</b> A Horus (grupo Neogrid) processa mais de 35 milhões de cupons por mês, de 45 mil pontos de venda, enviados por usuários do app Pinngo e por parceiros, e vende os dados a indústria e varejo. A Dinerama vende insights a fabricantes como Unilever, Ambev e Colgate.</li>
+    <li><b>Campanhas de marca.</b> A marca paga para devolver parte do valor de um produto específico (Méliuz, Dinerama, Winn). O app cobra comissão e repassa uma parte.</li>
+    <li><b>Valor fixo por nota.</b> O Dinheiro na Nota paga R$ 0,10 por nota comum, com bônus a cada 20 e a cada 200 notas. O Winn paga R$ 0,10 por nota válida.</li>
+  </ul>
+  <h3>Regras que todos usam</h3>
+  <ul>
+    <li>Limites por usuário (Dinerama: 6 notas por semana e no máximo 2 por dia da mesma loja) e bloqueio de nota repetida.</li>
+    <li>Saque só a partir de um mínimo (R$ 20 no Mimocash, R$ 75 na Dinerama), via Pix.</li>
+    <li>Análise que pode levar até 15 dias, para barrar fraude.</li>
+  </ul>
+  <div class="warn">Os centavos não saem do bolso do app: saem de quem compra os dados. Sem esse comprador, pagar R$ 0,20 por nota é custo puro. Com 1.000 usuários enviando 20 notas por mês, são 20 mil notas e <b>R$ 4.000 por mês</b> de saída, sem receita correspondente.</div>
+</section>
+
+<section>
+  <h2>3. O que isso significa para o ControlAI</h2>
+  <div class="scroll"><table>
+    <tr><th>Ponto</th><th>Situação hoje</th></tr>
+    <tr><td>Leitura de cupom</td><td>Já existe, por <b>foto + IA</b> (planos Pro e Família). Custa tokens a cada leitura e pode errar valores em foto ruim.</td></tr>
+    <tr><td>Recompensas</td><td>A gamificação já tem <b>pontos</b>, emblemas e roleta com prêmios em pontos e em <b>dias de plano</b>.</td></tr>
+    <tr><td>Privacidade</td><td>A Política de Privacidade promete: <i>"Não vendemos seus dados e não usamos seus dados financeiros para publicidade."</i></td></tr>
+    <tr><td>Câmera</td><td>O app não tem leitor de QR. Exige a biblioteca de câmera do Expo, que é nativa: <b>precisa de APK novo</b>, não vai por atualização sem loja.</td></tr>
+  </table></div>
+  <p>O ganho real para o seu usuário não é o centavo: é <b>lançar a compra sem digitar nada</b>, com os itens certos e a categoria sugerida. Isso vale mais num app de finanças do que R$ 0,20.</p>
+</section>
+
+<section class="phase">
+  <span class="num">1</span>
+  <div>
+    <h2>Fase 1 — Ler o QR do cupom e lançar a compra <span class="tag">recomendado agora</span></h2>
+    <ul>
+      <li>Botão "Ler QR do cupom" no app (e na tela de transação do web, com a câmera do celular no PWA).</li>
+      <li>A API consulta a nota na SEFAZ da UF pela chave e cria a transação: loja, data, total e forma de pagamento, com a categoria sugerida pelos itens (mercado, farmácia, restaurante).</li>
+      <li>Itens guardados junto da transação (base para relatórios como "quanto gastei em carne no mês").</li>
+      <li>Nota repetida bloqueada pela chave de acesso. Se a consulta falhar, cai na leitura por foto que já existe.</li>
+      <li>Sem custo de IA por leitura e mais preciso que a foto.</li>
+    </ul>
+    <h3>A parte difícil: cada estado tem seu portal</h3>
+    <p>Não existe uma API nacional aberta. Cada SEFAZ tem uma página diferente, alguns com captcha, e elas mudam sem aviso. Dois caminhos:</p>
+    <div class="scroll"><table>
+      <tr><th></th><th>Leitura própria dos portais</th><th>API pronta (ex.: Infosimples)</th></tr>
+      <tr><td>Custo</td><td>Zero por consulta</td><td>Por consulta (não publicado; precisa cotar). Tem teste grátis.</td></tr>
+      <tr><td>Cobertura</td><td>Começar pelos estados dos seus usuários (ex.: RJ, SP) e ampliar</td><td>Vários estados prontos, com itens, CNPJ e totais em JSON</td></tr>
+      <tr><td>Manutenção</td><td>Quebra quando o portal muda; captcha pode bloquear</td><td>Do fornecedor</td></tr>
+    </table></div>
+    <p>Sugestão: começar com leitura própria dos 1 ou 2 estados que você mais usa e medir; contratar API se o volume ou a cobertura justificar.</p>
+  </div>
+</section>
+
+<section class="phase">
+  <span class="num">2</span>
+  <div>
+    <h2>Fase 2 — Recompensa em pontos por nota <span class="tag">recomendado em seguida</span></h2>
+    <ul>
+      <li>Cada nota nova e válida dá pontos na gamificação (configurável no admin, como o check-in).</li>
+      <li>Limites no estilo do mercado: por dia, por semana e por loja; nota repetida não conta.</li>
+      <li>Os pontos já compram giros da roleta, que dão dias de plano: a recompensa vira <b>engajamento e conversão para o plano pago</b>, sem sair dinheiro.</li>
+      <li>Custo controlado: o "prêmio" máximo são dias de plano, que você já distribui hoje.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="phase">
+  <span class="num">3</span>
+  <div>
+    <h2>Fase 3 — Cashback em dinheiro <span class="tag off">só com parceiro e escala</span></h2>
+    <p>Só se fecha com alguém pagando pelos dados ou pelas campanhas. Exigiria:</p>
+    <ul>
+      <li><b>Comprador:</b> contrato com empresa de inteligência de mercado ou campanhas com marcas. Elas só pagam com volume grande (dezenas de milhares de notas por mês).</li>
+      <li><b>Privacidade:</b> mudar a promessa "não vendemos seus dados", com consentimento específico, separado e opcional, dados anonimizados e lista de quem recebe (LGPD art. 18). Autorizações genéricas "para parceiros comerciais" são apontadas como abusivas.</li>
+      <li><b>Pagamento:</b> carteira, saque mínimo por Pix, conciliação e antifraude (notas de outras pessoas, contas falsas).</li>
+    </ul>
+    <div class="warn">Num app que guarda as finanças da família, vender o histórico de compras pesa na confiança, que é o principal ativo do produto. A Fase 3 é uma decisão de negócio, não só técnica.</div>
+  </div>
+</section>
+
+<section>
+  <h2>4. Portais das SEFAZ: dá para uma API própria?</h2>
+  <p>A lista oficial do ENCAT tem um endereço de QR Code por estado. Em 19/10/2026 abri cada um com uma chave fictícia (sem dado de ninguém) para ver o destino e o tipo de proteção:</p>
+  <div class="scroll"><table>
+    <tr><th>Situação</th><th>Estados</th><th>O que significa</th></tr>
+    <tr><td><b>Página aberta</b></td><td>SP, RJ, MG*, BA, CE, DF, ES, GO, PB, PE, PR, PI*, RS, AM</td><td>Responde sem captcha. Cada um tem um layout; o RS cai no portal compartilhado SVRS. *MG e PI não responderam a tempo neste teste.</td></tr>
+    <tr><td><b>Captcha</b></td><td>SC (Cloudflare Turnstile), TO (reCAPTCHA), RR, MS, RN</td><td>Leitura automática bloqueada ou instável sem resolver o captcha.</td></tr>
+    <tr><td><b>Firewall bloqueou</b></td><td>AC, AL, MA, RO, SE</td><td>Mesmo firewall (WAF) recusou a requisição automática. Pode liberar com cabeçalhos de navegador ou bloquear de vez IPs de servidor.</td></tr>
+    <tr><td><b>Fora do ar / erro</b></td><td>AP, PA, MT</td><td>Responderam 404, 410 e 400 no endereço oficial.</td></tr>
+  </table></div>
+  <p><b>Não há um padrão nacional:</b> são cerca de 20 layouts diferentes, alguns protegidos. Mas não é preciso cobrir todos de uma vez: o QR diz de qual estado é a nota (os 2 primeiros dígitos da chave), então dá para atender estado a estado.</p>
+  <h3>API gratuita?</h3>
+  <p>Não encontrei API gratuita que devolva os itens. As prontas (Infosimples, NFE.io) são pagas por consulta. Há bibliotecas abertas no GitHub que leem portais específicos (ES, PR, RS e um leitor genérico em Node com cheerio), úteis como referência, mas cada uma cobre poucos estados e pode estar desatualizada.</p>
+  <h3>Arquitetura proposta (API própria)</h3>
+  <ul>
+    <li>Um leitor por família de portal, escolhido pelo estado da chave. A chave de acesso já traz CNPJ da loja, data, modelo e número da nota, mesmo quando a página não abre.</li>
+    <li>Resultado guardado por chave (cache): a mesma nota nunca é consultada duas vezes.</li>
+    <li>Estado sem leitor, com captcha ou bloqueado: a transação é criada com loja e data tiradas da própria chave e valor digitado, ou cai na leitura por foto.</li>
+    <li>Testes com notas reais de cada estado, para saber na hora quando um portal mudar.</li>
+  </ul>
+  <div class="warn">O teste saiu de um computador no Brasil. Em servidor (VPS), firewalls como o desses 5 estados costumam bloquear com mais frequência. Precisa ser testado no servidor de produção antes de prometer cobertura.</div>
+</section>
+
+<section>
+  <h2>5. Decisões tomadas (19/10/2026)</h2>
+  <ul>
+    <li><b>Recompensa em dinheiro:</b> área própria no app, com termo de privacidade separado. Só envia cupom para ganhar quem aceitar antes; o aceite fica registrado com a versão do termo e pode ser revogado.</li>
+    <li><b>Leitura por foto continua</b> para NF, recibos e cupons sem QR.</li>
+    <li><b>Leitura pelo QR:</b> começar pela API própria, estado a estado, a partir de notas reais.</li>
+  </ul>
+  <div class="note">O aceite resolve a parte da LGPD, mas não quem paga. Antes de ligar o dinheiro de verdade, falta definir a origem: comprador dos dados, campanhas de marca ou verba de marketing com teto mensal.</div>
+</section>
+
+<section>
+  <h2>6. Feito em 19/10/2026</h2>
+  <ul>
+    <li><b>Área "Recompensa por cupom"</b> no web e no app, com termo próprio versionado, aceite registrado (data, versão, IP e navegador) e saída a qualquer momento. Recompensa em pontos; nasce desligada (Admin › Gamificação).</li>
+    <li><b>Validação da chave sem SEFAZ:</b> estado, modelo (NFC-e 65 ou SAT 59), CNPJ (inclusive o alfanumérico de 2026), dígito verificador e prazo pelo mês da compra. Aceita QR versões 2 e 3.</li>
+    <li><b>São Paulo:</b> a consulta pública devolve a nota completa (itens com código de barras, valores, pagamento) por requisição simples, sem captcha, inclusive em nota de 2020. É o primeiro candidato a leitor depois do ES.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Próximos passos</h2>
+  <ol>
+    <li>Juntar links de QR de cupons reais dos estados que você mais usa (abrindo o QR com a câmera do celular e copiando o link).</li>
+    <li>Com eles, construir os primeiros leitores e testar a partir do servidor.</li>
+    <li>Definir de onde vem o dinheiro da recompensa antes de ligar a área de cashback.</li>
+  </ol>
+</section>
+
+<p class="sources"><b>Fontes:</b>
+<a href="https://ganherecompensa.com.br/blog/apps-que-pagam-por-escanear-cupons-fiscais-2026-top-5">Apps que pagam por escanear cupons (2026)</a> ·
+<a href="https://www.em.com.br/app/noticia/economia/2023/10/10/internas_economia,1574354/apps-devolvem-dinheiro-da-nota-fiscal-e-dao-cashback-mas-podem-usar-seus-d.shtml">Estado de Minas: apps podem usar seus dados</a> ·
+<a href="https://www.folhape.com.br/economia/as-vantagens-e-desvantagens-dos-apps-de-cashback-para-quem-pede-nota/383471/">Folha PE: vantagens e desvantagens</a> ·
+<a href="https://rendaalternativa.com.br/dinheiro-na-nota-app-que-da-cashback-por-notas-fiscais/">Dinheiro na Nota</a> ·
+<a href="https://www.acate.com.br/noticias/neogrid-investe-r-7-milhoes-na-horus-startup-carioca-de-inteligencia-de-mercado-com-foco-em-dados-de-consumo/">Neogrid investe na Horus</a> ·
+<a href="https://www.linkedin.com/company/horusinteligencia">Horus</a> ·
+<a href="https://www.sefaz.rr.gov.br/Manual_do_DANFE_NFC-e_QR_Code.pdf">Manual do DANFE NFC-e e QR Code (SEFAZ-RR)</a> ·
+<a href="https://oobj.com.br/?p=4074">oobj: QR Code versão 2</a> ·
+<a href="https://infosimples.com/consultas/sefaz-rj-nfce-completa/">Infosimples: NFC-e RJ</a> ·
+<a href="https://analise.com/noticias/cashback-entenda-como-lojas-usam-dados-pessoais-e-os-riscos-envolvidos">Análise: cashback e dados pessoais</a> ·
+<a href="https://nfce.encat.org/desenvolvedor/qrcode/">ENCAT: URL do QR Code por UF</a> ·
+<a href="https://github.com/Mateuss18/kompra-justa-nfce-api">Kompra Justa NFC-e Parser</a> ·
+<a href="https://github.com/leonichel/nfce-scraper">nfce-scraper</a> ·
+<a href="https://socket.dev/npm/package/scraping-nfce-sefazes">scraping-nfce-sefazes</a> ·
+<a href="https://infosimples.com/consultas/sefaz-nfce/">Infosimples: NFC-e unificada</a> ·
+<a href="https://nfe.io/docs/rest-api/">NFE.io</a>
+</p>
+
+</div>
+</body>
+</html>

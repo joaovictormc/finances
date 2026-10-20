@@ -32,6 +32,8 @@ Dados de uso do app:
 
 Não pedimos CPF nem telefone, e não conectamos o app à sua conta bancária. Os dados financeiros são só os que você registra ou importa.
 
+Programa de recompensa por cupom (opcional): quem decide participar aceita um termo próprio, mostrado na tela do programa, e envia a chave de acesso dos cupons fiscais. Guardamos a chave, o estado, o mês da compra, o CNPJ da loja e o registro do seu aceite (data, versão do termo, IP e navegador). Sem esse aceite, nenhum cupom é enviado.
+
 ## Para que usamos
 
 - Mostrar suas finanças, gerar relatórios, gráficos, previsões e alertas de orçamento (execução do contrato, art. 7º, V)

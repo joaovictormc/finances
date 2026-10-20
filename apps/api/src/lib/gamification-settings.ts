@@ -64,9 +64,19 @@ export type CheckinSettings = {
   rewardPoints: number;
 };
 
+/** Recompensa por cupom fiscal: pontos por cupom, limites e prazo da compra. */
+export type ReceiptRewardSettings = {
+  enabled: boolean;
+  points: number;
+  dailyLimit: number;
+  weeklyLimit: number;
+  maxAgeDays: number;
+};
+
 export type GamificationSettingsData = {
   spinPrizes: SpinPrize[];
   checkin: CheckinSettings;
+  receiptReward: ReceiptRewardSettings;
   updatedAt: Date;
 };
 
@@ -79,6 +89,13 @@ function toSettingsData(row: SettingsRow): GamificationSettingsData {
       enabled: row.checkinEnabled,
       rewardDays: row.checkinRewardDays,
       rewardPoints: row.checkinRewardPoints,
+    },
+    receiptReward: {
+      enabled: row.receiptRewardEnabled,
+      points: row.receiptRewardPoints,
+      dailyLimit: row.receiptDailyLimit,
+      weeklyLimit: row.receiptWeeklyLimit,
+      maxAgeDays: row.receiptMaxAgeDays,
     },
     updatedAt: row.updatedAt,
   };
@@ -97,6 +114,7 @@ export async function getGamificationSettings(): Promise<GamificationSettingsDat
 export async function updateGamificationSettings(data: {
   spinPrizes?: SpinPrize[];
   checkin?: CheckinSettings;
+  receiptReward?: ReceiptRewardSettings;
 }): Promise<GamificationSettingsData> {
   const changes: Prisma.GamificationSettingsUpdateInput = {
     ...(data.spinPrizes ? { spinPrizes: data.spinPrizes as unknown as Prisma.InputJsonValue } : {}),
@@ -105,6 +123,15 @@ export async function updateGamificationSettings(data: {
           checkinEnabled: data.checkin.enabled,
           checkinRewardDays: data.checkin.rewardDays,
           checkinRewardPoints: data.checkin.rewardPoints,
+        }
+      : {}),
+    ...(data.receiptReward
+      ? {
+          receiptRewardEnabled: data.receiptReward.enabled,
+          receiptRewardPoints: data.receiptReward.points,
+          receiptDailyLimit: data.receiptReward.dailyLimit,
+          receiptWeeklyLimit: data.receiptReward.weeklyLimit,
+          receiptMaxAgeDays: data.receiptReward.maxAgeDays,
         }
       : {}),
   };

@@ -580,6 +580,17 @@ const GamificationSettingsSchema = z.object({
       rewardPoints: z.number().int().min(1).max(10_000),
     })
     .optional(),
+  receiptReward: z
+    .object({
+      enabled: z.boolean(),
+      points: z.number().int().min(1).max(10_000),
+      dailyLimit: z.number().int().min(1).max(50),
+      weeklyLimit: z.number().int().min(1).max(200),
+      // Mínimo de 1 dia; até 90 para não aceitar cupom esquecido há meses.
+      maxAgeDays: z.number().int().min(1).max(90),
+    })
+    .refine((r) => r.weeklyLimit >= r.dailyLimit, { message: "O limite semanal não pode ser menor que o diário", path: ["weeklyLimit"] })
+    .optional(),
 });
 
 app.patch("/gamification/settings", zValidator("json", GamificationSettingsSchema), async (c) => {

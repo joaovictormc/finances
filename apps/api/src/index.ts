@@ -31,6 +31,7 @@ import userRoute from "./routes/user";
 import gamificationRoute from "./routes/gamification";
 import changelogRoute from "./routes/changelog";
 import adminChangelogRoute from "./routes/admin-changelog";
+import receiptRewardsRoute from "./routes/receipt-rewards";
 import { registerRepeatableJobs } from "./jobs/scheduler";
 import { db } from "@finances/db";
 
@@ -121,6 +122,7 @@ app.route("/api/notifications", notificationsRoute);
 app.route("/api/user", userRoute);
 app.route("/api/gamification", gamificationRoute);
 app.route("/api/changelog", changelogRoute);
+app.route("/api/receipt-rewards", receiptRewardsRoute);
 
 app.onError((err, c) => {
   const requestId = c.res.headers.get("x-request-id") ?? "unknown";

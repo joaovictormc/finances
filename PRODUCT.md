@@ -73,6 +73,12 @@ tratam compartilhamento como funcionalidade extra; aqui é a espinha dorsal.
   avisado (sininho, push e e-mail) e revisa antes de publicar. O painel e o
   item Admin do menu mostram o contador de pendências (rascunhos e Pix a
   confirmar).
+- Recompensa por cupom (Recompensas › Recompensa por cupom): área opcional com
+  termo de privacidade próprio e aceite registrado (versão, data, IP). Quem
+  aceita envia o link do QR ou a chave do cupom fiscal e ganha pontos; cada
+  cupom vale uma vez no sistema, com limites por dia/semana e prazo da compra.
+  Nasce desligada (Admin › Gamificação). Recompensa em dinheiro ainda não
+  existe: depende de definir quem paga e de nova versão do termo.
 - Promoções (Admin › Promoções): cupons de desconto que valem para a
   assinatura (mínimo R$ 1,00 por cobrança, um uso por pessoa; no cartão o
   desconto vale em todas as cobranças da recorrência, no Pix só no pagamento

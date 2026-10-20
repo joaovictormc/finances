@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Modal } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api-client";
 import { useTheme } from "@/lib/theme";
@@ -153,6 +153,19 @@ export default function RewardsScreen() {
 
   return (
     <ScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16, gap: 16 }}>
+      <Pressable
+        onPress={() => router.push("/receipt-rewards")}
+        className="flex-row items-center gap-4 rounded-2xl border border-border bg-card p-4 dark:border-border-dark dark:bg-card-dark"
+      >
+        <View className="h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+          <Ionicons name="receipt-outline" size={20} color={colors.primary} />
+        </View>
+        <View className="flex-1">
+          <Text className="font-semibold text-foreground dark:text-foreground-dark">Recompensa por cupom</Text>
+          <Text className="text-xs text-muted-foreground dark:text-muted-foreground-dark">Envie cupons fiscais e ganhe pontos</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
+      </Pressable>
       <View className="flex-row items-center gap-4 rounded-2xl border border-border bg-card p-5 dark:border-border-dark dark:bg-card-dark">
         <View className="h-12 w-12 items-center justify-center rounded-full bg-primary/10">
           <Ionicons name="sparkles" size={22} color={colors.primary} />

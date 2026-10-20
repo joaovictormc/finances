@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Sparkles, Check, History } from "lucide-react";
+import Link from "next/link";
+import { Sparkles, Check, History, ReceiptText, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { SpinWheel } from "@/components/ui/spin-wheel";
@@ -180,6 +181,20 @@ export default function RewardsPage() {
         <h1 className="text-2xl font-bold tracking-tight">Recompensas</h1>
         <p className="text-muted-foreground text-sm mt-1">Use os pontos que você acumula registrando transações</p>
       </div>
+
+      <Link
+        href="/rewards/cupons"
+        className="mb-6 flex items-center gap-4 rounded-2xl border border-border/60 bg-card p-5 shadow-sm transition-colors hover:border-foreground/30"
+      >
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+          <ReceiptText size={18} />
+        </div>
+        <div className="flex-1">
+          <p className="font-semibold text-foreground">Recompensa por cupom</p>
+          <p className="text-sm text-muted-foreground">Envie cupons fiscais das suas compras e ganhe pontos</p>
+        </div>
+        <ArrowRight size={16} className="shrink-0 text-muted-foreground" />
+      </Link>
 
       <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-6">
         <div className="sm:col-span-2 bg-card rounded-2xl border border-border/60 shadow-sm p-6 flex items-center gap-4">

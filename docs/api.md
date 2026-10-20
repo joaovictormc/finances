@@ -181,6 +181,18 @@ GET    /api/admin/pending                               → { total, changelogDr
 POST   /api/admin/changelog/:id/publish { notifyInApp, notifyEmail }   publica; o aviso roda na fila "broadcast" (sininho para todos + e-mail para quem não desligou), uma vez por novidade. 409 se já publicada
 ```
 
+## Recompensa por cupom (`/api/receipt-rewards`)
+
+```
+GET    /api/receipt-rewards              → { enabled, terms: { version, sections }, consent: { active, acceptedAt, outdated }, rules, usage: { today, week }, totals, history[] }
+POST   /api/receipt-rewards/consent      { version }   aceita o termo na versão atual (registra IP e navegador); versão antiga → 409
+DELETE /api/receipt-rewards/consent                    sai do programa (o histórico fica, contra reuso do cupom)
+POST   /api/receipt-rewards/receipts     { code }      link do QR (v2/v3, `p` ou `chNFe`) ou chave de 44 dígitos → 201 { points, uf, issuedMonth, status }
+                                                       403 sem programa ou sem aceite · 400 chave inválida/antiga · 409 cupom já enviado · 429 limite
+```
+
+A chave é conferida sem consultar a SEFAZ (`lib/access-key.ts`): estado, modelo 65/59, CNPJ (inclusive alfanumérico) e dígito verificador. Regras em `PATCH /api/admin/gamification/settings` → `receiptReward { enabled, points, dailyLimit, weeklyLimit, maxAgeDays }`.
+
 ## Notificações (`/api/notifications`)
 
 ```

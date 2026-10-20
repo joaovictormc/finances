@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, X, FlaskConical, Sparkles, BarChart3, CalendarCheck } from "lucide-react";
+import { Plus, X, FlaskConical, Sparkles, BarChart3, CalendarCheck, ReceiptText } from "lucide-react";
 import { BackButton } from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,20 @@ type SpinPrize = {
   weight: number;
 };
 type CheckinSettings = { enabled: boolean; rewardDays: number; rewardPoints: number };
-type GamificationSettings = { spinPrizes: SpinPrize[]; checkin: CheckinSettings };
+type ReceiptRewardSettings = { enabled: boolean; points: number; dailyLimit: number; weeklyLimit: number; maxAgeDays: number };
+type GamificationSettings = { spinPrizes: SpinPrize[]; checkin: CheckinSettings; receiptReward: ReceiptRewardSettings };
+
+type ReceiptDraft = { enabled: boolean; points: string; dailyLimit: string; weeklyLimit: string; maxAgeDays: string };
+
+function toReceiptDraft(r: ReceiptRewardSettings): ReceiptDraft {
+  return {
+    enabled: r.enabled,
+    points: String(r.points),
+    dailyLimit: String(r.dailyLimit),
+    weeklyLimit: String(r.weeklyLimit),
+    maxAgeDays: String(r.maxAgeDays),
+  };
+}
 
 // Números como string pelo mesmo motivo do PrizeDraft: digitação livre.
 type CheckinDraft = { enabled: boolean; rewardDays: string; rewardPoints: string };
@@ -115,6 +128,8 @@ export default function AdminGamificationPage() {
 
   const [checkin, setCheckin] = useState<CheckinDraft | null>(null);
   const [savingCheckin, setSavingCheckin] = useState(false);
+  const [receipt, setReceipt] = useState<ReceiptDraft | null>(null);
+  const [savingReceipt, setSavingReceipt] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -123,6 +138,7 @@ export default function AdminGamificationPage() {
       setPrizes(settings.spinPrizes.map(toDraft));
       setSavedPrizes(settings.spinPrizes);
       setCheckin(toCheckinDraft(settings.checkin));
+      setReceipt(toReceiptDraft(settings.receiptReward));
     } catch {
       toast({ title: "Erro ao carregar configurações da gamificação", variant: "error" });
     } finally {
@@ -294,6 +310,44 @@ export default function AdminGamificationPage() {
     }
   }
 
+  async function handleSaveReceipt() {
+    if (!receipt) return;
+    const values = {
+      points: Number(receipt.points.trim()),
+      dailyLimit: Number(receipt.dailyLimit.trim()),
+      weeklyLimit: Number(receipt.weeklyLimit.trim()),
+      maxAgeDays: Number(receipt.maxAgeDays.trim()),
+    };
+    const ranges: [keyof typeof values, string, number, number][] = [
+      ["points", "Pontos por cupom", 1, 10_000],
+      ["dailyLimit", "Cupons por dia", 1, 50],
+      ["weeklyLimit", "Cupons em 7 dias", 1, 200],
+      ["maxAgeDays", "Prazo da compra", 1, 90],
+    ];
+    for (const [key, label, min, max] of ranges) {
+      if (!Number.isInteger(values[key]) || values[key] < min || values[key] > max) {
+        toast({ title: `${label} precisa ser um número inteiro entre ${min} e ${max.toLocaleString("pt-BR")}`, variant: "error" });
+        return;
+      }
+    }
+    if (values.weeklyLimit < values.dailyLimit) {
+      toast({ title: "O limite de 7 dias não pode ser menor que o diário", variant: "error" });
+      return;
+    }
+    setSavingReceipt(true);
+    try {
+      const settings = await api.patch<GamificationSettings>("/api/admin/gamification/settings", {
+        receiptReward: { enabled: receipt.enabled, ...values },
+      });
+      setReceipt(toReceiptDraft(settings.receiptReward));
+      toast({ title: "Recompensa por cupom salva", variant: "success" });
+    } catch {
+      toast({ title: "Erro ao salvar recompensa por cupom", variant: "error" });
+    } finally {
+      setSavingReceipt(false);
+    }
+  }
+
   async function handleSimulate() {
     const spins = Number(spinsInput);
     if (!Number.isFinite(spins) || spins < 1 || spins > 50000) {
@@ -409,6 +463,40 @@ export default function AdminGamificationPage() {
 
           <div className="mt-4">
             <Button onClick={handleSaveCheckin} loading={savingCheckin}>Salvar check-in</Button>
+          </div>
+        </section>
+      )}
+
+      {receipt && (
+        <section className="bg-card rounded-2xl border border-border/60 shadow-sm p-6 mb-6">
+          <h2 className="text-base font-semibold mb-1 flex items-center gap-2">
+            <ReceiptText size={16} className="text-primary" /> Recompensa por cupom
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Área opcional com termo de privacidade próprio: só envia cupom quem aceitou. Cada cupom fiscal
+            (NFC-e ou SAT) vale uma vez no sistema inteiro e dá os pontos abaixo. A chave é conferida pelos
+            dígitos verificadores; a consulta na SEFAZ entra quando houver leitor do estado.
+          </p>
+
+          <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-4 cursor-pointer w-fit">
+            <input
+              type="checkbox"
+              checked={receipt.enabled}
+              onChange={(e) => setReceipt({ ...receipt, enabled: e.target.checked })}
+              className="h-4 w-4 accent-[var(--color-primary)]"
+            />
+            Programa ativo
+          </label>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Input label="Pontos por cupom" type="number" inputMode="numeric" min={1} max={10000} value={receipt.points} onChange={(e) => setReceipt({ ...receipt, points: e.target.value })} />
+            <Input label="Cupons por dia" type="number" inputMode="numeric" min={1} max={50} value={receipt.dailyLimit} onChange={(e) => setReceipt({ ...receipt, dailyLimit: e.target.value })} />
+            <Input label="Cupons em 7 dias" type="number" inputMode="numeric" min={1} max={200} value={receipt.weeklyLimit} onChange={(e) => setReceipt({ ...receipt, weeklyLimit: e.target.value })} />
+            <Input label="Prazo da compra (dias)" type="number" inputMode="numeric" min={1} max={90} value={receipt.maxAgeDays} onChange={(e) => setReceipt({ ...receipt, maxAgeDays: e.target.value })} />
+          </div>
+
+          <div className="mt-4">
+            <Button onClick={handleSaveReceipt} loading={savingReceipt}>Salvar recompensa por cupom</Button>
           </div>
         </section>
       )}

@@ -11,3 +11,4 @@ export * from "./landing.schema";
 export * from "./landing-defaults";
 export * from "./promotion.schema";
 export * from "./changelog.schema";
+export * from "./receipt-rewards.schema";

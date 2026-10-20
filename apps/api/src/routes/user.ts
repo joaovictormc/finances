@@ -74,6 +74,16 @@ app.get("/export", async (c) => {
     }),
     gamificationProfile: db.gamificationProfile.findUnique({ where: { userId } }),
     gamificationSpins: db.gamificationSpinLog.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
+    receiptRewardConsents: db.receiptRewardConsent.findMany({
+      where: { userId },
+      orderBy: { acceptedAt: "desc" },
+      select: { termsVersion: true, acceptedAt: true, revokedAt: true, ipAddress: true, userAgent: true },
+    }),
+    rewardReceipts: db.rewardReceipt.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      select: { accessKey: true, uf: true, model: true, issuerCnpj: true, issuedMonth: true, status: true, points: true, createdAt: true },
+    }),
     subscription: db.subscription.findUnique({ where: { userId } }),
     couponRedemptions: db.couponRedemption.findMany({
       where: { userId },
