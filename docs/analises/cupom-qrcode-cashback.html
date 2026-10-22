@@ -189,6 +189,24 @@
 </section>
 
 <section>
+  <h2>7. Primeiro cupom real do ES (21/10/2026)</h2>
+  <p>A chave do cupom passou na validação (ES, 10/2026, NFC-e, CNPJ e dígito corretos). Mas o portal do ES <b>agora exige a verificação do Cloudflare Turnstile</b> antes de mostrar a nota: a página carrega o verificador e só reenvia o formulário com um token quando ele aprova. No levantamento anterior isso passou despercebido porque a página não usa a palavra "captcha".</p>
+  <p>Um servidor não consegue esse token sem burlar a proteção da SEFAZ, e esse caminho está descartado. Proposta:</p>
+  <div class="scroll"><table>
+    <tr><th>Onde a nota é lida</th><th>Estados</th><th>Como</th></tr>
+    <tr><td><b>No servidor</b></td><td>Os que abrem sem proteção (SP confirmado com nota completa)</td><td>A API consulta o portal e devolve os itens. Funciona no app, no web e no PWA.</td></tr>
+    <tr><td><b>No aparelho</b></td><td>Os protegidos (ES, SC, TO, RR, MS, RN e os 5 com firewall)</td><td>O app abre a página oficial da SEFAZ num navegador embutido. Quem passa pela verificação é a própria pessoa, como faria no navegador. Quando a nota aparece, o app lê os itens da página e preenche a transação.</td></tr>
+    <tr><td><b>Pela foto</b></td><td>Qualquer um, e o web nos estados protegidos</td><td>A leitura por foto que já existe: o cupom impresso traz os mesmos itens.</td></tr>
+  </table></div>
+  <ul>
+    <li>A leitura no aparelho precisa de duas bibliotecas nativas no app (câmera para o QR e navegador embutido): <b>exige APK novo</b>.</li>
+    <li>No web e no PWA não dá para ler a página de outro site por dentro (o navegador bloqueia). Lá, estado protegido segue pela foto.</li>
+    <li>Para a recompensa por cupom, dado lido no aparelho pode ser adulterado. Para pontos, com os limites atuais, é aceitável; para dinheiro, só a leitura no servidor (ou uma API paga) dá garantia.</li>
+    <li>O Turnstile costuma aprovar sozinho em navegador de verdade, mas pode pedir um clique; dentro do navegador embutido do app isso precisa ser testado no celular.</li>
+  </ul>
+</section>
+
+<section>
   <h2>Próximos passos</h2>
   <ol>
     <li>Juntar links de QR de cupons reais dos estados que você mais usa (abrindo o QR com a câmera do celular e copiando o link).</li>
