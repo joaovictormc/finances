@@ -32,6 +32,8 @@ Dados de uso do app:
 
 Não pedimos CPF nem telefone, e não conectamos o app à sua conta bancária. Os dados financeiros são só os que você registra ou importa.
 
+Leitura do QR Code do cupom (app para celular): o app abre a página oficial da SEFAZ no seu próprio celular e lê dela a loja, os itens, os valores, a forma de pagamento e a data, para preencher a transação. Os dados de consumidor que a página mostra (CPF e nome) não são lidos. Só chega ao ControlAI o que você salvar na transação.
+
 Programa de recompensa por cupom (opcional): quem decide participar aceita um termo próprio, mostrado na tela do programa, e envia a chave de acesso dos cupons fiscais. Guardamos a chave, o estado, o mês da compra, o CNPJ da loja e o registro do seu aceite (data, versão do termo, IP e navegador). Sem esse aceite, nenhum cupom é enviado.
 
 ## Para que usamos

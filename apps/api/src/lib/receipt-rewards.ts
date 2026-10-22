@@ -1,10 +1,12 @@
 import { db } from "@finances/db";
 import {
+  ACCESS_KEY_MESSAGES,
   RECEIPT_REWARD_TERMS,
   RECEIPT_REWARD_TERMS_VERSION,
+  extractAccessKey,
+  validateAccessKey,
   type ReceiptRewardStatus,
 } from "@finances/validations";
-import { ACCESS_KEY_MESSAGES, extractAccessKey, validateAccessKey } from "./access-key";
 import { getGamificationSettings } from "./gamification-settings";
 import { isUniqueViolation } from "./prisma-errors";
 

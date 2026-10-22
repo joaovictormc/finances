@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accessKeyCheckDigit, extractAccessKey, isValidCnpj, validateAccessKey } from "./access-key";
+import { accessKeyCheckDigit, extractAccessKey, isValidCnpj, validateAccessKey } from "@finances/validations";
 
 // Chaves reais de cupons públicos da SEFAZ-SP (2020, QR v2; 2026, QR v3).
 const SP_2020 = "35200793015006003481651250003293021742482879";

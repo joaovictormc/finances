@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, ActivityIndicator, Alert } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { View, Text, TextInput, Pressable, ActivityIndicator, Alert, Platform } from "react-native";
 import { FormScrollView } from "@/components/form-scroll-view";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api-client";
@@ -11,6 +11,7 @@ import { useTheme } from "@/lib/theme";
 import { BASE_PAYMENT_METHOD_TABS, type PaymentMethod } from "@/lib/payment-methods";
 import { CategoryPicker } from "@/components/category-picker";
 import type { Category, FinancialAccount } from "@/lib/types";
+import { merchantTitle, notesFromItems, paymentMethodFromNote, suggestCategory, takePendingNfceScan } from "@/lib/nfce";
 
 type ParsedReceipt = {
   merchant?: string;
@@ -18,6 +19,8 @@ type ParsedReceipt = {
   date?: string;
   categoryHint?: string;
   confidence: number;
+  /** Lido pelo QR Code na página da SEFAZ, e não pela foto. */
+  qr?: { uf: string; itemCount: number };
 };
 
 type TransactionType = "expense" | "income" | "transfer";
@@ -92,6 +95,26 @@ export default function NewTransactionScreen() {
       .finally(() => setLoadingData(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
+
+  // Volta da tela do QR Code com a nota lida na SEFAZ.
+  useFocusEffect(
+    useCallback(() => {
+      const scan = takePendingNfceScan();
+      if (!scan) return;
+      const { note } = scan;
+      setType("expense");
+      if (note.total !== null) setAmount(note.total.toFixed(2).replace(".", ","));
+      if (note.merchant) setDescription(merchantTitle(note.merchant));
+      if (note.issuedAt) setDate(note.issuedAt);
+      const method = paymentMethodFromNote(note);
+      if (method) setPaymentMethod(method);
+      if (note.items.length) setNotes(notesFromItems(note.items));
+      // Com outro tipo aberto, as categorias carregadas não são as de gasto.
+      const category = type === "expense" ? suggestCategory(note, flattenCategories(categories)) : null;
+      if (category) setCategoryId(category.id);
+      setReceipt({ confidence: 1, qr: { uf: scan.uf, itemCount: note.items.length } });
+    }, [categories, type])
+  );
 
   async function handleSubmit() {
     setError(null);
@@ -220,26 +243,39 @@ export default function NewTransactionScreen() {
 
   return (
     <FormScrollView className="flex-1 bg-background dark:bg-background-dark" contentContainerStyle={{ padding: 16 }}>
-      <Pressable
-        onPress={handleScanReceipt}
-        disabled={scanning}
-        className="mb-4 flex-row items-center justify-center gap-2 rounded-md border border-dashed border-primary py-3"
-        style={{ opacity: scanning ? 0.6 : 1 }}
-      >
-        {scanning ? (
-          <ActivityIndicator size="small" color={colors.primary} />
-        ) : (
-          <Ionicons name="camera-outline" size={18} color={colors.primary} />
+      <View className="mb-4 flex-row gap-2">
+        {/* A página da SEFAZ só abre no WebView do app; no navegador fica só a foto. */}
+        {Platform.OS !== "web" && (
+          <Pressable
+            onPress={() => router.push("/scan-receipt")}
+            disabled={scanning}
+            className="flex-1 flex-row items-center justify-center gap-2 rounded-md border border-dashed border-primary py-3"
+          >
+            <Ionicons name="qr-code-outline" size={18} color={colors.primary} />
+            <Text className="text-sm font-medium text-primary dark:text-primary-dark">QR Code do cupom</Text>
+          </Pressable>
         )}
-        <Text className="text-sm font-medium text-primary dark:text-primary-dark">
-          {scanning ? "Lendo cupom..." : "Preencher com foto do cupom (Pro)"}
-        </Text>
-      </Pressable>
+        <Pressable
+          onPress={handleScanReceipt}
+          disabled={scanning}
+          className="flex-1 flex-row items-center justify-center gap-2 rounded-md border border-dashed border-primary py-3"
+          style={{ opacity: scanning ? 0.6 : 1 }}
+        >
+          {scanning ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Ionicons name="camera-outline" size={18} color={colors.primary} />
+          )}
+          <Text className="text-sm font-medium text-primary dark:text-primary-dark">
+            {scanning ? "Lendo cupom..." : "Foto do cupom (Pro)"}
+          </Text>
+        </Pressable>
+      </View>
 
       {receipt && (
         <View className="mb-4 rounded-lg border border-primary bg-card p-4 dark:bg-card-dark">
           <Text className="mb-3 text-sm font-semibold text-foreground dark:text-foreground-dark">
-            Lido do cupom
+            {receipt.qr ? `Lido na SEFAZ-${receipt.qr.uf} · ${receipt.qr.itemCount} itens` : "Lido do cupom"}
           </Text>
 
           <ReceiptRow label="Estabelecimento" value={description || "—"} />

@@ -88,6 +88,7 @@ function RootNavigator() {
           name="new-transaction"
           options={{ ...modalHeaderOptions, title: "Nova Transação" }}
         />
+        <Stack.Screen name="scan-receipt" options={{ ...modalHeaderOptions, title: "Ler QR do cupom" }} />
         <Stack.Screen
           name="new-account"
           options={{ ...modalHeaderOptions, title: "Nova Conta" }}
