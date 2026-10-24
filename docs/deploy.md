@@ -181,6 +181,14 @@ EXPO_PUBLIC_LANDING_URL="https://SEUDOMINIO.com.br" \
   eas update --channel production --message "descrição da mudança"
 ```
 
+Para a homologação (canal `preview`) já existe um script com o endereço do
+joaosrv:
+
+```bash
+cd apps/mobile
+pnpm run update:preview --message "descrição da mudança"
+```
+
 ---
 
 ## Parte B — Homologação no servidor joaosrv (Ubuntu Server + Docker Compose)

@@ -63,7 +63,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "update:preview": "EXPO_PUBLIC_API_URL=http://100.84.104.128:3011 EXPO_PUBLIC_LANDING_URL=http://100.84.104.128:3012 npx eas-cli@latest update --channel preview"
   },
   "private": true
 }

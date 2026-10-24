@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "3913444b-d36c-43a8-ad48-35265801af54"
+      }
+    },
+    "android": {
+      "package": "com.joaovictormc.finances"
+    }
+  }
+}

@@ -19,7 +19,8 @@ try {
 }
 import { useEffect } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
-import { View, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, ActivityIndicator } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import { useSession } from "@/lib/auth-client";
 import { ThemeProvider, useTheme } from "@/lib/theme";
@@ -27,13 +28,16 @@ import { registerPushToken, subscribeToNotificationTaps } from "@/lib/push";
 import { routeFromPushData } from "@/lib/notification-links";
 
 function RootNavigator() {
-  const { data: session, isPending } = useSession();
+  const { data: session, isPending, error, refetch } = useSession();
+  // Sem resposta do servidor não dá para saber se há sessão: mandar para o
+  // login nesse caso pareceria que a conta saiu.
+  const offline = !isPending && !session && !!error;
   const segments = useSegments();
   const router = useRouter();
   const { scheme, colors } = useTheme();
 
   useEffect(() => {
-    if (isPending) return;
+    if (isPending || offline) return;
     const inAuthGroup = segments[0] === "(auth)";
 
     if (!session && !inAuthGroup) {
@@ -41,7 +45,7 @@ function RootNavigator() {
     } else if (session && inAuthGroup) {
       router.replace("/(tabs)");
     }
-  }, [session, isPending, segments, router]);
+  }, [session, isPending, offline, segments, router]);
 
   // Registra o aparelho pra push e trata o toque no aviso. Depende da sessão:
   // o token é gravado por usuário, então registrar antes do login o atribuiria
@@ -64,6 +68,29 @@ function RootNavigator() {
         style={{ backgroundColor: colors.background }}
       >
         <ActivityIndicator />
+      </View>
+    );
+  }
+
+  if (offline) {
+    return (
+      <View
+        className="flex-1 items-center justify-center gap-3 bg-background p-8 dark:bg-background-dark"
+        style={{ backgroundColor: colors.background }}
+      >
+        <Ionicons name="cloud-offline-outline" size={40} color={colors.mutedForeground} />
+        <Text className="text-center text-lg font-semibold text-foreground dark:text-foreground-dark">
+          Sem conexão com o servidor
+        </Text>
+        <Text className="text-center text-sm text-muted-foreground dark:text-muted-foreground-dark">
+          Confira a internet e tente de novo. Seus dados continuam guardados.
+        </Text>
+        <Pressable
+          onPress={() => void refetch()}
+          className="mt-3 items-center rounded-md bg-primary px-6 py-3 dark:bg-primary-dark"
+        >
+          <Text className="font-semibold text-primary-foreground dark:text-primary-foreground-dark">Tentar de novo</Text>
+        </Pressable>
       </View>
     );
   }

@@ -10,6 +10,25 @@ export function nativeAuthHeaders(): Record<string, string> | undefined {
   return { Cookie: authClient.getCookie(), Origin: new URL(API_URL).origin };
 }
 
+export const OFFLINE_MESSAGE = "Sem conexão com o servidor. Confira a internet e tente de novo.";
+
+/**
+ * fetch com prazo: sem ele, uma conexão que não responde deixa a tela
+ * carregando para sempre. Falha de rede e prazo estourado viram a mesma
+ * mensagem, que as telas já mostram como erro.
+ */
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch {
+    throw new Error(OFFLINE_MESSAGE);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
@@ -52,7 +71,8 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   };
   if (body !== undefined) fetchInit.body = JSON.stringify(body);
 
-  const res = await fetch(url, fetchInit);
+  // Envios podem esperar a IA (leitura de cupom por foto); leituras não.
+  const res = await fetchWithTimeout(url, fetchInit, method === "GET" ? 20_000 : 60_000);
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ error: "Request failed" }));
@@ -72,7 +92,7 @@ async function upload<T>(path: string, formData: FormData): Promise<T> {
     credentials: isWeb ? "include" : undefined,
   };
 
-  const res = await fetch(`${API_URL}${path}`, fetchInit);
+  const res = await fetchWithTimeout(`${API_URL}${path}`, fetchInit, 60_000);
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ error: "Request failed" }));

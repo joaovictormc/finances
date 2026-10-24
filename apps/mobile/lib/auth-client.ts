@@ -20,6 +20,9 @@ export const authClient = createAuthClient({
     // Na web a sessão vive em cookie de verdade guardado pelo navegador, que só
     // é enviado em requests cross-origin (porta 8081 -> 3001) com `credentials: include`.
     credentials: isWeb ? "include" : undefined,
+    // Sem limite, a checagem de sessão fica pendurada quando o servidor some
+    // (ex.: VPN da homologação caiu) e o app mostra carregamento infinito.
+    timeout: 15_000,
   },
   plugins: isWeb
     ? [twoFactorClient()]
