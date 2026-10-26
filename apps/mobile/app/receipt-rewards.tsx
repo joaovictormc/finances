@@ -1,12 +1,13 @@
 import { useCallback, useState } from "react";
-import { View, Text, TextInput, Pressable, ActivityIndicator, Alert } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { View, Text, TextInput, Pressable, ActivityIndicator, Alert, Platform } from "react-native";
+import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import type { ReceiptRewardStatus } from "@finances/validations";
 import { api } from "@/lib/api-client";
 import { useTheme } from "@/lib/theme";
 import { formatDate } from "@/lib/format";
 import { FormScrollView } from "@/components/form-scroll-view";
+import { takePendingReceiptCode } from "@/lib/nfce";
 
 const MODEL_LABEL: Record<string, string> = { "65": "NFC-e", "59": "SAT" };
 
@@ -148,6 +149,16 @@ function Participating({ status, onChange }: { status: ReceiptRewardStatus; onCh
   const [showTerms, setShowTerms] = useState(false);
   const { rules, usage, totals } = status;
   const limitReached = usage.today >= rules.dailyLimit || usage.week >= rules.weeklyLimit;
+  // A câmera do QR é nativa; no navegador segue colando o link ou a chave.
+  const canScan = Platform.OS !== "web";
+
+  // Volta da câmera com o link do QR já lido.
+  useFocusEffect(
+    useCallback(() => {
+      const scanned = takePendingReceiptCode();
+      if (scanned) setCode(scanned);
+    }, [])
+  );
 
   async function send() {
     setSending(true);
@@ -185,9 +196,19 @@ function Participating({ status, onChange }: { status: ReceiptRewardStatus; onCh
       <Card>
         <Text className="text-base font-semibold text-foreground dark:text-foreground-dark">Enviar cupom</Text>
         <Text className="mt-1 text-sm text-muted-foreground dark:text-muted-foreground-dark">
-          Aponte a câmera do celular para o QR Code do cupom, abra o link e cole o endereço aqui. Ou digite a chave de 44
-          dígitos impressa no cupom.
+          {canScan
+            ? "Leia o QR Code impresso no cupom. Se ele estiver apagado, digite a chave de 44 dígitos que vem embaixo dele."
+            : "Aponte a câmera do celular para o QR Code do cupom, abra o link e cole o endereço aqui. Ou digite a chave de 44 dígitos impressa no cupom."}
         </Text>
+        {canScan && (
+          <Pressable
+            onPress={() => router.push({ pathname: "/scan-receipt", params: { mode: "code" } })}
+            className="mt-3 flex-row items-center justify-center gap-2 rounded-md border border-dashed border-primary py-3"
+          >
+            <Ionicons name="qr-code-outline" size={18} color={colors.primary} />
+            <Text className="text-sm font-medium text-primary dark:text-primary-dark">Ler QR Code do cupom</Text>
+          </Pressable>
+        )}
         <TextInput
           value={code}
           onChangeText={setCode}

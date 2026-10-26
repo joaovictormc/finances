@@ -11,7 +11,7 @@ import {
   Easing,
   AccessibilityInfo,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 import type { ShouldStartLoadRequest } from "react-native-webview/lib/WebViewTypes";
@@ -25,6 +25,7 @@ import {
   merchantTitle,
   readReceiptQr,
   setPendingNfceScan,
+  setPendingReceiptCode,
   type NfceDiagnostics,
   type NfcePageMessage,
   type NfceScan,
@@ -39,10 +40,23 @@ type Phase =
 const SLOW_AFTER_SECONDS = 30;
 
 export default function ScanReceiptScreen() {
+  // `mode=code`: só lê o QR e devolve o link (recompensa por cupom).
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
   const [phase, setPhase] = useState<Phase>({ step: "camera" });
 
   if (phase.step === "camera") {
-    return <QrCamera onRead={(url, uf, month) => setPhase({ step: "sefaz", url, uf, month })} />;
+    return (
+      <QrCamera
+        onRead={(url, uf, month) => {
+          if (mode === "code") {
+            setPendingReceiptCode(url);
+            router.back();
+            return;
+          }
+          setPhase({ step: "sefaz", url, uf, month });
+        }}
+      />
+    );
   }
   if (phase.step === "sefaz") {
     return (

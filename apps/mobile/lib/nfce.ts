@@ -164,3 +164,17 @@ export function takePendingNfceScan(): NfceScan | null {
   pending = null;
   return scan;
 }
+
+// Na recompensa por cupom basta o link do QR (a chave vai para a API), então
+// a câmera devolve só ele, sem abrir a SEFAZ.
+let pendingCode: string | null = null;
+
+export function setPendingReceiptCode(code: string) {
+  pendingCode = code;
+}
+
+export function takePendingReceiptCode(): string | null {
+  const code = pendingCode;
+  pendingCode = null;
+  return code;
+}
