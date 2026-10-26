@@ -6,7 +6,9 @@ Levantamento feito por leitura direta do código (não é uma lista de desejos g
 
 ## 🔴 Bugs conhecidos (corrigir primeiro)
 
-Nenhum aberto no momento.
+- Corrigir erros de layout e alinhamento de itens no mobile, alguns itens estao muito proximos da barra de notificacoes do aparelho, melhorar a responsividade 
+-Diferenciar melhor o que é pagamento de fatura de cartao de credito que hoje está sendo registrado como receita
+- Montar uma identificacao no app para quando usar alguma categoria de investimento ou nas transferencias houver algum item que seja sobre algum investimento seja ele resgate de algum dividendo, ele seja perguntado ao usuario para qual meta esse dinheiro sera destinado
 
 ## ✅ Resolvidos desde a última revisão
 
@@ -59,6 +61,13 @@ Nenhum aberto no momento.
 - ~~Auto-categorização de transações importadas~~ — **resolvido por decisão de produto**: a escolha foi sugerir, nunca categorizar sozinho (`POST /api/transactions/suggest-categories` + conciliação em massa).
 
 ## 🟢 Candidatos a nova funcionalidade (a validar antes de virar spec)
+
+- Criar novas áreas (prints de exemplo na pasta docs>novas funcoes): 
+    > Criar área de planejamento dos gastos fixos e variaveis
+    > Criar área de cadastro de patrimonio e mostrar relacao de cada conta cadastrada com graficos customisaveis
+    > Criar area de bens e dividas onde o usuario poderá registrar fundos de insvestimentos com todas as informacoes 
+
+- Plano futuro: Criar versão do app para empresas com foco em controle das finanças empresariais, gastos e investimentos
 
 Estes **não foram pedidos** — são lacunas observadas durante o desenvolvimento. Cada um precisaria de brainstorming antes de virar trabalho:
 
